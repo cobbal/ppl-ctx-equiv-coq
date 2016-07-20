@@ -66,8 +66,7 @@ where "'TC' Γ ⊢ e : τ" := (tc (Γ := Γ) e τ)
 
 Inductive Val :=
 | v_bool : bool -> Val
-| v_clo : Var -> Expr -> Env (Val * Ty) -> Val.
-
+| v_clo : Var -> Expr -> Env Val -> Val.
 
 Fixpoint val_models (τ : Ty) (v : Val) : Prop :=
   match τ, v with
@@ -78,21 +77,20 @@ Fixpoint val_models (τ : Ty) (v : Val) : Prop :=
 Notation "'VAL' τ ⊨ v" := (val_models τ v) (at level 69, no associativity).
 
 Reserved Notation "'EVAL' ρ ⊢ e ⇓ v" (at level 69, e at level 99, no associativity).
-Inductive eval (ρ : Env (Val * Ty)) : Expr -> Val -> Prop :=
-| EVar (x : Var) (v : Val) (τ : Ty)
-  : ρ x = Some (v, τ) ->
+Inductive eval (ρ : Env Val) : Expr -> Val -> Prop :=
+| EVar (x : Var) (v : Val)
+  : ρ x = Some v ->
     EVAL ρ ⊢ `x ⇓ v
 | EConst (b : bool)
   : EVAL ρ ⊢ e_bool b ⇓ v_bool b
 | ELam  (x : Var) (τ : Ty) (e : Expr)
   : EVAL ρ ⊢ λ x ; τ , e ⇓ v_clo x e ρ
 | EApp (e0 e1 : Expr)
-       (x : Var) (body : Expr) (ρ_clo : Env (Val * Ty))
-       (τa : Ty)
+       (x : Var) (body : Expr) (ρ_clo : Env Val)
        (v1 v2 : Val)
   : EVAL ρ ⊢ e0 ⇓ v_clo x body ρ_clo ->
     EVAL ρ ⊢ e1 ⇓ v1 ->
-    EVAL ρ_clo[x → (v1, τa)] ⊢ body ⇓ v2 ->
+    EVAL ρ_clo[x → v1] ⊢ body ⇓ v2 ->
     EVAL ρ ⊢ e0 @ e1 ⇓ v2
 | EIfTrue (e0 e1 e2 : Expr) (v : Val)
   : (EVAL ρ ⊢ e0 ⇓ v_bool true) ->
@@ -105,12 +103,11 @@ Inductive eval (ρ : Env (Val * Ty)) : Expr -> Val -> Prop :=
 where "'EVAL' ρ ⊢ e ⇓ v" := (eval ρ e v)
 .
 
-Definition Config := Env (Val ⨉ Ty) ⨉ Expr.
+Definition Config := Env Val ⨉ Expr.
 
 Definition E_rel' (V_rel : Ty -> Val -> Prop) (τ : Ty) (c : Config) : Prop :=
   let (ρ, e) := c in
   exists v,
-    (TC (map_env snd ρ) ⊢ e : τ) /\
     (EVAL ρ ⊢ e ⇓ v) /\
     V_rel τ v.
 
@@ -119,9 +116,8 @@ Fixpoint V_rel τ v : Prop :=
   | B, v_bool _ => True
   | τa ~> τr, v_clo x e ρ =>
     forall v',
-      let ρ' := ρ[x → (v', τa)] in
+      let ρ' := ρ[x → v'] in
       V_rel τa v'->
-      (TC (map_env snd ρ') ⊢ e : τr) /\
       E_rel' V_rel τr (ρ', e)
   | _, _ => False
   end
@@ -138,32 +134,32 @@ Qed.
 Definition env_dom_eq {A B} (envA : Env A) (envB : Env B) :=
   forall x, envA x = None <-> envB x = None.
 
-Record env_models {Γ : Env Ty} {ρ : Env (Val * Ty)} : Type :=
+Record env_models {Γ : Env Ty} {ρ : Env Val} : Type :=
   {
     env_dom_match : env_dom_eq Γ ρ;
     env_val_models : forall x τ,
         Γ x = Some τ ->
-        {v | ρ x = Some (v, τ) /\ VAL τ ⊨ v}
+        {v | ρ x = Some v /\ VAL τ ⊨ v}
   }.
 Notation "'ENV' Γ ⊨ ρ" := (@env_models Γ ρ) (at level 69, no associativity).
 
-Lemma env_models_replacable Γ ρ:
-  ENV Γ ⊨ ρ-> map_env snd ρ = Γ.
-Proof.
-  intros.
-  extensionality x.
-  unfold map_env.
-  remember (Γ x).
-  induction o.
-  -
-    induction (env_val_models X x a); auto.
-    rewrite (proj1 p); auto.
-  -
-    induction (env_dom_match X x).
-    rewrite H; auto.
-Qed.
+(* Lemma env_models_replacable Γ ρ: *)
+(*   ENV Γ ⊨ ρ-> map_env snd ρ = Γ. *)
+(* Proof. *)
+(*   intros. *)
+(*   extensionality x. *)
+(*   unfold map_env. *)
+(*   remember (Γ x). *)
+(*   induction o. *)
+(*   - *)
+(*     induction (env_val_models X x a); auto. *)
+(*     rewrite (proj1 p); auto. *)
+(*   - *)
+(*     induction (env_dom_match X x). *)
+(*     rewrite H; auto. *)
+(* Qed. *)
 
-Record G_rel {Γ : Env Ty} {ρ : Env (Val * Ty)} : Type :=
+Record G_rel {Γ : Env Ty} {ρ : Env Val} : Type :=
   {
     G_rel_modeling : ENV Γ ⊨ ρ;
     G_rel_V : forall x τ (pf1 : Γ x = Some τ),
@@ -172,10 +168,10 @@ Record G_rel {Γ : Env Ty} {ρ : Env (Val * Ty)} : Type :=
 Arguments G_rel _ _ : clear implicits.
 
 Definition related_expr (Γ : Env Ty) (τ : Ty) (e : Expr) : Prop :=
-  TC Γ ⊢ e : τ /\
-             forall ρ,
-               G_rel Γ ρ ->
-               E_rel τ (ρ, e).
+  (TC Γ ⊢ e : τ) /\
+  forall ρ,
+    G_rel Γ ρ ->
+    E_rel τ (ρ, e).
 Notation "'EXP' Γ ⊢ e0 ≈ e1 : τ" :=
   (related_expr Γ e0 e1 τ)
     (at level 69, e0 at level 99, e1 at level 99, no associativity).
@@ -204,6 +200,22 @@ Ltac decompose_common b :=
   clear H.
 (* absurdly common typo I'm sick of correcting *)
 Ltac inductino a := induction a.
+Ltac murder_eq xs :=
+  let m x :=
+      match goal with
+      | [ H : x = _ |- _ ] => (try rewrite H in *); clear x H
+| [ H : _ = x |- _ ] => (try rewrite <- H in *); clear x H
+end in
+  match xs with
+    (* I hate ltac *)
+  | ?a => m a
+  | (?a, ?b) => m a; m b
+  | (?a, ?b, ?c) => m a; m b; m c
+  | (?a, ?b, ?c, ?d) => m a; m b; m c; m d
+  | (?a, ?b, ?c, ?d, ?e) => m a; m b; m c; m d; m e
+  | (?a, ?b, ?c, ?d, ?e, ?f) => m a; m b; m c; m d; m e; m f
+  | (?a, ?b, ?c, ?d, ?e, ?f, ?g) => m a; m b; m c; m d; m e; m f; m g
+  end.
 
 
 Lemma rel_implies_models τ v : V_rel τ v -> VAL τ ⊨ v.
@@ -219,7 +231,6 @@ Proof.
   apply TCBool.
   exists (v_bool b).
   split3; simpl; auto.
-  apply TCBool.
   apply EConst.
 Qed.
 
@@ -235,13 +246,9 @@ Proof.
   induction (env_val_models _ x τ) as [v]; auto.
   simpl in *.
   exists v.
-  split3; auto. {
-    rewrite (env_models_replacable Γ); auto.
-    apply TCVar; auto.
-  } {
-    apply EVar with (τ := τ); auto.
-    apply (proj1 p).
-  }
+  split; auto.
+  apply EVar; auto.
+  apply p.
 Qed.
 
 Lemma compat_lam Γ x body τa τr :
@@ -257,20 +264,15 @@ Proof.
     intros ρ grel.
     induction grel.
     exists (v_clo x body ρ).
-    split3. {
-      rewrite (env_models_replacable Γ); auto.
-      apply TCLam.
-      apply IH.
-    } {
+    split. {
       apply ELam.
     } {
       simpl.
       intros.
-      induction (proj2 IH (ρ[x → (v', τa)])). {
-        split; eauto.
-        apply H0.
+      induction (proj2 IH (ρ[x → v'])). {
+        exists x0; auto.
       }
-      enough (env'_model : ENV Γ[x → τa] ⊨ ρ[x → (v', τa)]). {
+      enough (env'_model : ENV Γ[x → τa] ⊨ ρ[x → v']). {
         split with (G_rel_modeling := env'_model).
         intros.
         unfold extend in *.
@@ -279,6 +281,7 @@ Proof.
         induction Var_eq_dec. {
           induction p.
           inversion H0.
+          inversion pf1.
           rewrite <- H3, <- H4.
           auto.
         } {
@@ -334,18 +337,15 @@ Proof.
     decompose_common H; clear H.
     induction x; [contradict H3; tauto|].
     rename e0 into ρ_clo.
-    induction (H4 x0); auto.
-    rename v into x.
-    rename x0 into v.
-    induction H0 as [vr].
+    rename v into x, x0 into va, e into body.
+    induction (H2 va); auto.
+    rename x0 into vr.
     exists vr.
-    split3. {
-      apply TCApp with (τa0 := τa); auto.
+    split. {
+      apply (EApp ρ _ _ x body ρ_clo va); eauto.
+      apply H.
     } {
-      apply (EApp ρ _ _ x e ρ_clo τa v); eauto.
-      apply H0.
-    } {
-      apply H0.
+      apply H.
     }
   }
 Qed.
@@ -369,14 +369,12 @@ Proof.
   induction b;
 [decompose_common (proj2 IH1 ρ grel) | decompose_common (proj2 IH2 ρ grel)];
 exists x;
-split3;
-try rewrite (env_models_replacable Γ);
+split;
 induction grel;
 auto.
   apply EIfTrue; tauto.
   apply EIfFalse; tauto.
 Qed.
-
 
 Lemma well_typed_is_related
       {τ Γ e} (tc_deriv : TC Γ ⊢ e : τ) : related_expr Γ τ e.
