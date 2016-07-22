@@ -68,14 +68,6 @@ Inductive Val :=
 | v_bool : bool -> Val
 | v_clo : Var -> Expr -> Env Val -> Val.
 
-Fixpoint val_models (τ : Ty) (v : Val) : Prop :=
-  match τ, v with
-  | B, v_bool _ => True
-  | τa ~> τr, v_clo x e ρ => True (* Well, what should it be? *)
-  | _, _ => False
-  end.
-Notation "'VAL' τ ⊨ v" := (val_models τ v) (at level 69, no associativity).
-
 Reserved Notation "'EVAL' ρ ⊢ e ⇓ v" (at level 69, e at level 99, no associativity).
 Inductive eval (ρ : Env Val) : Expr -> Val -> Prop :=
 | EVar (x : Var) (v : Val)
@@ -125,12 +117,6 @@ Fixpoint V_rel τ v : Prop :=
 
 Definition E_rel := E_rel' V_rel.
 
-Lemma V_rel_models : forall {τ v}, V_rel τ v -> VAL τ ⊨ v.
-Proof.
-  intros.
-  induction τ, v; simpl; auto.
-Qed.
-
 Definition env_dom_eq {A B} (envA : Env A) (envB : Env B) :=
   forall x, envA x = None <-> envB x = None.
 
@@ -139,7 +125,7 @@ Record env_models {Γ : Env Ty} {ρ : Env Val} : Type :=
     env_dom_match : env_dom_eq Γ ρ;
     env_val_models : forall x τ,
         Γ x = Some τ ->
-        {v | ρ x = Some v /\ VAL τ ⊨ v}
+        {v | ρ x = Some v}
   }.
 Notation "'ENV' Γ ⊨ ρ" := (@env_models Γ ρ) (at level 69, no associativity).
 
@@ -217,13 +203,6 @@ end in
   | (?a, ?b, ?c, ?d, ?e, ?f, ?g) => m a; m b; m c; m d; m e; m f; m g
   end.
 
-
-Lemma rel_implies_models τ v : V_rel τ v -> VAL τ ⊨ v.
-Proof.
-  intros.
-  induction τ, v; simpl; eauto.
-Qed.
-
 Lemma compat_bool Γ b :
   related_expr Γ B (e_bool b).
 Proof.
@@ -248,7 +227,6 @@ Proof.
   exists v.
   split; auto.
   apply EVar; auto.
-  apply p.
 Qed.
 
 Lemma compat_lam Γ x body τa τr :
@@ -279,10 +257,9 @@ Proof.
         generalize (env_val_models env'_model x0 τ pf1).
         induction s; simpl.
         induction Var_eq_dec. {
-          induction p.
-          inversion H0.
+          inversion p.
           inversion pf1.
-          rewrite <- H3, <- H4.
+          rewrite <- H1, <- H2.
           auto.
         } {
           pose proof (G_rel_V0 x0 τ pf1).
@@ -291,27 +268,26 @@ Proof.
           cutrewrite (x1 = x2); auto.
           inversion p.
           inversion p0.
-          rewrite H1 in *.
-          inversion H3.
+          rewrite H3 in *.
+          inversion H2.
           auto.
         }
       } {
-        repeat split;
+        split.
+        split;
 unfold extend;
 try inductino Var_eq_dec;
 try discriminate;
 try apply G_rel_modeling0.
 
+        unfold extend.
         intros.
         induction Var_eq_dec. {
           exists v'.
           inversion H0.
-          split; auto.
-          induction G_rel_modeling0; simpl in *.
-          apply V_rel_models.
-          rewrite <- H2; auto.
+          auto.
         } {
-          apply G_rel_modeling0; auto.
+          exact (env_val_models G_rel_modeling0 _ _ H0).
         }
       }
     }
