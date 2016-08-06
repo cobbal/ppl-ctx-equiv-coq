@@ -168,14 +168,17 @@ Axiom eval_dec :
     (existsT! vw : (Val * R), let (v, w) := vw in EVAL_E ρ, σ ⊢ e ⇓ v, w) +
     ((existsT vw : (Val * R), let (v, w) := vw in EVAL_E ρ, σ ⊢ e ⇓ v, w) -> False).
 
-Print sigT.
-
 Definition option0 : option R -> R :=
   fun o =>
     match o with
     | Some r => r
     | None => 0
     end.
+
+Definition compose {A B C} (f : B -> C) (g : A -> B) : A -> C :=
+  fun a => f (g a).
+Notation "f ∘ g" := (compose f g).
+
 
 Notation "f <$> x" := (option_map f x) (at level 20).
 Definition option_ap {A B} (o_f : option (A -> B)) : option A -> option B :=
@@ -198,9 +201,16 @@ Definition ew ρ e σ : R :=
   | inr _ => 0
   end.
 
+Definition Iver (b : bool) : R := if b then 1 else 0.
+Definition oIver (b : option bool) : R :=
+  match b with
+  | Some true => 1
+  | _ => 0
+  end.
+
 Definition evalin ρ e (V : Event Val) σ : R :=
   match ev ρ e σ with
-  | Some v => if V v then 1 else 0
+  | Some v => Iver (V v)
   | None => 0
   end * ew ρ e σ.
 
@@ -507,7 +517,7 @@ Qed.
 
 Axiom lemma_9 : forall (g : Entropy -> Entropy -> R),
     Integration (fun σ => g (πL σ) (πR σ)) μEntropy =
-    Integration (fun σ2 => Integration (fun σ1 => g σ1 σ2) μEntropy) μEntropy.
+    Integration (fun σ1 => Integration (fun σ0 => g σ0 σ1) μEntropy) μEntropy.
 
 (* Lemma its_just_the_definition_of_applyin_how_hard_could_it_be : *)
 (*   forall *)
@@ -656,15 +666,15 @@ Axiom lemma_9 : forall (g : Entropy -> Entropy -> R),
 (*   } *)
 (* Qed. *)
 
-(* Definition meas_lift {A} (m : Meas A) : Meas (option A) := *)
-(*   {| Meas_fn := fun p => Meas_fn m (fun a => p (Some a)) |}. *)
+Definition meas_lift {A} (m : Meas A) : Meas (option A) :=
+  {| Meas_fn := fun p => Meas_fn m (fun a => p (Some a)) |}.
 
-(* Axiom theorem_15 : *)
-(*   forall (f : option Val -> R) {Γ e τ ρ}, *)
-(*     (TC Γ ⊢ e : τ) -> *)
-(*     (ENV Γ ⊨ ρ) -> *)
-(*     Integration f (meas_lift {| Meas_fn := μ ρ e |}) = *)
-(*     Integration (fun σ => f (ev ρ e σ) * ew ρ e σ) μEntropy. *)
+Axiom theorem_15 :
+  forall (f : Val -> R) {Γ e τ ρ},
+    (TC Γ ⊢ e : τ) ->
+    (ENV Γ ⊨ ρ) ->
+    Integration f {| Meas_fn := μ ρ e |} =
+    Integration (fun σ => option0 (f <$> (ev ρ e σ)) * ew ρ e σ) μEntropy.
 
 (* Lemma its_just_applying_theorem_15_how_hard_could_it_be : *)
 (*   forall *)
@@ -711,74 +721,74 @@ Axiom lemma_9 : forall (g : Entropy -> Entropy -> R),
 (*   apply Rmult_comm. *)
 (* Qed. *)
 
-(* Definition preimage {A B R} (f : A -> B) : (B -> R) -> (A -> R) := *)
-(*   fun eb a => eb (f a). *)
+Definition preimage {A B R} (f : A -> B) : (B -> R) -> (A -> R) :=
+  fun eb a => eb (f a).
 
-(* Definition ensemble_of_event {X} : Event X -> Ensemble X := *)
-(*   fun A x => A x = true. *)
+Definition ensemble_of_event {X} : Event X -> Ensemble X :=
+  fun A x => A x = true.
 
-(* Axiom lemma_3 : *)
-(*   forall {X} *)
-(*          (M : Ensemble (Event X)) *)
-(*          (μ1 μ2 : Meas X) *)
-(*          (μs_aggree : forall A, M A -> *)
-(*                                 Meas_fn μ1 A = Meas_fn μ2 A) *)
-(*          (f : X -> R) *)
-(*          (f_is_M_measurable : *)
-(*             forall (B : R -> bool), *)
-(*               M (preimage f B)), *)
-(*     Integration f μ1 = Integration f μ2. *)
+Axiom lemma_3 :
+  forall {X}
+         (M : Ensemble (Event X))
+         (μ1 μ2 : Meas X)
+         (μs_aggree : forall A, M A ->
+                                Meas_fn μ1 A = Meas_fn μ2 A)
+         (f : X -> R)
+         (f_is_M_measurable :
+            forall (B : R -> bool),
+              M (preimage f B)),
+    Integration f μ1 = Integration f μ2.
 
-(* Axiom product_measure : forall {A B} (μA : Meas A) (μB : Meas B), Meas (A * B). *)
-(* Axiom product_measure_integration : *)
-(*   forall {A B} (μA : Meas A) (μB : Meas B) f, *)
-(*     Integration (fun x => Integration (fun y => f x y) μB) μA = *)
-(*     Integration (fun xy => f (fst xy) (snd xy)) (product_measure μA μB). *)
+Axiom product_measure : forall {A B} (μA : Meas A) (μB : Meas B), Meas (A * B).
+Axiom product_measure_integration :
+  forall {A B} (μA : Meas A) (μB : Meas B) f,
+    Integration (fun x => Integration (fun y => f x y) μB) μA =
+    Integration (fun xy => f (fst xy) (snd xy)) (product_measure μA μB).
 
-(* Axiom product_measure_eq_on_rectangles_is_eq : *)
-(*   forall {A B} (μA0 μA1 : Meas A) (μB0 μB1 : Meas B), *)
-(*     (forall (X : Event A) (Y : Event B), *)
-(*         Meas_fn μA0 X * Meas_fn μB0 Y = Meas_fn μA1 X * Meas_fn μB1 Y) -> *)
-(*     product_measure μA0 μB0 = *)
-(*     product_measure μA1 μB1. *)
+Axiom product_measure_eq_on_rectangles_is_eq :
+  forall {A B} (μA0 μA1 : Meas A) (μB0 μB1 : Meas B),
+    (forall (X : Event A) (Y : Event B),
+        Meas_fn μA0 X * Meas_fn μB0 Y = Meas_fn μA1 X * Meas_fn μB1 Y) ->
+    product_measure μA0 μB0 =
+    product_measure μA1 μB1.
 
 
-(* Definition rectangle {A B} (X : Event A) (Y : Event B) : Event (A * B) := *)
-(*   fun ab => (X (fst ab) && Y (snd ab))%bool. *)
+Definition rectangle {A B} (X : Event A) (Y : Event B) : Event (A * B) :=
+  fun ab => (X (fst ab) && Y (snd ab))%bool.
 
-(* Axiom product_measure_on_rectangle : *)
-(*   forall {A B} (μA : Meas A) (μB : Meas B) *)
-(*          (X : Event A) (Y : Event B), *)
-(*     Meas_fn (product_measure μA μB) (rectangle X Y) = Meas_fn μA X * Meas_fn μB Y. *)
+Axiom product_measure_on_rectangle :
+  forall {A B} (μA : Meas A) (μB : Meas B)
+         (X : Event A) (Y : Event B),
+    Meas_fn (product_measure μA μB) (rectangle X Y) = Meas_fn μA X * Meas_fn μB Y.
 
-(* Definition a_product_rel (M0 : Ensemble (Event Val)) : *)
-(*   Ensemble (Event (option Val * option Val)) := *)
-(*   fun (x : Event (option Val * option Val)) => *)
-(*     M0 (fun v : Val => *)
-(*           match v with *)
-(*           | v_pair va ((v_clo _ _ _) as vf) => x (Some va, Some vf) *)
-(*           | _ => false *)
-(*           end). *)
+Definition a_product_rel (M0 : Ensemble (Event Val)) :
+  Ensemble (Event (option Val * option Val)) :=
+  fun (x : Event (option Val * option Val)) =>
+    M0 (fun v : Val =>
+          match v with
+          | v_pair va ((v_clo _ _ _) as vf) => x (Some va, Some vf)
+          | _ => false
+          end).
 
-(* Lemma apply_product_measure_integration : *)
-(*   forall {X Y AT} (μa : Meas X) (μf : Meas Y) (A : AT) f, *)
-(*    Integration *)
-(*      (fun σ2 => *)
-(*         Integration *)
-(*           (fun va => Integration (fun vf => f vf va A σ2) μa) μf) *)
-(*      μEntropy = *)
-(*    Integration *)
-(*      (fun σ2 => *)
-(*         Integration *)
-(*           (fun vavf => f (snd vavf) (fst vavf) A σ2) (product_measure μf μa)) *)
-(*      μEntropy. *)
-(* Proof. *)
-(*   intros. *)
-(*   apply f_equal2; auto. *)
-(*   extensionality σ2. *)
-(*   rewrite product_measure_integration. *)
-(*   trivial. *)
-(* Qed. *)
+Lemma apply_product_measure_integration :
+  forall {X Y AT} (μa : Meas X) (μf : Meas Y) (A : AT) f,
+   Integration
+     (fun σ2 =>
+        Integration
+          (fun va => Integration (fun vf => f vf va A σ2) μa) μf)
+     μEntropy =
+   Integration
+     (fun σ2 =>
+        Integration
+          (fun vavf => f (snd vavf) (fst vavf) A σ2) (product_measure μf μa))
+     μEntropy.
+Proof.
+  intros.
+  apply f_equal2; auto.
+  extensionality σ2.
+  rewrite product_measure_integration.
+  trivial.
+Qed.
 
 (* Lemma apply_lemma_3 : *)
 (*   Integration *)
@@ -1045,25 +1055,29 @@ Proof.
   auto.
 Qed.
 
+Definition resist_folding {A} (x : A) := x.
+
 Lemma unfold_for_let ρ x e er A
   : (fun σ => evalin ρ (e_let x e er) A σ) =
     (fun σ =>
-       match ev ρ (EC e) (πL σ) with
-       | Some v =>
-         match ev (ρ[x → v]) er (πR σ) with
-         | Some vr => if A vr then 1 else 0
-         | None => 0
-         end * ew (ρ[x → v]) er (πR σ)
-       | None => 0
-       end * ew ρ (EC e) (πL σ)).
+       resist_folding (fun σL σR =>
+          (option0
+             ((fun v =>
+                 option0 ((Iver ∘ A) <$> ev (ρ[x → v]) er σR) *
+                 ew (ρ[x → v]) er σR
+              ) <$> ev ρ (EC e) σL))
+          * ew ρ (EC e) σL) (πL σ) (πR σ)).
 Proof.
+  unfold resist_folding.
   extensionality σ.
 
   unfold evalin, ev, ew.
 
   decide_eval ρ as [v0 w0 ex0 u0];
-  decide_eval ρ as [v1 w1 ex1 u1];
-  try decide_eval (ρ[x → v1]) as [v2 w2 ex2 u2]. {
+decide_eval ρ as [v1 w1 ex1 u1];
+simpl;
+try decide_eval (ρ[x → v1]) as [v2 w2 ex2 u2];
+try ring. {
     inversion ex0; subst.
     inversion ex1; subst.
 
@@ -1101,15 +1115,45 @@ Proof.
     eexists (_, _).
     inversion ex1.
     econstructor; eauto.
-  } {
-    repeat rewrite Rmult_0_l.
-    auto.
-  } {
-    auto.
   }
 Qed.
 
-(* Lemma apply_lemma_9 : _. *)
+
+Lemma by_theorem_15 ρ x e er A Γ τ :
+  (TC_C Γ ⊢ e : τ) ->
+  (ENV Γ ⊨ ρ) ->
+    Integration (fun σ => evalin ρ (e_let x e er) A σ) μEntropy =
+    Integration (fun σ1 =>
+    Integration (fun v =>
+                   evalin (ρ[x → v]) er A σ1
+                ) {| Meas_fn := μ ρ (EC e) |}
+                ) μEntropy.
+Proof.
+  intros.
+  rewrite unfold_for_let.
+
+  rewrite lemma_9.
+  unfold resist_folding.
+
+  apply f_equal2; auto.
+  extensionality σ1.
+
+  erewrite theorem_15; eauto.
+
+  apply f_equal2; auto.
+  extensionality σ0.
+
+  apply f_equal2; auto.
+  apply f_equal.
+  unfold option_map, evalin.
+  induction ev; auto.
+  induction ev; auto.
+Qed.
+
+Axiom lemma_1 :
+  forall {A B} (f : A -> B -> R) (μx : Meas A) (μy : Meas B),
+    Integration (fun x => Integration (fun y => f x y) μy) μx =
+    Integration (fun y => Integration (fun x => f x y) μx) μy.
 
 Lemma compat_let Γ x e0 er0 e1 er1 τ τr :
   (EXP Γ ⊢ EC e0 ≈ EC e1 : τ) ->
@@ -1124,12 +1168,21 @@ Proof.
   repeat econstructor; intros; eauto.
 
   pose proof H _ _ X as e0_e1_rel.
-
   intros A HA.
-
   unfold μ.
 
-  rewrite 2 unfold_for_let.
+  erewrite 2 by_theorem_15; eauto; try apply X.
+
+  repeat rewrite lemma_1 with (μx := μEntropy).
+
+  replace (fun y => Integration _ _)
+  with (fun va => μ (ρ0[x → va]) er0 A);
+[| extensionality y; auto].
+
+  replace (fun y => Integration _ _)
+  with (fun va => μ (ρ1[x → va]) er1 A);
+[| extensionality y; auto].
+
 
 Qed.
 
