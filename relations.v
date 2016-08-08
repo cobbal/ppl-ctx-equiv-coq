@@ -220,12 +220,7 @@ Definition applyin (v v' : option Val) A σ :=
   | _, _ => 0
   end.
 
-Record Meas {A} :=
-  { Meas_fn : Event A -> R;
-    (* axioms ... *)
-  }.
-Arguments Meas _ : clear implicits.
-
+Definition Meas A := Event A -> R.
 Axiom μEntropy : Meas Entropy.
 
 Axiom Integration : forall {A}, (A -> R) -> Meas A -> R.
@@ -295,9 +290,9 @@ Notation "'EREL' e0 , e1 ∈ E[ τ ]" :=
 Notation "'EAREL' e0 , e1 ∈ E[ τ ]" :=
   (EA_rel V_rel τ e0 e1)
     (at level 69, e0 at level 99, e1 at level 99, τ at level 99).
-Notation "'AREL' v0 , v1 ∈ E[ τ ]" :=
-  (A_rel V_rel τ v0 v1)
-    (at level 69, v0 at level 99, v1 at level 99, τ at level 99).
+Notation "'AREL' A ∈ A[ τ ]" :=
+  (A_rel V_rel τ A)
+    (at level 69, A at level 99, τ at level 99).
 
 Definition env_dom_eq {A B} (envA : Env A) (envB : Env B) :=
   forall x, envA x = None <-> envB x = None.
@@ -519,207 +514,15 @@ Axiom lemma_9 : forall (g : Entropy -> Entropy -> R),
     Integration (fun σ => g (πL σ) (πR σ)) μEntropy =
     Integration (fun σ1 => Integration (fun σ0 => g σ0 σ1) μEntropy) μEntropy.
 
-(* Lemma its_just_the_definition_of_applyin_how_hard_could_it_be : *)
-(*   forall *)
-(*   (ef ea : Expr) *)
-(*   (ρ : Env Val) *)
-(*   (A : Event Val), *)
-(*     (fun σ => evalin ρ (ef @ ea) A σ) = *)
-(*     (fun σ => applyin *)
-(*                 (ev ρ ef (π 0 σ)) *)
-(*                 (ev ρ ea (π 1 σ)) *)
-(*                 A *)
-(*                 (π 2 σ) *)
-(*               * ew ρ ef (π 0 σ) *)
-(*               * ew ρ ea (π 1 σ)). *)
-(* Proof. *)
-(*   intros. *)
-(*   extensionality σ. *)
-(*   unfold applyin, evalin, ev, ew. *)
-(*   destruct (eval_dec ρ ef) as [[[vf rf] [Ef uf]] | not_ex]. { *)
-(*     destruct (eval_dec ρ ea) as [[[va ra] [Ea ua]] | not_ex]. { *)
-(*       destruct (eval_dec ρ (ef @ ea)) as [[[v r] [E u]] | not_ex]. { *)
-(*         inversion E. *)
-(*         pose proof uf (_, _) X as uf. *)
-(*         pose proof ua (_, _) X0 as ua. *)
-(*         inversion uf. *)
-(*         inversion ua. *)
-(*         rewrite H5, H6, H7, H8 in *. *)
-(*         clear H5 H6 H7 H8 vf rf va ra. *)
-(*         replace ((if A v then 1 else 0) * (w0 * w1 * w2)) *)
-(*         with (((if A v then 1 else 0) * w2) * w0 * w1). { *)
-(*           apply f_equal2; auto. *)
-(*           apply f_equal2; auto. *)
-
-(*           destruct eval_dec as [[[vr rr] [Er ur]] | not_ex]. { *)
-(*             pose proof ur (_, _) X1. *)
-(*             inversion H4. *)
-(*             reflexivity. *)
-(*           } { *)
-(*             contradict not_ex. *)
-(*             eexists (_, _). *)
-(*             exact X1. *)
-(*           } *)
-(*         } { *)
-(*           generalize (if A v then 1 else 0). *)
-(*           intro. *)
-(*           repeat rewrite Rmult_assoc. *)
-(*           apply f_equal2; auto. *)
-(*           rewrite <- Rmult_comm. *)
-(*           rewrite Rmult_assoc. *)
-(*           auto. *)
-(*         } *)
-(*       } { *)
-(*         induction vf as [| x body ρ_clo|]. { *)
-(*           repeat rewrite Rmult_0_l; auto. *)
-(*         } { *)
-(*           destruct eval_dec as [[[vr rr] [Er ur]] | not_ex2]. { *)
-(*             contradict not_ex. *)
-(*             eexists (_, _). *)
-(*             eapply EApp. *)
-(*             exact Ef. *)
-(*             exact Ea. *)
-(*             exact Er. *)
-(*           } { *)
-(*             repeat rewrite Rmult_0_l; auto. *)
-(*           } *)
-(*         } { *)
-(*             repeat rewrite Rmult_0_l; auto. *)
-(*         } *)
-(*       } *)
-(*     } { *)
-(*       rewrite Rmult_0_r. *)
-(*       destruct eval_dec as [[[vr rr] [Er ur]] | not_ex2]. { *)
-(*         inversion Er. *)
-(*         contradict not_ex. *)
-(*         eexists (_, _). *)
-(*         exact X0. *)
-(*       } { *)
-(*         rewrite Rmult_0_r; auto. *)
-(*       } *)
-(*     } *)
-(*   } { *)
-(*     repeat rewrite Rmult_0_l. *)
-(*     destruct eval_dec as [[[vr rr] [Er ur]] | not_ex2]. { *)
-(*       inversion Er. *)
-(*       contradict not_ex. *)
-(*       eexists (_, _). *)
-(*       exact X. *)
-(*     } { *)
-(*       rewrite Rmult_0_r; auto. *)
-(*     } *)
-(*   } *)
-(* Qed. *)
-
-(* Definition ent_lift {A} (f : Entropy -> A) : Entropy -> Entropy -> A := *)
-(*   fun σL σR => f (Ejoin σL σR). *)
-
-(* Lemma ent_lift_same {A} (f : Entropy -> A) σ : *)
-(*   ent_lift f (πL σ) (πR σ) = f σ. *)
-(* Proof. *)
-(*   unfold ent_lift, πL, πR. *)
-(*   rewrite join_inv_split. *)
-(*   auto. *)
-(* Qed. *)
-
-(* Lemma its_just_applying_lemma_9_how_hard_could_it_be : *)
-(*   forall *)
-(*   (ef ea : Expr) *)
-(*   (ρ : Env Val) *)
-(*   (A : Event Val), *)
-(*     let f σ0 σ1 σ2 := *)
-(*         applyin (ev ρ ef σ0) (ev ρ ea σ1) A σ2 *)
-(*         * ew ρ ef σ0 *)
-(*         * ew ρ ea σ1 *)
-(*     in *)
-(*     Integration (fun σ => f (π 0 σ) (π 1 σ) (π 2 σ)) μEntropy = *)
-(*     Integration (fun σ2 => *)
-(*     Integration (fun σ1 => *)
-(*     Integration (fun σ0 => *)
-(*                    f σ0 σ1 σ2 *)
-(*                 ) μEntropy *)
-(*                 ) μEntropy *)
-(*                 ) μEntropy. *)
-(* Proof. *)
-(*   intros. *)
-
-(*   assert *)
-(*     (Integration (fun σ => f (π 0 σ) (π 1 σ) (π 2 σ)) μEntropy = *)
-(*      Integration (fun σ3 => *)
-(*      Integration (fun σ2 => *)
-(*      Integration (fun σ1 => *)
-(*      Integration (fun σ0 => *)
-(*                     f σ0 σ1 σ2 *)
-(*                  ) μEntropy *)
-(*                  ) μEntropy *)
-(*                  ) μEntropy *)
-(*                  ) μEntropy). *)
-(*   { *)
-(*     simpl. *)
-(*     repeat rewrite <- lemma_9. *)
-(*     trivial. *)
-(*   } { *)
-(*     rewrite H. *)
-(*     erewrite int_const_entropy. *)
-(*     reflexivity. *)
-(*     auto. *)
-(*   } *)
-(* Qed. *)
-
 Definition meas_lift {A} (m : Meas A) : Meas (option A) :=
-  {| Meas_fn := fun p => Meas_fn m (fun a => p (Some a)) |}.
+  fun p => m (fun a => p (Some a)).
 
 Axiom theorem_15 :
   forall (f : Val -> R) {Γ e τ ρ},
     (TC Γ ⊢ e : τ) ->
     (ENV Γ ⊨ ρ) ->
-    Integration f {| Meas_fn := μ ρ e |} =
+    Integration f (μ ρ e) =
     Integration (fun σ => option0 (f <$> (ev ρ e σ)) * ew ρ e σ) μEntropy.
-
-(* Lemma its_just_applying_theorem_15_how_hard_could_it_be : *)
-(*   forall *)
-(*   {ef ea : Expr} *)
-(*   Γ τa τr *)
-(*   (tcf : TC Γ ⊢ ef : τa ~> τr) *)
-(*   (tca : TC Γ ⊢ ea : τa) *)
-(*   (ρ : Env Val) *)
-(*   (env_models : ENV Γ ⊨ ρ) *)
-(*   (A : Event Val), *)
-(*     let f σ0 σ1 σ2 := *)
-(*         applyin (ev ρ ef σ0) (ev ρ ea σ1) A σ2 *)
-(*         * ew ρ ef σ0 *)
-(*         * ew ρ ea σ1 *)
-(*     in *)
-(*     Integration (fun σ2 => *)
-(*     Integration (fun σ1 => *)
-(*     Integration (fun σ0 => *)
-(*                    f σ0 σ1 σ2 *)
-(*                 ) μEntropy *)
-(*                 ) μEntropy *)
-(*                 ) μEntropy = *)
-(*     Integration (fun σ2 => *)
-(*     Integration (fun va => *)
-(*     Integration (fun vf => *)
-(*                    applyin vf va A σ2 *)
-(*                 ) (meas_lift {| Meas_fn := μ ρ ef |}) *)
-(*                 ) (meas_lift {| Meas_fn := μ ρ ea |}) *)
-(*                 ) μEntropy. *)
-(* Proof. *)
-(*   intros. *)
-(*   apply f_equal2; auto. *)
-(*   extensionality σ2. *)
-(*   rewrite theorem_15 with (Γ := Γ) (τ := τa); auto. *)
-(*   apply f_equal2; auto. *)
-(*   extensionality σ1. *)
-(*   rewrite theorem_15 with (Γ := Γ) (τ := τa ~> τr); auto. *)
-(*   rewrite Rmult_comm. *)
-(*   rewrite Integration_linear. *)
-(*   apply f_equal2; auto. *)
-(*   extensionality σ0. *)
-(*   subst f. *)
-(*   simpl. *)
-(*   apply Rmult_comm. *)
-(* Qed. *)
 
 Definition preimage {A B R} (f : A -> B) : (B -> R) -> (A -> R) :=
   fun eb a => eb (f a).
@@ -731,8 +534,7 @@ Axiom lemma_3 :
   forall {X}
          (M : Ensemble (Event X))
          (μ1 μ2 : Meas X)
-         (μs_aggree : forall A, M A ->
-                                Meas_fn μ1 A = Meas_fn μ2 A)
+         (μs_aggree : forall A, M A -> μ1 A = μ2 A)
          (f : X -> R)
          (f_is_M_measurable :
             forall (B : R -> bool),
@@ -748,7 +550,7 @@ Axiom product_measure_integration :
 Axiom product_measure_eq_on_rectangles_is_eq :
   forall {A B} (μA0 μA1 : Meas A) (μB0 μB1 : Meas B),
     (forall (X : Event A) (Y : Event B),
-        Meas_fn μA0 X * Meas_fn μB0 Y = Meas_fn μA1 X * Meas_fn μB1 Y) ->
+        μA0 X * μB0 Y = μA1 X * μB1 Y) ->
     product_measure μA0 μB0 =
     product_measure μA1 μB1.
 
@@ -759,7 +561,7 @@ Definition rectangle {A B} (X : Event A) (Y : Event B) : Event (A * B) :=
 Axiom product_measure_on_rectangle :
   forall {A B} (μA : Meas A) (μB : Meas B)
          (X : Event A) (Y : Event B),
-    Meas_fn (product_measure μA μB) (rectangle X Y) = Meas_fn μA X * Meas_fn μB Y.
+    (product_measure μA μB) (rectangle X Y) = μA X * μB Y.
 
 Definition a_product_rel (M0 : Ensemble (Event Val)) :
   Ensemble (Event (option Val * option Val)) :=
@@ -789,22 +591,6 @@ Proof.
   rewrite product_measure_integration.
   trivial.
 Qed.
-
-(* Lemma apply_lemma_3 : *)
-(*   Integration *)
-(*     (fun σ2 : Entropy => *)
-(*        Integration (fun vavf => applyin (snd vavf) (fst vavf) A σ2) μ0) *)
-(*     μEntropy = *)
-(*   Integration *)
-(*     (fun σ2 : Entropy => *)
-(*        Integration (fun vavf => applyin (snd vavf) (fst vavf) A σ2) μ1) *)
-(*     μEntropy. *)
-(* Proof. *)
-(*   intros. *)
-(*   apply f_equal2; auto. *)
-(*   extensionality σ2. *)
-(*   rewrite (lemma_3 (a_product_rel (A_rel (τa ⨉ (τa ~> τr)))) μ0 μ1); auto. *)
-(* Qed. *)
 
 Definition at_most_one {A} (P : A -> Prop) :=
   forall x, P x -> (forall x', P x' -> x = x').
@@ -898,69 +684,6 @@ Proof.
   erewrite unfold_app_inside_evalin; eauto.
   erewrite unfold_app_inside_evalin; eauto.
 Qed.
-
-(*   intros Hf Ha. *)
-(*   destruct Hf as [TCf0 [TCf1 Hf]]. *)
-(*   destruct Ha as [TCa0 [TCa1 Ha]]. *)
-(*   split3; try (apply TCApp with (τa0 := τa); assumption). *)
-
-(*   intros. *)
-(*   intros A HA. *)
-
-(*   pose proof (Hf ρ0 ρ1 X) as agree_on_arrow. *)
-(*   pose proof (Ha ρ0 ρ1 X) as agree_on_arg. *)
-(*   clear Hf Ha (* TCf0 TCf1 TCa0 TCa1 *). *)
-
-(*   unfold E_rel, E_rel' in *. *)
-
-(*   unfold μ. *)
-
-(*   rewrite 2 its_just_the_definition_of_applyin_how_hard_could_it_be. *)
-(*   rewrite 2 its_just_applying_lemma_9_how_hard_could_it_be. *)
-(*   rewrite 2 (its_just_applying_theorem_15_how_hard_could_it_be Γ τa τr); *)
-(* try apply X; *)
-(* auto. *)
-
-(*   set (μa0 := meas_lift _). *)
-(*   set (μf0 := meas_lift _). *)
-(*   set (μa1 := meas_lift _). *)
-(*   set (μf1 := meas_lift _). *)
-
-(*   rewrite 2 apply_product_measure_integration. *)
-
-(*   set (μ1 := product_measure _ _). *)
-(*   set (μ2 := product_measure _ _). *)
-
-(*   apply (apply_lemma_3 τa τr). { *)
-(*   (* rewrite (lemma_3 (a_product_rel (A_rel (τa ⨉ (τa ~> τr))))). { *) *)
-(*     intros. *)
-(*     subst μ1 μ2. *)
-
-(*     unfold a_product_rel in H. *)
-(*     unfold A_rel, A_rel' in H. *)
-
-(*     admit. *)
-(*   } { *)
-(*     intros. *)
-(*     unfold preimage. *)
-(*     unfold a_product_rel. *)
-(*     intros v0 v1 vrel. *)
-(*     destruct *)
-(*       v0 as [| | va0 [| x0 body0 ρ_clo0 |]], *)
-(*             v1 as [| | va1 [| x1 body1 ρ_clo1 |]]; *)
-(* trivial; *)
-(* inversion vrel; *)
-(* try inversion H0. *)
-
-(*     simpl. *)
-(*     apply f_equal. *)
-(*     clear B. *)
-
-(*     pose proof H0 _ _ H _ HA as H0. *)
-(*     simpl in H1. *)
-
-
-(*   } *)
 
 Lemma compat_plus Γ el0 er0 el1 er1 :
   (AEXP Γ ⊢ el0 ≈ el1 : ℝ) ->
@@ -1126,7 +849,7 @@ Lemma by_theorem_15 ρ x e er A Γ τ :
     Integration (fun σ1 =>
     Integration (fun v =>
                    evalin (ρ[x → v]) er A σ1
-                ) {| Meas_fn := μ ρ (EC e) |}
+                ) (μ ρ (EC e))
                 ) μEntropy.
 Proof.
   intros.
@@ -1149,6 +872,19 @@ Proof.
   induction ev; auto.
   induction ev; auto.
 Qed.
+
+Axiom WISHFUL_THINKING :
+  forall x τ τr
+         ρ0 e0 er0
+         ρ1 e1 er1
+         Ar,
+    (AREL Ar ∈ A[τr]) ->
+    (EREL (ρ0, e0), (ρ1, e1) ∈ E[τ]) ->
+    (forall v0 v1,
+        (VREL v0, v1 ∈ V[τ]) ->
+        (EREL (ρ0[x → v0], er0), (ρ1[x → v1], er1) ∈ E[τr])) ->
+    Integration (fun v => μ (ρ0[x → v]) er0 Ar) (μ ρ0 e0) =
+    Integration (fun v => μ (ρ1[x → v]) er1 Ar) (μ ρ1 e1).
 
 Axiom lemma_1 :
   forall {A B} (f : A -> B -> R) (μx : Meas A) (μy : Meas B),
@@ -1183,19 +919,22 @@ Proof.
   with (fun va => μ (ρ1[x → va]) er1 A);
 [| extensionality y; auto].
 
-
+  eapply WISHFUL_THINKING; eauto.
+  intros.
+  eapply Hr.
+  apply extend_grel; auto.
 Qed.
 
-Definition AExp_if_applicable e Γ τ :=
+Definition AExp_related_if_applicable e Γ τ :=
   match e with
   | EA e' => (AEXP Γ ⊢ e' ≈ e' : τ)
   | _ => True
   end.
-Hint Unfold AExp_if_applicable.
+Hint Unfold AExp_related_if_applicable.
 
 Lemma fundamental_properties Γ e τ :
   (TC Γ ⊢ e : τ) ->
-  (EXP Γ ⊢ e ≈ e : τ) /\ AExp_if_applicable e Γ τ.
+  (EXP Γ ⊢ e ≈ e : τ) /\ AExp_related_if_applicable e Γ τ.
 Proof.
   intros.
   induction H; try (split; [|auto; fail]).
