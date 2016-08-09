@@ -1,5 +1,5 @@
-Add LoadPath "Topology".
-Add LoadPath "ZornsLemma".
+(* Add LoadPath "Topology". *)
+Add LoadPath "ZornsLemma" as ZornsLemma.
 
 Require Import Reals.
 Require Import List.
@@ -7,15 +7,14 @@ Require Import Fourier.
 Require Import Basics.
 Require Import Ensembles.
 Require Import ZornsLemma.IndexedFamilies.
-
-Check Ensembles.Complement.
+Require Import Coq.Logic.FunctionalExtensionality.
+Require Import Coq.Logic.ProofIrrelevance.
 
 Notation "∅" := Empty_set.
 Notation "x ∈ X" := (In X x) (at level 80, no associativity).
 Notation "x ∉ X" := (~ In X x) (at level 80, no associativity).
 Notation " g ∘ f " := (compose g f)
   (at level 40, left associativity).
-
 Definition preimage {A B} (f : A -> B) : Ensemble B -> Ensemble A :=
   fun bs a => f a ∈ bs.
 
@@ -26,7 +25,8 @@ Module Type σAlgebra.
 
   Axiom contains_empty : ∅ ∈ Σ.
   Axiom closed_comp : forall σ, σ ∈ Σ -> Ensembles.Complement σ ∈ Σ.
-  Axiom closed_union : forall F : IndexedFamily nat X,
+  Axiom closed_union : forall σ0 σ1, σ0 ∈ Σ -> σ1 ∈ Σ -> Union σ0 σ1 ∈ Σ.
+  Axiom closed_countable_union : forall F : IndexedFamily nat X,
       (forall n, F n ∈ Σ) ->
       IndexedUnion F ∈ Σ.
 
@@ -48,8 +48,18 @@ Next Obligation.
   fourier.
 Qed.
 
+Program Definition eNNR_leq (a b : eNNR) : Prop :=
+  match (a, b) with
+  | (NNR a', NNR b') => a' <= b'
+  | (Infty, NNR b') => False
+  | (_, Infty) => True
+  end.
+
+Notation "x ≤ y" := (eNNR_leq x y) (at level 70, no associativity).
+
+
 Program Definition eNNR_0 := NNR (mknonnegreal 0 _).
-Solve Obligations using fourier.
+Solve Obligations with fourier.
 
 Program Definition NNR_eNNR_mult (a : nonnegreal) (b : eNNR) : eNNR :=
   if Req_EM_T a 0
@@ -63,7 +73,7 @@ Next Obligation.
 Qed.
 
 Axiom infinite_eNNR_sum : (nat -> eNNR) -> eNNR.
-Axiom eNNR_sup : (nat -> eNNR) -> eNNR.
+Axiom eNNR_sup : forall {A}, (A -> eNNR) -> eNNR.
 
 Module Type Measure (σAlg : σAlgebra).
   Import σAlg.
@@ -92,14 +102,73 @@ Module Type Measure (σAlg : σAlgebra).
   Definition Measurable (f : X -> eNNR) : Prop :=
     forall t : R, preimage f (R_lt_eNNR t) ∈ Σ.
 
-  Definition SimpleFn := list (nonnegreal * {σ : Ensemble X & σ ∈ Σ}).
+  Definition SimpleFn := list (nonnegreal * {σ : Ensemble X | σ ∈ Σ}).
+
+  Fixpoint SimpleEval (f : SimpleFn) (x : X) : eNNR :=
+    match f with
+    | nil => eNNR_0
+    | cons (a, i) f' => eNNR_plus
+                          (if Σ_dec x (proj1_sig i) (proj2_sig i) then NNR a else eNNR_0)
+                          (SimpleEval f' x)
+    end.
 
   Fixpoint SimpleInt (s : SimpleFn) : eNNR :=
     match s with
       | nil => eNNR_0
-      | cons (a, i) s' => eNNR_plus (NNR_eNNR_mult a (μ (projT1 i) (projT2 i)))
+      | cons (a, i) s' => eNNR_plus (NNR_eNNR_mult a (μ (proj1_sig i) (proj2_sig i)))
                           (SimpleInt s')
     end.
 
   Definition NNInt f : Measurable f -> eNNR :=
-    eNNR_sup
+    fun f_mbl =>
+      eNNR_sup
+        (fun sp : {s : SimpleFn |
+                   forall x,
+                      eNNR_0 ≤ SimpleEval s x /\
+                      SimpleEval s x ≤ f x} =>
+           SimpleInt (proj1_sig sp)).
+
+  Theorem simple_is_measurable :
+    forall s : SimpleFn,
+      Measurable (SimpleEval s).
+  Proof.
+    intros.
+    intro.
+    induction s. {
+      assert (SimpleEval nil = const eNNR_0) by auto.
+      rewrite H.
+      clear H.
+      unfold preimage, const.
+      unfold In at 2.
+
+      unfold R_lt_eNNR.
+      unfold eNNR_0.
+      simpl.
+
+      induction (Rlt_dec t 0). {
+        rewrite (Extensionality_Ensembles (fun _ : X => t < 0) (Ensembles.Complement ∅)). {
+          exact (closed_comp _ contains_empty).
+        } {
+          split; unfold Included; intros x _; auto.
+          intro H.
+          case H.
+        }
+      } {
+        rewrite (Extensionality_Ensembles (fun _ : X => t < 0) ∅). {
+          exact contains_empty.
+        } {
+          split; unfold Included; intros x H; contradict H; auto.
+        }
+      }
+    } {
+      destruct a as [n [σ Hσ]].
+      simpl.
+      unfold preimage in *.
+    }
+
+
+  Qed.
+
+  Theorem NNInt_extends_SimpleInt :
+    forall s : SimpleFn,
+      SimpleInt s = NNInt (SimpleEval s) _.

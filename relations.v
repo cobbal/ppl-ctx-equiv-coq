@@ -886,6 +886,18 @@ Axiom WISHFUL_THINKING :
     Integration (fun v => μ (ρ0[x → v]) er0 Ar) (μ ρ0 e0) =
     Integration (fun v => μ (ρ1[x → v]) er1 Ar) (μ ρ1 e1).
 
+Axiom WISHFUL_THINKING_2 :
+  forall (τ : Ty)
+         (A' : Event Val)
+         (μ0 μ1 : Meas Val)
+         (μ0' μ1' : Val -> Meas Val),
+    (forall A, AREL A ∈ A[τ] -> μ0 A = μ1 A) ->
+    (forall (v0 v1 : Val),
+        (VREL v0, v1 ∈ V[τ]) ->
+        μ0' v0 A' = μ1' v1 A') ->
+    Integration (fun v => μ0' v A') μ0 =
+    Integration (fun v => μ1' v A') μ1.
+
 Axiom lemma_1 :
   forall {A B} (f : A -> B -> R) (μx : Meas A) (μy : Meas B),
     Integration (fun x => Integration (fun y => f x y) μy) μx =
@@ -912,18 +924,28 @@ Proof.
   repeat rewrite lemma_1 with (μx := μEntropy).
 
   replace (fun y => Integration _ _)
-  with (fun va => μ (ρ0[x → va]) er0 A);
+  with (fun v => μ (ρ0[x → v]) er0 A);
 [| extensionality y; auto].
 
   replace (fun y => Integration _ _)
-  with (fun va => μ (ρ1[x → va]) er1 A);
+  with (fun v => μ (ρ1[x → v]) er1 A);
 [| extensionality y; auto].
 
-  eapply WISHFUL_THINKING; eauto.
+  (* eapply (WISHFUL_THINKING_2 *)
+  (*          τ A *)
+  (*          (μ ρ0 (EC e0)) (μ ρ1 (EC e1)) *)
+  (*          (fun v => μ (ρ0[x → v]) er0) (fun v => μ (ρ1[x → v]) er1) *)
+  (*       ); eauto. *)
+
+  eapply WISHFUL_THINKING_2 with
+    (μ0' := fun v => μ (ρ0[x → v]) er0)
+    (μ1' := fun v => μ (ρ1[x → v]) er1); eauto.
+
   intros.
-  eapply Hr.
+  apply Hr; auto.
   apply extend_grel; auto.
 Qed.
+
 
 Definition AExp_related_if_applicable e Γ τ :=
   match e with
