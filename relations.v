@@ -1,3 +1,5 @@
+(* Tested with coq 8.5pl1 *)
+
 Require Import Basics.
 Require Import Reals.
 Require Import Ensembles.
@@ -5,7 +7,6 @@ Require Import Coq.Logic.FunctionalExtensionality.
 Require Import Coq.Logic.ProofIrrelevance.
 
 Local Open Scope R.
-
 
 Record nnr := mknnr { _r : R; nnr_pos : 0 <= _r }.
 Notation "R+" := nnr.
@@ -30,7 +31,7 @@ Notation "a + b" := (nnr_plus a b).
 Program Definition nnr_0 := mknnr 0 (Rle_refl _).
 Program Definition nnr_1 := mknnr 1 Rle_0_1.
 
-Notation "a  '_>_'  b" := (Rgt_dec (_r a) (_r b)) (at level 70, no associativity).
+Notation "a  '[>]'  b" := (Rgt_dec (_r a) (_r b)) (at level 70, no associativity).
 
 Lemma nnr_eq_is_real_eq :
   forall (a b : R+), _r a = _r b -> a = b.
@@ -56,10 +57,8 @@ Parameter Var_eq_dec : forall x y : Var, {x = y} + {x <> y}.
 Inductive Ty :=
 | ℝ : Ty
 | Arrow : Ty -> Ty -> Ty
-| Prod : Ty -> Ty -> Ty
 .
 Notation "x ~> y" := (Arrow x y) (at level 69, right associativity, y at level 70).
-Notation "x ⨉ y" := (Prod x y) (at level 70).
 
 Inductive Expr :=
 | e_let : Var -> CExpr -> Expr -> Expr
@@ -128,7 +127,7 @@ and "'TC_C' Γ ⊢ e : τ" := (tc (Γ := Γ) (EC e) τ).
 Inductive Val :=
 | v_real : R+ -> Val
 | v_clo : Var -> Expr -> Env Val -> Val
-| v_pair : Val -> Val -> Val.
+.
 
 Definition Entropy := nat -> {r : R+ | 0 <= _r r /\ _r r <= 1}.
 
@@ -263,19 +262,19 @@ Axiom Integration_linear :
   forall {A} (μ : Meas A) (c : R+) (f : A -> R+),
     c * Integration f μ = Integration (fun x => c * f x) μ.
 
+Definition bool_of_dec {A B} : sumbool A B -> bool :=
+  fun x => if x then true else false.
+
 Axiom lebesgue_pos_measure : Meas R+.
 Axiom lebesgue_pos_measure_interval :
-  forall r : R+,
-              lebesgue_pos_measure (fun x : R+ =>
-                                      if Rgt_dec (_r r) (_r x) then true else false) = r.
-
+  forall (r : R+),
+    lebesgue_pos_measure (fun x => bool_of_dec (r [>] x)) = r.
 
 Axiom riemann_def_of_lebesgue_integration :
   forall {A} μ (f : A -> R+),
     Integration f μ =
     Integration
-      (fun t =>
-         μ (fun x => if f x _>_ t then true else false))
+      (fun t => μ (fun x => bool_of_dec (f x [>] t)))
       lebesgue_pos_measure.
 
 Axiom int_const_entropy :
@@ -331,11 +330,6 @@ Fixpoint V_rel τ v0 v1 : Prop :=
                            (ρ1[x1 → va1], e1)
                 | _, _ => False
                 end
-  | τl ⨉ τr => match v0, v1 with
-               | v_pair vl0 vr0, v_pair vl1 vr1 =>
-                 V_rel τl vl0 vl1 /\ V_rel τr vr0 vr1
-               | _, _ => False
-               end
   end
 where "'VREL' v0 , v1 ∈ V[ τ ]" := (V_rel τ v0 v1)
 .
@@ -360,13 +354,6 @@ Record env_models {ρ : Env Val} {Γ : Env Ty} : Type :=
   }.
 Notation "'ENV' ρ ⊨ Γ" := (@env_models ρ Γ) (at level 69, no associativity).
 
-(* record G_rel (Γ : env ty) (ρ : env val) : Type := *)
-(*   (dom_match : ∀ x, lookup Γ x = none ↔ lookup ρ x = none) *)
-(*   (values : Π x τ v, *)
-(*     Π (Γx_eq : lookup Γ x = some τ) *)
-(*       (ρx_eq : lookup ρ x = some v), *)
-(*       V_rel τ v) *)
-
 Record G_rel {Γ : Env Ty} {ρ0 ρ1 : Env Val}: Type :=
   {
     G_rel_modeling0 : ENV ρ0 ⊨ Γ;
@@ -385,29 +372,22 @@ Notation "'GREL' ρ0 , ρ1 ∈ G[ Γ ]" :=
 Definition related_exprs (Γ : Env Ty) (τ : Ty) (e0 e1 : Expr) : Prop :=
   (TC Γ ⊢ e0 : τ) /\
   (TC Γ ⊢ e1 : τ) /\
-  forall ρ0 ρ1,
-    GREL ρ0, ρ1 ∈ G[Γ] ->
-    EREL (ρ0, e0), (ρ1, e1) ∈ E[τ].
+  forall {ρ0 ρ1},
+    (GREL ρ0, ρ1 ∈ G[Γ]) ->
+    (EREL (ρ0, e0), (ρ1, e1) ∈ E[τ]).
 Notation "'EXP' Γ ⊢ e0 ≈ e1 : τ" :=
   (related_exprs Γ τ e0 e1)
     (at level 69, e0 at level 99, e1 at level 99, no associativity).
 Definition related_aexprs (Γ : Env Ty) (τ : Ty) (e0 e1 : AExpr) :=
   (TC_A Γ ⊢ e0 : τ) /\
   (TC_A Γ ⊢ e1 : τ) /\
-  forall ρ0 ρ1,
-    GREL ρ0, ρ1 ∈ G[Γ] ->
-    EAREL (ρ0, e0), (ρ1, e1) ∈ E[τ].
+  forall {ρ0 ρ1},
+    (GREL ρ0, ρ1 ∈ G[Γ]) ->
+    (EAREL (ρ0, e0), (ρ1, e1) ∈ E[τ]).
 Notation "'AEXP' Γ ⊢ e0 ≈ e1 : τ" :=
   (related_aexprs Γ τ e0 e1)
     (at level 69, e0 at level 99, e1 at level 99, no associativity).
 
-(* this won't be true without a real definition of contexts *)
-Definition obs_equiv (e1 e2 : Expr) :=
-  forall (C : Expr -> Expr) (A : Event Val),
-    μ empty_env (C e1) A = μ empty_env (C e2) A.
-Notation "e0 '=ctx' e1" := (obs_equiv e0 e1) (at level 60, no associativity).
-
-Ltac split3 := split; [|split].
 (* absurdly common typo I'm sick of correcting *)
 Ltac inductino a := induction a.
 
@@ -425,15 +405,16 @@ Lemma compat_real Γ r :
   AEXP Γ ⊢ e_real r ≈ e_real r : ℝ.
 Proof.
   repeat constructor.
-  intros.
+  intros ρ0 ρ1 Hρ.
   exists (v_real r, v_real r); simpl.
-  split3; auto; apply EReal.
+  repeat constructor.
 Qed.
 
 Lemma compat_ea_real Γ r :
   EXP Γ ⊢ EA (e_real r) ≈ EA (e_real r) : ℝ.
 Proof.
-  repeat constructor; intros; auto.
+  repeat constructor.
+  intros ρ0 ρ1 Hρ.
   intros A0 A1 HA.
 
   congruence_μ.
@@ -460,14 +441,16 @@ Lemma compat_var Γ x τ :
   Γ x = Some τ ->
   AEXP Γ ⊢ `x ≈ `x : τ.
 Proof.
-  repeat constructor; intros; auto.
+  intros.
+  repeat constructor; auto.
 
-  induction (env_val_models (G_rel_modeling0 X) x τ H) as [v0 Hv0].
-  induction (env_val_models (G_rel_modeling1 X) x τ H) as [v1 Hv1].
-  pose proof (G_rel_V X) H Hv0 Hv1.
+  intros ρ0 ρ1 Hρ.
 
-  exists (v0, v1).
-  simpl.
+  induction (env_val_models (G_rel_modeling0 Hρ) x τ H) as [v0 Hv0].
+  induction (env_val_models (G_rel_modeling1 Hρ) x τ H) as [v1 Hv1].
+  pose proof (G_rel_V Hρ H Hv0 Hv1) as Hv.
+
+  exists (v0, v1); simpl.
   repeat constructor; auto.
 Qed.
 
@@ -475,27 +458,29 @@ Lemma compat_ea_var Γ x τ :
   Γ x = Some τ ->
   EXP Γ ⊢ EA (`x) ≈ EA (`x) : τ.
 Proof.
-  repeat constructor; intros; auto.
-
-  induction (env_val_models (G_rel_modeling0 X) x τ H) as [v0 Hv0].
-  induction (env_val_models (G_rel_modeling1 X) x τ H) as [v1 Hv1].
-  pose proof (G_rel_V X) H Hv0 Hv1.
-
+  intros.
+  repeat constructor; auto.
+  intros ρ0 ρ1 Hρ.
   intros A0 A1 HA.
+
+  induction (env_val_models (G_rel_modeling0 Hρ) x τ H) as [v0 Hv0].
+  induction (env_val_models (G_rel_modeling1 Hρ) x τ H) as [v1 Hv1].
+  pose proof (G_rel_V Hρ H Hv0 Hv1) as Hv.
 
   congruence_μ.
 
   unfold evalin, ev, ew.
-  pose proof EEA _ σ (EVar _ Hv0) as E0.
-  pose proof EEA _ σ (EVar _ Hv1) as E1.
+  pose proof EEA _ σ (EVar _ Hv0) as EVAL_0.
+  pose proof EEA _ σ (EVar _ Hv1) as EVAL_1.
 
   decide_eval ρ0 as [ve0 w0 ex0 u0].
   decide_eval ρ1 as [ve1 w1 ex1 u1].
 
-  injection (u0 (_, _) E0); intros.
-  injection (u1 (_, _) E1); intros.
+  injection (u0 (_, _) EVAL_0); intros.
+  injection (u1 (_, _) EVAL_1); intros.
   subst.
-  replace (A1 v1) with (A0 v0); auto.
+  do 2 f_equal.
+  auto.
 Qed.
 
 
@@ -505,7 +490,7 @@ Lemma extend_grel {Γ x ρ0 ρ1 v0 v1 τ} :
   (GREL ρ0 [x → v0], ρ1 [x → v1] ∈ G[Γ[x → τ]]).
 Proof.
   split; try split; intro x';
-  unfold extend;
+unfold extend;
 induction Var_eq_dec;
 try (split; intro stupid; inversion stupid; fail);
 try apply X;
@@ -524,17 +509,17 @@ Lemma compat_lam Γ x body0 body1 τa τr :
   (EXP Γ[x → τa] ⊢ body0 ≈ body1 : τr) ->
   (AEXP Γ ⊢ λ x ; τa, body0 ≈ λ x ; τa, body1 : (τa ~> τr)).
 Proof.
-  intros.
-  destruct H as [tc0 [tc1 H]].
-  repeat constructor; auto.
+  intros Hbody.
+  repeat constructor; try apply Hbody.
+  intros ρ0 ρ1 Hρ.
 
-  intros.
-  exists (v_clo x body0 ρ0, v_clo x body1 ρ1).
+  exists (v_clo x body0 ρ0, v_clo x body1 ρ1); simpl.
+  repeat constructor.
 
-  split3; simpl; try constructor.
-  intros.
+  intros va0 va1 Hva.
+  intros A0 A1 HA.
 
-  apply H; auto.
+  apply Hbody; auto.
   apply extend_grel; auto.
 Qed.
 
@@ -542,45 +527,44 @@ Lemma compat_ea_lam Γ x body0 body1 τa τr :
   (EXP Γ[x → τa] ⊢ body0 ≈ body1 : τr) ->
   (EXP Γ ⊢ EA (λ x ; τa, body0) ≈ EA (λ x ; τa, body1) : (τa ~> τr)).
 Proof.
-  intros.
-  destruct H as [TC0 [TC1 H]].
-  split3; try (apply TCLam; assumption).
-  intros.
+  intro Hbody.
+  repeat constructor; try apply Hbody.
+  intros ρ0 ρ1 Hρ.
   intros A0 A1 HA.
 
   congruence_μ.
 
-  pose proof EEA _ σ (ELam ρ0 x τa body0) as E0.
-  pose proof EEA _ σ (ELam ρ1 x τa body1) as E1.
+  pose proof EEA _ σ (ELam ρ0 x τa body0) as EVAL_0.
+  pose proof EEA _ σ (ELam ρ1 x τa body1) as EVAL_1.
 
   unfold evalin, ev, ew.
   decide_eval ρ0 as [v0 w0 ex0 u0].
   decide_eval ρ1 as [v1 w1 ex1 u1].
 
-  injection (u0 (_, _) E0); intros tH0a tH0b.
-  injection (u1 (_, _) E1); intros tH1a tH1b.
-  rewrite tH0a, tH0b, tH1a, tH1b in *.
-  clear tH0a tH0b tH1a tH1b w0 v0 w1 v1 u0 u1 ex0 ex1.
-  replace (A1 (v_clo x body1 ρ1)) with (A0 (v_clo x body0 ρ0)); [reflexivity|].
+  injection (u0 (_, _) EVAL_0); intros tH0a tH0b.
+  injection (u1 (_, _) EVAL_1); intros tH1a tH1b.
+  subst.
+
+  do 2 f_equal.
 
   apply HA.
-  simpl.
-  intros.
-  apply H; auto.
+  intros va0 va1 Hva.
+
+  apply Hbody; auto.
   apply extend_grel; auto.
 Qed.
 
-Ltac riemann_it :=
-  rewrite riemann_def_of_lebesgue_integration;
-  apply eq_sym;
-  rewrite riemann_def_of_lebesgue_integration;
-  apply eq_sym;
-  f_equal;
-  extensionality t.
+(* Ltac riemann_it := *)
+(*   rewrite riemann_def_of_lebesgue_integration; *)
+(*   apply eq_sym; *)
+(*   rewrite riemann_def_of_lebesgue_integration; *)
+(*   apply eq_sym; *)
+(*   f_equal; *)
+(*   extensionality t. *)
 
-Ltac riemann_biimplicate :=
-         induction Rgt_dec as [gt0 | ngt0], Rgt_dec as [gt1 | ngt1]; auto;
-         [ contradict ngt1 | contradict ngt0 ].
+(* Ltac riemann_biimplicate := *)
+(*          induction Rgt_dec as [gt0 | ngt0], Rgt_dec as [gt1 | ngt1]; auto; *)
+(*          [ contradict ngt1 | contradict ngt0 ]. *)
 
 Axiom prod_meas : forall {A B}, Meas A -> Meas B -> Meas (A * B).
 
@@ -617,7 +601,7 @@ Admitted.
 
 Lemma if_bool_if_simplify :
   forall {A B C} (x : {A} + {B}) (a b : C),
-  (if (if x then true else false) then a else b) = (if x then a else b).
+  (if bool_of_dec x then a else b) = (if x then a else b).
 Proof.
   intros.
   induction x; auto.
@@ -679,15 +663,6 @@ Definition preimage {A B R} (f : A -> B) : (B -> R) -> (A -> R) :=
 
 Definition ensemble_of_event {X} : Event X -> Ensemble X :=
   fun A x => A x = true.
-
-Definition a_product_rel (M0 : Ensemble (Event Val)) :
-  Ensemble (Event (option Val * option Val)) :=
-  fun (x : Event (option Val * option Val)) =>
-    M0 (fun v : Val =>
-          match v with
-          | v_pair va ((v_clo _ _ _) as vf) => x (Some va, Some vf)
-          | _ => false
-          end).
 
 Definition at_most_one {A} (P : A -> Prop) :=
   forall x, P x -> (forall x', P x' -> x = x').
@@ -758,28 +733,27 @@ Proof.
   destruct Ha as [TCa0 [TCa1 Ha]].
   repeat econstructor; eauto.
 
-  intros.
-  pose proof (Hf _ _ X) as Hf.
-  pose proof (Ha _ _ X) as Ha.
+  intros ρ0 ρ1 Hρ.
   intros A0 A1 HA.
+
+  pose proof (Hf _ _ Hρ) as Hf.
+  pose proof (Ha _ _ Hρ) as Ha.
 
   destruct Hf as [[vf0 vf1] [f_vrel [ev_f0 ev_f1]]].
   destruct Ha as [[va0 va1] [a_vrel [ev_a0 ev_a1]]].
   unfold fst, snd in *.
 
-  induction vf0, vf1; try (contradict f_vrel; fail).
-  simpl in f_vrel.
-  pose proof f_vrel va0 va1 a_vrel A0 A1 HA.
+  induction vf0, vf1; try tauto.
 
   rename
     v into x0, e into body0, e0 into ρ_clo0,
   v0 into x1, e1 into body1, e2 into ρ_clo1.
 
+  pose proof f_vrel va0 va1 a_vrel A0 A1 HA as f_vrel.
 
   unfold μ.
 
-  erewrite unfold_app_inside_evalin; eauto.
-  erewrite unfold_app_inside_evalin; eauto.
+  do 2 (erewrite unfold_app_inside_evalin; eauto).
 Qed.
 
 Lemma compat_plus Γ el0 er0 el1 er1 :
@@ -788,13 +762,14 @@ Lemma compat_plus Γ el0 er0 el1 er1 :
   (EXP Γ ⊢ EC (e_plus el0 er0) ≈ EC (e_plus el1 er1) : ℝ).
 Proof.
   intros Hl Hr.
-  destruct Hl as [TCl0 [TCl1 Hl]].
-  destruct Hr as [TCr0 [TCr1 Hr]].
-  split3; try (apply TCPlus; assumption).
-  intros.
-  pose proof (Hl _ _ X) as Hl.
-  pose proof (Hr _ _ X) as Hr.
+  destruct Hl as [tc_l0 [tc_l1 Hl]].
+  destruct Hr as [tc_r0 [tc_r1 Hr]].
+  repeat constructor; auto.
+  intros ρ0 ρ1 Hρ.
   intros A0 A1 HA.
+
+  pose proof (Hl _ _ Hρ) as Hl.
+  pose proof (Hr _ _ Hρ) as Hr.
 
   congruence_μ.
 
@@ -802,53 +777,52 @@ Proof.
   destruct Hr as [[vr0 vr1] [r_vrel [ev_r0 ev_r1]]].
   unfold fst, snd in *.
 
-  induction vl0, vl1; try (contradict l_vrel; fail).
-  induction vr0, vr1; try (contradict r_vrel; fail).
+  induction vl0, vl1; try tauto.
+  induction vr0, vr1; try tauto.
   simpl in l_vrel, r_vrel.
   subst.
 
-  pose proof (EEC _ (EPlus _ σ ev_l0 ev_r0)) as E0.
-  pose proof (EEC _ (EPlus _ σ ev_l1 ev_r1)) as E1.
+  pose proof (EEC _ (EPlus _ σ ev_l0 ev_r0)) as EVAL_0.
+  pose proof (EEC _ (EPlus _ σ ev_l1 ev_r1)) as EVAL_1.
 
   unfold evalin, ev, ew.
   decide_eval ρ0 as [v0 w0 ex0 u0].
   decide_eval ρ1 as [v1 w1 ex1 u1].
 
-  injection (u0 (_, _) E0); intros.
-  injection (u1 (_, _) E1); intros.
+  injection (u0 (_, _) EVAL_0); intros.
+  injection (u1 (_, _) EVAL_1); intros.
   subst.
-  auto.
 
   do 2 f_equal.
   apply HA.
   simpl.
-  auto.
+  reflexivity.
 Qed.
 
 Lemma compat_sample Γ :
   EXP Γ ⊢ EC e_sample ≈ EC e_sample : ℝ.
 Proof.
-  split3; try apply TCSample.
-  intros.
+  repeat constructor.
+  intros ρ0 ρ1 Hρ.
   intros A0 A1 HA.
 
   congruence_μ.
 
-  pose proof EEC _ (ESample ρ0 σ) as E0.
-  pose proof EEC _ (ESample ρ1 σ) as E1.
+  pose proof EEC _ (ESample ρ0 σ) as EVAL_0.
+  pose proof EEC _ (ESample ρ1 σ) as EVAL_1.
 
   unfold evalin, ev, ew.
 
   decide_eval ρ0 as [v0 w0 e0 u0].
   decide_eval ρ1 as [v1 w1 e1 u1].
-  injection (u0 (_, _) E0); intros.
-  injection (u1 (_, _) E1); intros.
+  injection (u0 (_, _) EVAL_0); intros.
+  injection (u1 (_, _) EVAL_1); intros.
   subst.
 
   do 2 f_equal.
   apply HA.
   simpl.
-  auto.
+  reflexivity.
 Qed.
 
 Lemma compat_factor Γ e0 e1:
@@ -857,36 +831,35 @@ Lemma compat_factor Γ e0 e1:
 Proof.
   intro H.
   destruct H as [TC0 [TC1 H]].
-  split3; try (apply TCFactor; assumption).
-  intros.
-  pose proof H ρ0 ρ1 X as H.
-
+  repeat constructor; auto.
+  intros ρ0 ρ1 Hρ.
   intros A0 A1 HA.
+
+  pose proof H ρ0 ρ1 Hρ as H.
 
   congruence_μ.
 
   destruct H as [[v0 v1] [vrel [ev_0 ev_1]]].
   unfold fst, snd in *.
 
-  induction v0, v1; try (contradict vrel; fail).
+  induction v0, v1; try tauto.
   simpl in vrel.
   subst.
 
-  pose proof EEC _ (EFactor _ σ ev_0) as E0.
-  pose proof EEC _ (EFactor _ σ ev_1) as E1.
+  pose proof EEC _ (EFactor _ σ ev_0) as EVAL_0.
+  pose proof EEC _ (EFactor _ σ ev_1) as EVAL_1.
 
   unfold evalin, ev, ew.
   decide_eval ρ0 as [v0 w0 ex0 u0].
   decide_eval ρ1 as [v1 w1 ex1 u1].
-  injection (u0 (_, _) E0); intros.
-  injection (u1 (_, _) E1); intros.
+  injection (u0 (_, _) EVAL_0); intros.
+  injection (u1 (_, _) EVAL_1); intros.
   subst.
-  auto.
 
   do 2 f_equal.
   apply HA.
   simpl.
-  auto.
+  reflexivity.
 Qed.
 
 Definition resist_folding {A} (x : A) := x.
@@ -914,16 +887,16 @@ try decide_eval (ρ[x → v1]) as [v2 w2 ex2 u2]; try (nnr; simpl; ring). {
     inversion ex0; subst.
     inversion ex1; subst.
 
-    pose proof ELet ρ σ H1 ex2 as E0.
-    injection (u0 (_, _) E0).
+    pose proof ELet ρ σ H1 ex2 as EVAL_0.
+    injection (u0 (_, _) EVAL_0).
     intros.
     nnr.
     simpl.
     subst.
     rewrite H.
 
-    pose proof EEC _ H5 as E1.
-    injection (u1 (_, _) E1); intros; subst.
+    pose proof EEC _ H5 as EVAL_1.
+    injection (u1 (_, _) EVAL_1); intros; subst.
     injection (u2 (_, _) H6); intros; subst.
 
     rewrite Rmult_assoc.
@@ -934,8 +907,8 @@ try decide_eval (ρ[x → v1]) as [v2 w2 ex2 u2]; try (nnr; simpl; ring). {
     contradict not_ex.
     eexists (_, _).
 
-    pose proof EEC _ H5 as E1.
-    injection (u1 (_, _) E1); intros; subst.
+    pose proof EEC _ H5 as EVAL_1.
+    injection (u1 (_, _) EVAL_1); intros; subst.
 
     exact H6.
   } {
@@ -943,8 +916,8 @@ try decide_eval (ρ[x → v1]) as [v2 w2 ex2 u2]; try (nnr; simpl; ring). {
     contradict not_ex.
     eexists (_, _).
 
-    pose proof EEC _ H5 as E0.
-    exact E0.
+    pose proof EEC _ H5 as EVAL_0.
+    exact EVAL_0.
   } {
     contradict not_ex.
     eexists (_, _).
@@ -980,8 +953,7 @@ Proof.
 
   do 2 f_equal.
   unfold option_map, evalin.
-  induction ev; auto.
-  induction ev; auto.
+  induction ev, ev; auto.
 Qed.
 
 Lemma meas_compat_integration :
@@ -998,15 +970,16 @@ Lemma meas_compat_integration :
 Proof.
   intros.
 
-  riemann_it.
+  rewrite (riemann_def_of_lebesgue_integration μ0).
+  rewrite (riemann_def_of_lebesgue_integration μ1).
+  f_equal.
+  extensionality t.
 
   apply H.
-  unfold A_rel.
-  intros.
+  intros v0 v1 Hv.
 
-  riemann_biimplicate.
-  - erewrite <- H0; eauto.
-  - erewrite H0; eauto.
+  rewrite (H0 _ _ Hv).
+  reflexivity.
 Qed.
 
 Lemma compat_let Γ x e0 er0 e1 er1 τ τr :
@@ -1014,36 +987,31 @@ Lemma compat_let Γ x e0 er0 e1 er1 τ τr :
   (EXP (Γ[x → τ]) ⊢ er0 ≈ er1 : τr) ->
   (EXP Γ ⊢ e_let x e0 er0 ≈ e_let x e1 er1 : τr).
 Proof.
-  intros.
+  intros He Her.
+  destruct He as [tc_e0 [tc_e1 He]].
+  destruct Her as [tc_er0 [tc_er1 Her]].
+  repeat econstructor; eauto.
 
-  destruct H as [tc_e0 [tc_e1 H]].
-  destruct H0 as [TC_er0 [tc_er1 Hr]].
-
-  repeat econstructor; intros; eauto.
-
-  pose proof H _ _ X as e0_e1_rel.
+  intros ρ0 ρ1 Hρ.
   intros A0 A1 HA.
+
   unfold μ.
 
-  erewrite 2 by_theorem_15; eauto; try apply X.
+  erewrite 2 by_theorem_15; eauto; try apply Hρ.
 
   rewrite 2 lemma_1 with (μx := μEntropy).
 
-  replace (fun y => Integration _ _)
-  with (fun v => μ (ρ0[x → v]) er0 A0);
-[| extensionality y; auto].
-
-  replace (fun y => Integration _ _)
-  with (fun v => μ (ρ1[x → v]) er1 A1);
-[| extensionality y; auto].
-
   eapply meas_compat_integration with
     (μ0' := fun v => μ (ρ0[x → v]) er0)
-    (μ1' := fun v => μ (ρ1[x → v]) er1); eauto.
-
-  intros.
-  apply Hr; auto.
-  apply extend_grel; auto.
+    (μ1' := fun v => μ (ρ1[x → v]) er1).
+  {
+    apply He.
+    apply Hρ.
+  } {
+    intros v0 v1 Hv.
+    apply Her; auto.
+    apply extend_grel; auto.
+  }
 Qed.
 
 
