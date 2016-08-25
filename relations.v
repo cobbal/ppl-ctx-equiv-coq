@@ -5,59 +5,11 @@ Require Import Reals.
 Require Import Ensembles.
 Require Import Coq.Logic.FunctionalExtensionality.
 Require Import Coq.Logic.ProofIrrelevance.
-
-SearchPattern (nat -> R).
-SearchAbout Rlt.
-SearchAbout Rmin.
-
-SearchAbout Rmult.
+Require Import nnr.
 
 Local Open Scope R.
 
 Notation "a  '⨉'  b" := (prod a b) (at level 40, left associativity).
-
-Record nnr := mknnr { _r : R; nnr_pos : 0 <= _r }.
-Notation "R+" := nnr.
-
-Program Definition nnr_mult (a b : R+) : R+ := mknnr (_r a * _r b) _.
-Next Obligation.
-  apply Rmult_le_pos.
-  apply a.
-  apply b.
-Defined.
-Hint Unfold nnr_mult.
-Notation "a  '[*]'  b" := (nnr_mult a b) (at level 40, left associativity).
-
-Program Definition nnr_plus (a b : R+) : R+ := mknnr (_r a + _r b) _.
-Next Obligation.
-  replace 0 with (0 + 0) by apply Rplus_0_l.
-  apply Rplus_le_compat; [apply a | apply b].
-Qed.
-Hint Unfold nnr_plus.
-Notation "a  '[+]'  b" := (nnr_plus a b) (at level 50, left associativity).
-
-Program Definition nnr_0 := mknnr 0 (Rle_refl _).
-Program Definition nnr_1 := mknnr 1 Rle_0_1.
-
-Notation "a  '[>]'  b" := (Rgt_dec (_r a) b) (at level 70, no associativity).
-
-Lemma nnr_eq_is_real_eq :
-  forall (a b : R+), _r a = _r b -> a = b.
-Proof.
-  intros.
-  destruct a as [a Ha], b as [b Hb].
-  simpl in *.
-  subst b.
-  f_equal.
-  apply proof_irrelevance.
-Qed.
-Ltac nnr := apply nnr_eq_is_real_eq.
-
-Theorem nnr_mult_comm (a b : R+) : a [*] b = b [*] a.
-Proof.
-  nnr.
-  apply Rmult_comm.
-Qed.
 
 Parameter Var : Type.
 Parameter Var_eq_dec : forall x y : Var, {x = y} + {x <> y}.
@@ -69,20 +21,16 @@ Inductive Ty :=
 Notation "x ~> y" := (Arrow x y) (at level 69, right associativity, y at level 70).
 
 Inductive Expr :=
-| e_let : Var -> Expr -> Expr -> Expr
-| e_app : AExpr -> AExpr -> Expr
-| e_factor : AExpr -> Expr
+| e_app : Expr -> Expr -> Expr
+| e_factor : Expr -> Expr
 | e_sample : Expr
-| e_plus : AExpr -> AExpr -> Expr
-| e_pure : AExpr -> Expr
-with AExpr :=
-| e_real : R -> AExpr
-| e_var : Var -> AExpr
-| e_lam : Var -> Expr -> AExpr
+| e_plus : Expr -> Expr -> Expr
+(* | e_pure : AExpr -> Expr *)
+(* with AExpr := *)
+| e_real : R -> Expr
+| e_var : Var -> Expr
+| e_lam : Var -> Expr -> Expr
 .
-
-(* Scheme expr_eac_rec := Induction for Expr Sort Prop *)
-(* with expr_ace_rec := Induction for AExpr Sort Prop *)
 
 Notation "` x" := (e_var x) (at level 69).
 Notation "'λ' x ,  e" := (e_lam x e) (at level 69, right associativity).
@@ -98,40 +46,29 @@ Definition env_dom_eq {A B} (envA : Env A) (envB : Env B) :=
   forall x, envA x = None <-> envB x = None.
 
 Reserved Notation "'TC' Γ ⊢ e : τ" (at level 70, e at level 99, no associativity).
-Reserved Notation "'TC_A' Γ ⊢ e : τ" (at level 70, e at level 99, no associativity).
 Inductive tc {Γ : Env Ty} : Expr -> Ty -> Prop :=
-| TCLet (x : Var) (e0 : Expr) (e1 : Expr) (τ0 τ1 : Ty)
-  : (TC Γ ⊢ e0 : τ0) ->
-    (TC (Γ[x → τ0]) ⊢ e1 : τ1) ->
-    (TC Γ ⊢ e_let x e0 e1 : τ1)
-| TCApp (e0 e1 : AExpr) (τa τr : Ty)
-  : (TC_A Γ ⊢ e0 : τa ~> τr) ->
-    (TC_A Γ ⊢ e1 : τa) ->
+| TCReal (r : R)
+  : (TC Γ ⊢ e_real r : ℝ)
+| TCVar (x : Var) (τ : Ty)
+  : Γ x = Some τ ->
+    (TC Γ ⊢ `x : τ)
+| TCLam (x : Var) (τa τr : Ty) (body : Expr)
+  : (TC (extend Γ x τa) ⊢ body : τr) ->
+    (TC Γ ⊢ λ x, body : τa ~> τr)
+| TCApp (e0 e1 : Expr) (τa τr : Ty)
+  : (TC Γ ⊢ e0 : τa ~> τr) ->
+    (TC Γ ⊢ e1 : τa) ->
     (TC Γ ⊢ e0 @ e1 : τr)
-| TCFactor (e : AExpr)
-  : (TC_A Γ ⊢ e : ℝ) ->
+| TCFactor (e : Expr)
+  : (TC Γ ⊢ e : ℝ) ->
     (TC Γ ⊢ e_factor e : ℝ)
 | TCSample
   : (TC Γ ⊢ e_sample : ℝ)
-| TCPlus (e0 e1 : AExpr)
-  : (TC_A Γ ⊢ e0 : ℝ) ->
-    (TC_A Γ ⊢ e1 : ℝ) ->
+| TCPlus (e0 e1 : Expr)
+  : (TC Γ ⊢ e0 : ℝ) ->
+    (TC Γ ⊢ e1 : ℝ) ->
     (TC Γ ⊢ e_plus e0 e1 : ℝ)
-| TCPure (e : AExpr) (τ : Ty)
-  : (TC_A Γ ⊢ e : τ) ->
-    (TC Γ ⊢ e_pure e : τ)
-
-| TCReal (r : R)
-  : (TC_A Γ ⊢ e_real r : ℝ)
-| TCVar (x : Var) (τ : Ty)
-  : Γ x = Some τ ->
-    (TC_A Γ ⊢ `x : τ)
-| TCLam (x : Var) (τa τr : Ty) (body : Expr)
-  : (TC (extend Γ x τa) ⊢ body : τr) ->
-    (TC_A Γ ⊢ λ x, body : τa ~> τr)
-
-where "'TC' Γ ⊢ e : τ" := (tc (Γ := Γ) e τ)
-and "'TC_A' Γ ⊢ e : τ" := (tc (Γ := Γ) (e_pure e) τ).
+where "'TC' Γ ⊢ e : τ" := (tc (Γ := Γ) e τ).
 
 Inductive Val :=
 | v_real : R -> Val
@@ -143,42 +80,37 @@ Definition Entropy := nat -> {r : R | 0 <= r <= 1}.
 Definition πL (σ : Entropy) : Entropy := fun n => σ (2 * n)%nat.
 Definition πR (σ : Entropy) : Entropy := fun n => σ (2 * n + 1)%nat.
 
-Definition eval_a (ρ : Env Val) (e : AExpr) : option Val :=
-  match e with
-  | `x => ρ x
-  | e_real r => Some (v_real r)
-  | e_lam x body => Some (v_clo x body ρ)
+Fixpoint π (n : nat) (σ : Entropy) : Entropy :=
+  match n with
+  | O => πR σ
+  | S n' => π n' (πL σ)
   end.
-
-Notation "'EVAL_A' ρ ⊢ e ⇓ v" := (eval_a ρ e = Some v)
-                                   (at level 69, e at level 99, no associativity).
 
 Reserved Notation "'EVAL' ρ , σ ⊢ e ⇓ v , w" (at level 69, e at level 99, no associativity).
 Inductive eval (ρ : Env Val) : Entropy -> Expr -> Val -> R+ -> Prop :=
-| ELet (σ : Entropy) {x : Var} {e0 e1 : Expr} {v0 v1 : Val} {w0 w1 : R+}
-  : (EVAL ρ, (πL σ) ⊢ e0 ⇓ v0, w0) ->
-    (EVAL (ρ[x → v0]), (πR σ) ⊢ e1 ⇓ v1, w1) ->
-    (EVAL ρ, σ ⊢ e_let x e0 e1 ⇓ v1, (w0 [*] w1))
-| EApp (σ : Entropy) {e0 e1 : AExpr}
+| EReal (σ : Entropy) (r : R)
+  : (EVAL ρ, σ ⊢ e_real r ⇓ v_real r, nnr_1)
+| ELam (σ : Entropy) (x : Var) (body : Expr)
+  : (EVAL ρ, σ ⊢ e_lam x body ⇓ v_clo x body ρ, nnr_1)
+| EVar (σ : Entropy) {x : Var} {v : Val}
+  : ρ x = Some v ->
+    (EVAL ρ, σ ⊢ `x ⇓ v, nnr_1)
+| EApp (σ : Entropy) {e0 e1 : Expr}
        {x : Var} {body : Expr} {ρ_clo : Env Val}
-       {v1 v2 : Val} {w : R+}
-  : (EVAL_A ρ ⊢ e0 ⇓ v_clo x body ρ_clo) ->
-    (EVAL_A ρ ⊢ e1 ⇓ v1) ->
-    (EVAL (ρ_clo[x → v1]), σ ⊢ body ⇓ v2, w) ->
-    (EVAL ρ, σ ⊢ e0 @ e1 ⇓ v2, w)
-| EFactor (σ : Entropy) {e : AExpr} {r : R} (rpos : 0 <= r)
-  : (EVAL_A ρ ⊢ e ⇓ v_real r) ->
-    (EVAL ρ, σ ⊢ e_factor e ⇓ v_real r, mknnr r rpos)
+       {v1 v2 : Val} {w0 w1 w2 : R+}
+  : (EVAL ρ, (π 0 σ) ⊢ e0 ⇓ v_clo x body ρ_clo, w0) ->
+    (EVAL ρ, (π 1 σ) ⊢ e1 ⇓ v1, w1) ->
+    (EVAL (ρ_clo[x → v1]), (π 2 σ) ⊢ body ⇓ v2, w2) ->
+    (EVAL ρ, σ ⊢ e0 @ e1 ⇓ v2, w0 [*] w1 [*] w2)
+| EFactor (σ : Entropy) {e : Expr} {r : R} {w : R+} (rpos : 0 <= r)
+  : (EVAL ρ, σ ⊢ e ⇓ v_real r, w) ->
+    (EVAL ρ, σ ⊢ e_factor e ⇓ v_real r, mknnr r rpos [*] w)
 | ESample (σ : Entropy)
   : (EVAL ρ, σ ⊢ e_sample ⇓ v_real (proj1_sig (σ 0%nat)), nnr_1)
-| EPlus (σ : Entropy) {e0 e1 : AExpr} {r0 r1 : R}
-  : (EVAL_A ρ ⊢ e0 ⇓ v_real r0) ->
-    (EVAL_A ρ ⊢ e1 ⇓ v_real r1) ->
-    (EVAL ρ, σ ⊢ e_plus e0 e1 ⇓ v_real (r0 + r1), nnr_1)
-| EPure σ e {v}
-  : (EVAL_A ρ ⊢ e ⇓ v) ->
-    (EVAL ρ, σ ⊢ e_pure e ⇓ v, nnr_1)
-with eval_c (ρ : Env Val) : Entropy -> Expr -> Val -> R+ -> Prop :=
+| EPlus (σ : Entropy) {e0 e1 : Expr} {r0 r1 : R} {w0 w1 : R+}
+  : (EVAL ρ, (π 0 σ) ⊢ e0 ⇓ v_real r0, w0) ->
+    (EVAL ρ, (π 1 σ) ⊢ e1 ⇓ v_real r1, w1) ->
+    (EVAL ρ, σ ⊢ e_plus e0 e1 ⇓ v_real (r0 + r1), w0 [*] w1)
 where "'EVAL' ρ , σ ⊢ e ⇓ v , w" := (eval ρ σ e v w)
 .
 
@@ -359,19 +291,6 @@ Definition E_rel (V_rel : Ty -> Val -> Val -> Prop) (τ : Ty) (c0 c1 : Config) :
   forall A0 A1, A_rel V_rel τ A0 A1 ->
             μ ρ0 e0 A0 = μ ρ1 e1 A1.
 
-Definition EA_rel (V_rel : Ty -> Val -> Val -> Prop) (τ : Ty) (c0 c1 : Env Val * AExpr) : Prop :=
-  let (ρ0, e0) := c0 in
-  let (ρ1, e1) := c1 in
-  exists vs : Val * Val,
-    V_rel τ (fst vs) (snd vs) /\
-    EVAL_A ρ0 ⊢ e0 ⇓ (fst vs) /\
-    EVAL_A ρ1 ⊢ e1 ⇓ (snd vs).
-
-  (* exists v0 v1 : Val, *)
-  (*   V_rel τ v0 v1 /\ *)
-  (*   EVAL_A ρ0 ⊢ e0 ⇓ v0 /\ *)
-  (*   EVAL_A ρ1 ⊢ e1 ⇓ v1. *)
-
 Reserved Notation "'VREL' v0 , v1 ∈ V[ τ ]"
          (at level 69, v0 at level 99, v1 at level 99, τ at level 99).
 Fixpoint V_rel τ v0 v1 : Prop :=
@@ -394,9 +313,6 @@ where "'VREL' v0 , v1 ∈ V[ τ ]" := (V_rel τ v0 v1)
 .
 Notation "'EREL' e0 , e1 ∈ E[ τ ]" :=
   (E_rel V_rel τ e0 e1)
-    (at level 69, e0 at level 99, e1 at level 99, τ at level 99).
-Notation "'EAREL' e0 , e1 ∈ E[ τ ]" :=
-  (EA_rel V_rel τ e0 e1)
     (at level 69, e0 at level 99, e1 at level 99, τ at level 99).
 Notation "'AREL' A0 , A1 ∈ A[ τ ]" :=
   (A_rel V_rel τ A0 A1)
@@ -436,18 +352,12 @@ Definition related_exprs (Γ : Env Ty) (τ : Ty) (e0 e1 : Expr) : Prop :=
 Notation "'EXP' Γ ⊢ e0 ≈ e1 : τ" :=
   (related_exprs Γ τ e0 e1)
     (at level 69, e0 at level 99, e1 at level 99, no associativity).
-Definition related_aexprs (Γ : Env Ty) (τ : Ty) (e0 e1 : AExpr) :=
-  (TC_A Γ ⊢ e0 : τ) /\
-  (TC_A Γ ⊢ e1 : τ) /\
-  forall {ρ0 ρ1},
-    (GREL ρ0, ρ1 ∈ G[Γ]) ->
-    (EAREL (ρ0, e0), (ρ1, e1) ∈ E[τ]).
-Notation "'AEXP' Γ ⊢ e0 ≈ e1 : τ" :=
-  (related_aexprs Γ τ e0 e1)
-    (at level 69, e0 at level 99, e1 at level 99, no associativity).
 
-(* absurdly common typo I'm sick of correcting *)
-Ltac inductino a := induction a.
+Definition dirac {A} (v : A) : Meas A :=
+  fun e => Indicator (e v).
+
+Definition is_dirac {A} (v : A) (m : Meas A) : Prop :=
+  m = dirac v.
 
 Ltac decide_eval' ρ v w e u :=
   let not_ex := fresh "not_ex" in
@@ -459,57 +369,76 @@ Tactic Notation "decide_eval" constr(ρ) "as"
 
 Ltac congruence_μ := unfold μ; f_equal; extensionality σ.
 
-Lemma compat_real Γ r :
-  AEXP Γ ⊢ e_real r ≈ e_real r : ℝ.
+Axiom int_const_entropy :
+  forall (v : R+)
+         (f : Entropy -> R+),
+     (forall x, f x = v) ->
+     Integration f μEntropy = v.
+
+Lemma const_real_is_atomic A r ρ :
+  (fun σ => evalin ρ (e_real r) A σ) = fun σ => Indicator (A (v_real r)).
 Proof.
-  repeat constructor.
-  intros ρ0 ρ1 Hρ.
-  exists (v_real r, v_real r); simpl.
-  repeat constructor.
+  extensionality σ.
+  unfold evalin, ev, ew.
+  decide_eval ρ as [v w ex u]; simpl in *.
+  inversion ex; subst.
+  nnr.
+  unfold nnr_mult.
+  simpl.
+  ring.
 Qed.
 
-Lemma compat_pure_real Γ r :
-  EXP Γ ⊢ e_pure (e_real r) ≈ e_pure (e_real r) : ℝ.
+Lemma const_real_is_dirac ρ r:
+  μ ρ (e_real r) = dirac (v_real r).
+Proof.
+  intros.
+  extensionality A.
+  unfold μ, dirac; simpl.
+  rewrite const_real_is_atomic.
+  apply int_const_entropy.
+  auto.
+Qed.
+
+Lemma compat_real Γ r :
+  EXP Γ ⊢ e_real r ≈ e_real r : ℝ.
 Proof.
   repeat constructor.
   intros ρ0 ρ1 Hρ.
   intros A0 A1 HA.
 
-  congruence_μ.
-
-  unfold evalin, ew, ev.
-  decide_eval ρ0 as [v0 w0 ex0 u0]; simpl in *.
-  decide_eval ρ1 as [v1 w1 ex1 u1]; simpl in *.
-
-  inversion ex0.
-  inversion ex1.
-  inversion H1.
-  inversion H6.
-  subst.
-
-  do 2 f_equal.
-
+  rewrite 2 const_real_is_dirac.
+  unfold dirac.
+  f_equal.
   apply HA.
-  simpl.
-  auto.
+  constructor.
 Qed.
 
 Lemma compat_var Γ x τ :
   Γ x = Some τ ->
-  AEXP Γ ⊢ `x ≈ `x : τ.
+  EXP Γ ⊢ `x ≈ `x : τ.
 Proof.
-  intros.
   repeat constructor; auto.
-
   intros ρ0 ρ1 Hρ.
+  intros A0 A1 HA.
 
-  induction (env_val_models (G_rel_modeling0 Hρ) x τ H) as [v0 Hv0].
-  induction (env_val_models (G_rel_modeling1 Hρ) x τ H) as [v1 Hv1].
-  pose proof (G_rel_V Hρ H Hv0 Hv1) as Hv.
-
-  exists (v0, v1); simpl.
-  repeat constructor; auto.
+  rewrite 2 const_real_is_dirac.
+  unfold dirac.
+  f_equal.
+  apply HA.
+  constructor.
 Qed.
+(*   intros. *)
+(*   repeat constructor; auto. *)
+
+(*   intros ρ0 ρ1 Hρ. *)
+
+(*   induction (env_val_models (G_rel_modeling0 Hρ) x τ H) as [v0 Hv0]. *)
+(*   induction (env_val_models (G_rel_modeling1 Hρ) x τ H) as [v1 Hv1]. *)
+(*   pose proof (G_rel_V Hρ H Hv0 Hv1) as Hv. *)
+
+(*   exists (v0, v1); simpl. *)
+(*   repeat constructor; auto. *)
+(* Qed. *)
 
 Lemma compat_ea_var Γ x τ :
   Γ x = Some τ ->
