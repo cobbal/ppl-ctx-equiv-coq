@@ -56,3 +56,19 @@ Proof.
   nnr.
   apply Rmult_comm.
 Qed.
+
+Check Rmult_0_l.
+
+Theorem nnr_mult_0_l (r : R+) : nnr_0 [*] r = nnr_0.
+Proof.
+  nnr.
+  simpl.
+  ring.
+Qed.
+
+Theorem nnr_mult_0_r (r : R+) : r [*] nnr_0 = nnr_0.
+Proof.
+  nnr.
+  simpl.
+  ring.
+Qed.
