@@ -7,278 +7,19 @@ Require Import Coq.Logic.FunctionalExtensionality.
 Require Import Coq.Logic.ProofIrrelevance.
 Require Import Coq.Program.Basics.
 Require Import nnr.
+Require Import syntax.
+Require Import utils.
 
 Local Open Scope R.
 
-Notation "a  '⨉'  b" := (prod a b) (at level 40, left associativity).
-
-Parameter Var : Type.
-Parameter Var_eq_dec : forall x y : Var, {x = y} + {x <> y}.
-
-Inductive Ty :=
-| ℝ : Ty
-| Arrow : Ty -> Ty -> Ty
-.
-Notation "x ~> y" := (Arrow x y) (at level 69, right associativity, y at level 70).
-
-Inductive Expr :=
-| e_app : Expr -> Expr -> Expr
-| e_factor : Expr -> Expr
-| e_sample : Expr
-| e_plus : Expr -> Expr -> Expr
-| e_pure : AExpr -> Expr
-with AExpr :=
-| e_real : R -> AExpr
-| e_lam : Var -> Expr -> AExpr
-| e_var : Var -> AExpr
-.
-
-Definition Env (T : Type) := Var -> option T.
-Definition empty_env {T : Type} : Env T := const None.
-Definition extend {T} (ρ : Env T) (x : Var) (v : T) : Env T :=
-  fun y => if Var_eq_dec x y then Some v else ρ x.
-Notation "ρ [ x → v ]" := (extend ρ x v) (at level 68, left associativity).
-
-Definition env_dom_eq {A B} (envA : Env A) (envB : Env B) :=
-  forall x, envA x = None <-> envB x = None.
-
-Reserved Notation "'TC' Γ ⊢ e : τ" (at level 70, e at level 99, no associativity).
-Inductive tc {Γ : Env Ty} : Expr -> Ty -> Prop :=
-| TCReal (r : R)
-  : (TC Γ ⊢ e_pure (e_real r) : ℝ)
-| TCVar {x : Var} {τ : Ty}
-  : Γ x = Some τ ->
-    (TC Γ ⊢ e_pure (e_var x) : τ)
-| TCLam {x : Var} {τa τr : Ty} {body : Expr}
-  : (TC (extend Γ x τa) ⊢ body : τr) ->
-    (TC Γ ⊢ e_pure (e_lam x body) : τa ~> τr)
-| TCApp {e0 e1 : Expr} {τa τr : Ty}
-  : (TC Γ ⊢ e0 : τa ~> τr) ->
-    (TC Γ ⊢ e1 : τa) ->
-    (TC Γ ⊢ e_app e0 e1 : τr)
-| TCFactor {e : Expr}
-  : (TC Γ ⊢ e : ℝ) ->
-    (TC Γ ⊢ e_factor e : ℝ)
-| TCSample
-  : (TC Γ ⊢ e_sample : ℝ)
-| TCPlus {e0 e1 : Expr}
-  : (TC Γ ⊢ e0 : ℝ) ->
-    (TC Γ ⊢ e1 : ℝ) ->
-    (TC Γ ⊢ e_plus e0 e1 : ℝ)
-where "'TC' Γ ⊢ e : τ" := (tc (Γ := Γ) e τ).
-
-Inductive Val :=
-| v_real : R -> Val
-| v_clo : Var -> Expr -> Env Val -> Val
-.
-
-Definition Entropy := nat -> {r : R | 0 <= r <= 1}.
-
-Definition πL (σ : Entropy) : Entropy := fun n => σ (2 * n)%nat.
-Definition πR (σ : Entropy) : Entropy := fun n => σ (2 * n + 1)%nat.
-
-Fixpoint π (n : nat) (σ : Entropy) : Entropy :=
-  match n with
-  | O => πL σ
-  | S n' => π n' (πR σ)
-  end.
-
-Record env_models {ρ : Env Val} {Γ : Env Ty} : Type :=
-  {
-    env_dom_match : env_dom_eq Γ ρ;
-    env_val_models : forall x τ,
-        Γ x = Some τ ->
-        {v | ρ x = Some v}
-  }.
-Notation "'ENV' ρ ⊨ Γ" := (@env_models ρ Γ) (at level 69, no associativity).
-
-Lemma env_model_extend
-           {ρ Γ} (Hρ : ENV ρ ⊨ Γ) (x : Var) (v : Val) (τ : Ty)
-  : ENV ρ[x → v] ⊨ Γ[x → τ].
-Proof.
-  unfold extend.
-  repeat constructor. {
-    destruct Var_eq_dec; intros H. {
-      inversion H.
-    } {
-      apply Hρ.
-      auto.
-    }
-  } {
-    destruct Var_eq_dec; intros H. {
-      inversion H.
-    } {
-      apply Hρ.
-      auto.
-    }
-  } {
-    intros.
-    destruct Var_eq_dec. {
-      exists v; auto.
-    } {
-      eapply env_val_models; eauto.
-    }
-  }
-Qed.
-
-Definition eval_a ρ (e : AExpr) : option Val :=
-  match e with
-  | e_real r => Some (v_real r)
-  | e_lam x body => Some (v_clo x body ρ)
-  | e_var x => ρ x
-  end.
-
-Reserved Notation "'EVAL' ρ , σ ⊢ e ⇓ v , w" (at level 69, e at level 99, no associativity).
-Inductive eval (ρ : Env Val) (σ : Entropy) : forall (e : Expr) (v : Val) (w : R+), Prop :=
-| EPure (ae : AExpr) (v : Val) :
-    eval_a ρ ae = Some v ->
-    (EVAL ρ, σ ⊢ e_pure ae ⇓ v, nnr_1)
-| EApp {e0 e1 : Expr}
-       {x : Var} {body : Expr} {ρ_clo : Env Val}
-       {v1 v2 : Val}
-       {w0 w1 w2 : R+}
-  : (EVAL ρ, (π 0 σ) ⊢ e0 ⇓ v_clo x body ρ_clo, w0) ->
-    (EVAL ρ, (π 1 σ) ⊢ e1 ⇓ v1, w1) ->
-    (EVAL ρ_clo[x → v1], (π 2 σ) ⊢ body ⇓ v2, w2) ->
-    (EVAL ρ, σ ⊢ e_app e0 e1 ⇓ v2, w0 [*] w1 [*] w2)
-| EFactor {e : Expr} {r : R} {w : R+} (rpos : 0 <= r)
-  : (EVAL ρ, σ ⊢ e ⇓ v_real r, w) ->
-    (EVAL ρ, σ ⊢ e_factor e ⇓ v_real r, mknnr r rpos [*] w)
-| ESample
-  : (EVAL ρ, σ ⊢ e_sample ⇓ v_real (proj1_sig (σ 0%nat)), nnr_1)
-| EPlus {e0 e1 : Expr} {r0 r1 : R} {w0 w1 : R+}
-  : (EVAL ρ, (π 0 σ) ⊢ e0 ⇓ v_real r0, w0) ->
-    (EVAL ρ, (π 1 σ) ⊢ e1 ⇓ v_real r1, w1) ->
-    (EVAL ρ, σ ⊢ e_plus e0 e1 ⇓ v_real (r0 + r1), w0 [*] w1)
-where "'EVAL' ρ , σ ⊢ e ⇓ v , w" := (eval ρ σ e v w)
-.
-
-Definition Config := Env Val ⨉ Expr.
 
 Definition Event X := X -> bool.
-
-Notation "'existsT' x .. y , p" :=
-  (sigT (fun x => .. (sigT (fun y => p)) ..))
-  (at level 200, x binder, right associativity,
-   format "'[' 'existsT'  '/ ' x .. y , '/ ' p ']'")
-  : type_scope.
-
-Definition uniqueT {A : Type} (P : A -> Type) (x : A) :=
-  P x ⨉ forall x' : A, P x' -> x = x'.
-
-Notation "'existsT' ! x .. y , p" :=
-  (sigT (uniqueT (fun x => .. (sigT (uniqueT (fun y => p))) ..)))
-    (at level 200, x binder, right associativity,
-     format "'[' 'existsT' !  '/ ' x .. y , '/ ' p ']'")
-    : type_scope.
 
 Axiom eval_dec :
   forall ρ e σ,
     (existsT! vw : (Val * R+), let (v, w) := vw in EVAL ρ, σ ⊢ e ⇓ v, w) +
     ((existsT vw : (Val * R+), let (v, w) := vw in EVAL ρ, σ ⊢ e ⇓ v, w) -> False).
 
-Definition TCEnv' (TCVal : Val -> Ty -> Type) (ρ : Env Val) (Γ : Env Ty) : Type :=
-  (env_dom_eq Γ ρ) *
-  forall x τ,
-    Γ x = Some τ ->
-    {v : Val & (ρ x = Some v) ⨉ TCVal v τ}
-.
-
-Inductive TCVal : Val -> Ty -> Type :=
-| TCVReal (r : R) : TCVal (v_real r) ℝ
-| TCVClo x body ρ Γ τa τr :
-    (TC (Γ[x → τa]) ⊢ body : τr) ->
-    TCEnv' TCVal ρ Γ ->
-    TCVal (v_clo x body ρ) (τa ~> τr)
-.
-
-Definition TCEnv := TCEnv' TCVal.
-
-Lemma TCEnv_extend Γ ρ x v τ :
-  TCEnv ρ Γ ->
-  TCVal v τ ->
-  TCEnv (ρ[x → v]) (Γ[x → τ]).
-Proof.
-  intros.
-  unfold extend.
-  destruct X.
-  split. {
-    intro y.
-    destruct Var_eq_dec; auto.
-    split; intros; inversion H.
-  } {
-    intros.
-    destruct Var_eq_dec. {
-      exists v.
-      split; auto.
-      injection H.
-      intros.
-      subst.
-      auto.
-    } {
-      apply s.
-      auto.
-    }
-  }
-Qed.
-
-Lemma eval_dec' Γ e τ ρ σ :
-    (TC Γ ⊢ e : τ) ->
-    (TCEnv ρ Γ) ->
-    (existsT! vw : (Val * R+), let (v, w) := vw in
-                               (TCVal v τ)
-                                 ⨉ (EVAL ρ, σ ⊢ e ⇓ v, w)) +
-    ((existsT vw : (Val * R+), let (v, w) := vw in EVAL ρ, σ ⊢ e ⇓ v, w) -> False).
-Proof.
-  intros H Hρ.
-  revert ρ Hρ.
-
-  (* induction H. { *)
-  (*   intros. *)
-  (*   case (IHtc1 ρ); intros; auto. { *)
-  (*     destruct s as [[v0 w0] [ex0 u0]]. *)
-  (*     case (IHtc2 (ρ[x → v0])); intros. { *)
-  (*       apply TCEnv_extend; auto. *)
-  (*       apply ex0. *)
-  (*     } { *)
-  (*       admit. *)
-  (*     } *)
-  (*     admit. *)
-
-  (*   } *)
-Admitted.
-
-Definition fromOption {A} (d : A) (opt : option A) : A :=
-  match opt with
-  | Some a' => a'
-  | None => d
-  end.
-
-Definition option0 : option R+ -> R+ := fromOption nnr_0.
-
-Notation "f ∘ g" := (compose f g).
-
-Notation "f <$> x" := (option_map f x) (at level 20, left associativity).
-Definition option_ap {A B} (o_f : option (A -> B)) : option A -> option B :=
-  fun a =>
-    match o_f with
-    | Some f => f <$> a
-    | None => None
-    end.
-Notation "f <*> x" := (option_ap f x) (at level 20).
-
-Definition option_rbind {A B} (f : A -> option B) : option A -> option B :=
-  fun o_a =>
-    match o_a with
-    | Some a => f a
-    | None => None
-    end.
-Notation "f =<< x" := (option_rbind f x) (at level 20).
-
-Definition id {A} := @Datatypes.id A.
-
-Definition option_join {A} : option (option A) -> option A :=
-  fun x => id =<< x.
 
 Definition ev ρ e σ : option Val :=
   match eval_dec ρ e σ with
@@ -432,9 +173,9 @@ Notation "'GREL' ρ0 , ρ1 ∈ G[ Γ ]" :=
   (G_rel Γ ρ0 ρ1)
     (at level 69, ρ0 at level 99, ρ1 at level 99, Γ at level 99).
 
-Definition related_exprs (Γ : Env Ty) (τ : Ty) (e0 e1 : Expr) : Prop :=
-  (TC Γ ⊢ e0 : τ) /\
-  (TC Γ ⊢ e1 : τ) /\
+Definition related_exprs (Γ : Env Ty) (τ : Ty) (e0 e1 : Expr) : Type :=
+  (TC Γ ⊢ e0 : τ) ⨉
+  (TC Γ ⊢ e1 : τ) ⨉
   forall {ρ0 ρ1},
     (GREL ρ0, ρ1 ∈ G[Γ]) ->
     (EREL (ρ0, e0), (ρ1, e1) ∈ E[τ]).
@@ -502,11 +243,11 @@ Lemma eval_a_total_for_well_typed {Γ ρ e τ} :
   (TC Γ ⊢ e_pure e : τ) ->
   exists v, eval_a ρ e = Some v.
 Proof.
-  intros.
-  inversion H; try (eexists; reflexivity).
+  intros Hρ tc.
+  inversion tc; try (eexists; reflexivity).
   simpl.
-  pose proof (env_val_models X x τ H1).
-  destruct X0.
+  pose proof (env_val_models Hρ x τ H0).
+  destruct X.
   exists x0.
   auto.
 Qed.
@@ -611,7 +352,7 @@ Proof.
   intros ρ0 ρ1 Hρ.
   intros A0 A1 HA.
 
-  destruct Hbody as [Hbody0 [Hbody1 ?]].
+  destruct Hbody as [[Hbody0 Hbody1] ?].
 
   pose proof pure_is_dirac (G_rel_modeling0 Hρ) (TCLam Hbody0) as H0.
   pose proof pure_is_dirac (G_rel_modeling1 Hρ) (TCLam Hbody1) as H1.
@@ -629,7 +370,7 @@ Proof.
   subst.
 
   intros va0 va1 Hva.
-  apply H; auto.
+  apply e; auto.
   apply extend_grel; auto.
 Qed.
 
@@ -693,14 +434,57 @@ Axiom lemma_9 : forall (g : Entropy -> Entropy -> R+),
     Integration (fun σ => g (πL σ) (πR σ)) μEntropy =
     Integration (fun σL => Integration (fun σR => g σL σR) μEntropy) μEntropy.
 
-Lemma pick_2_entropies : forall (g : Entropy -> Entropy -> R+),
-    Integration (fun σ => g (π 0 σ) (π 1 σ)) μEntropy =
-    Integration (fun σ0 => Integration (fun σ1 => g σ0 σ1) μEntropy) μEntropy.
+Lemma pick_3_and_waste : forall (g : Entropy -> Entropy -> Entropy -> Entropy -> R+),
+    Integration (fun σ => g (π 0 σ) (π 1 σ) (π 2 σ) (πR (πR (πR σ)))) μEntropy =
+    Integration
+      (fun σ0 =>
+         Integration
+           (fun σ1 =>
+              Integration
+                (fun σ2 =>
+                   Integration
+                     (fun σ3 =>
+                        g σ0 σ1 σ2 σ3)
+                     μEntropy)
+                μEntropy)
+           μEntropy)
+      μEntropy.
 Proof.
   intros.
-  simpl.
+
+  evar (x : Entropy -> R+).
+  replace (Integration (fun σ0 => Integration _ _) _)
+  with (Integration x μEntropy).
+  shelve. {
+    f_equal.
+    extensionality σ0.
+
+    evar (y : Entropy -> R+).
+    replace (Integration _ _)
+    (* with (Integration (fun σ1 => ) μEntropy). *)
+    with (Integration y μEntropy).
+    shelve. {
+      f_equal.
+      extensionality σ1.
+
+      rewrite <- lemma_9.
+      subst y.
+      reflexivity.
+    }
+    Unshelve.
+    shelve.
+    shelve.
+    subst y.
+    rewrite <- lemma_9.
+    subst x.
+    reflexivity.
+  }
+  Unshelve.
+  subst x.
   rewrite <- lemma_9.
-Admitted.
+  simpl.
+  auto.
+Qed.
 
 Lemma pick_3_entropies : forall (g : Entropy -> Entropy -> Entropy -> R+),
     Integration (fun σ => g (π 0 σ) (π 1 σ) (π 2 σ)) μEntropy =
@@ -715,12 +499,31 @@ Lemma pick_3_entropies : forall (g : Entropy -> Entropy -> Entropy -> R+),
            μEntropy)
       μEntropy.
 Proof.
+  intros.
+  pose proof pick_3_and_waste (fun (σ0 σ1 σ2 σR : Entropy) => g σ0 σ1 σ2).
+  simpl in *.
+  rewrite H.
+  simpl.
+
+  f_equal; extensionality σ0.
+  f_equal; extensionality σ1.
+  f_equal; extensionality σ2.
+  rewrite (int_const_entropy (g σ0 σ1 σ2)); auto.
+Qed.
+
+Lemma pick_2_entropies : forall (g : Entropy -> Entropy -> R+),
+    Integration (fun σ => g (π 0 σ) (π 1 σ)) μEntropy =
+    Integration (fun σ0 => Integration (fun σ1 => g σ0 σ1) μEntropy) μEntropy.
 Proof.
   intros.
-  rewrite <- lemma_9.
-  rewrite <- lemma_9.
-  simpl.
-Admitted.
+  pose proof pick_3_entropies (fun (σ0 σ1 σ2 : Entropy) => g σ0 σ1).
+  simpl in *.
+  rewrite H.
+
+  f_equal; extensionality σ0.
+  f_equal; extensionality σ1.
+  rewrite (int_const_entropy (g σ0 σ1)); auto.
+Qed.
 
 Lemma if_bool_if_simplify :
   forall {A B C} (x : {A} + {B}) (a b : C),
@@ -737,7 +540,7 @@ Theorem theorem_15 :
     Integration f (μ ρ e) =
     Integration (fun σ => option0 (f <$> ev ρ e σ) [*] ew ρ e σ) μEntropy.
 Proof.
-  intros.
+  intros f Γ e τ ρ He Hρ.
 
   unfold μ.
 
@@ -755,8 +558,8 @@ Proof.
     rewrite <- Integration_linear_mult_r.
     auto.
   }
-  rewrite H0.
-  clear H0.
+  rewrite H.
+  clear H.
 
   f_equal.
   extensionality σ.
@@ -768,7 +571,7 @@ Proof.
   induction v; simpl. {
     pose proof @integration_of_indicator.
     unfold Indicator in *.
-    rewrite H0.
+    rewrite H.
     apply lebesgue_measure_interval.
   } {
     replace (fun _ => nnr_0) with (fun _ : R => nnr_0 [*] nnr_0)
@@ -907,10 +710,10 @@ Proof.
         decide_eval ρ, el as [v3 w3 ex3 u3]; simpl.
         decide_eval ρ, er as [v4 w4 ex4 u4]; simpl.
 
-        pose proof (u3 (_, _) H1).
-        pose proof (u4 (_, _) H4).
-        inversion H; subst.
-        inversion H0; subst.
+        specialize (u3 (_, _) X).
+        specialize (u4 (_, _) X0).
+        inversion u3; subst.
+        inversion u4; subst.
         simpl.
         nnr; simpl; ring.
       } {
@@ -931,8 +734,8 @@ Lemma compat_plus Γ el0 er0 el1 er1 :
   (EXP Γ ⊢ e_plus el0 er0 ≈ e_plus el1 er1 : ℝ).
 Proof.
   intros Hl Hr.
-  destruct Hl as [tc_l0 [tc_l1 Hl]].
-  destruct Hr as [tc_r0 [tc_r1 Hr]].
+  destruct Hl as [[tc_l0 tc_l1] Hl].
+  destruct Hr as [[tc_r0 tc_r1] Hr].
   repeat constructor; auto.
   intros ρ0 ρ1 Hρ.
   intros A0 A1 HA.
@@ -1051,10 +854,10 @@ Proof.
         decide_eval ρ, ef as [v4 w4 ex4 u4]; simpl.
         decide_eval ρ, ea as [v5 w5 ex5 u5]; simpl.
 
-        pose proof (u4 (_, _) H1).
-        pose proof (u5 (_, _) H2).
-        inversion H; subst.
-        inversion H0; subst.
+        specialize (u4 (_, _) X).
+        specialize (u5 (_, _) X0).
+        inversion u4; subst.
+        inversion u5; subst.
         simpl.
 
         replace (Indicator _ _ [*] _)
@@ -1065,8 +868,8 @@ Proof.
 
         unfold eval_in, ev, ew.
         decide_eval (ρ_clo[x → v1]), body as [v6 w6 ex6 u6].
-        pose proof (u6 (_, _) H5).
-        inversion H3; subst.
+        specialize (u6 (_, _) X1).
+        inversion u6; subst.
         auto.
       } {
         decide_eval ρ, ef as [v3 w3 ex3 u3].
@@ -1089,8 +892,8 @@ Lemma compat_app Γ ef0 ef1 ea0 ea1 τa τr :
   (EXP Γ ⊢ e_app ef0 ea0 ≈ e_app ef1 ea1 : τr).
 Proof.
   intros Hf Ha.
-  destruct Hf as [TCf0 [TCf1 Hf]].
-  destruct Ha as [TCa0 [TCa1 Ha]].
+  destruct Hf as [[TCf0 TCf1] Hf].
+  destruct Ha as [[TCa0 TCa1] Ha].
   repeat econstructor; eauto.
 
   intros ρ0 ρ1 Hρ.
@@ -1188,7 +991,7 @@ Proof.
     subst.
     decide_eval ρ, e as [v1 w1 ex1 u1]. {
       simpl.
-      injection (u1 (_, _) H0); intros.
+      injection (u1 (_, _) X); intros.
       subst.
       destruct Rle_dec. {
         nnr; simpl; ring.
@@ -1221,7 +1024,7 @@ Lemma compat_factor Γ e0 e1:
   (EXP Γ ⊢ e_factor e0 ≈ e_factor e1 : ℝ).
 Proof.
   intro He.
-  destruct He as [TC0 [TC1 He]].
+  destruct He as [[TC0 TC1] He].
   repeat constructor; auto.
   intros ρ0 ρ1 Hρ.
   intros A0 A1 HA.
@@ -1256,12 +1059,12 @@ Proof.
   }
 Qed.
 
-Lemma fundamental_properties Γ e τ :
+Lemma fundamental_property Γ e τ :
   (TC Γ ⊢ e : τ) ->
   (EXP Γ ⊢ e ≈ e : τ).
 Proof.
-  intros.
-  induction H.
+  intros tc.
+  induction tc.
   - apply compat_real.
   - apply compat_var; tauto.
   - apply compat_lam; tauto.
@@ -1271,4 +1074,4 @@ Proof.
   - apply compat_plus; tauto.
 Qed.
 
-Print Assumptions fundamental_properties.
+Print Assumptions fundamental_property.

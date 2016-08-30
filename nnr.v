@@ -3,6 +3,7 @@
 Require Import Basics.
 Require Import Reals.
 Require Import Ensembles.
+Require Import Coq.fourier.Fourier.
 Require Import Coq.Logic.FunctionalExtensionality.
 Require Import Coq.Logic.ProofIrrelevance.
 
@@ -33,6 +34,18 @@ Next Obligation.
 Qed.
 Hint Unfold nnr_plus.
 Notation "a  '[+]'  b" := (nnr_plus a b) (at level 50, left associativity).
+
+Program Definition nnr_div (a b : R+) (bpos : 0 < _r b) : R+ :=
+ mknnr (_r a  / _r b) _.
+Next Obligation.
+  destruct a, b; simpl in *.
+
+  SearchAbout Rdiv.
+  apply Rmult_le_pos; auto.
+  SearchAbout Rinv.
+  apply Rlt_le.
+  apply Rinv_0_lt_compat; auto.
+Qed.
 
 Program Definition nnr_0 := mknnr 0 (Rle_refl _).
 Program Definition nnr_1 := mknnr 1 Rle_0_1.
@@ -71,4 +84,23 @@ Proof.
   nnr.
   simpl.
   ring.
+Qed.
+
+Lemma nnr_mult_pos_l (a b : R+) :
+  0 < _r (a [*] b) -> 0 < _r a.
+Proof.
+  intros.
+  destruct a, b.
+  simpl in *.
+  SearchAbout Rmult.
+
+  destruct nnr_pos1. {
+    apply (Rmult_lt_reg_r _r1); auto.
+    rewrite Rmult_0_l; auto.
+  } {
+    contradict H.
+    subst.
+    rewrite Rmult_0_r.
+    apply Rlt_irrefl.
+  }
 Qed.

@@ -1,3 +1,5 @@
 -R . OpSemProofs
 nnr.v
 relations.v
+syntax.v
+utils.v
