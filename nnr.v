@@ -62,28 +62,21 @@ Proof.
   f_equal.
   apply proof_irrelevance.
 Qed.
-Ltac nnr := apply nnr_eq_is_real_eq.
+Ltac nnr := apply nnr_eq_is_real_eq; try (simpl; ring).
 
 Theorem nnr_mult_comm (a b : R+) : a [*] b = b [*] a.
 Proof.
   nnr.
-  apply Rmult_comm.
 Qed.
-
-Check Rmult_0_l.
 
 Theorem nnr_mult_0_l (r : R+) : nnr_0 [*] r = nnr_0.
 Proof.
   nnr.
-  simpl.
-  ring.
 Qed.
 
 Theorem nnr_mult_0_r (r : R+) : r [*] nnr_0 = nnr_0.
 Proof.
   nnr.
-  simpl.
-  ring.
 Qed.
 
 Lemma nnr_mult_pos_l (a b : R+) :

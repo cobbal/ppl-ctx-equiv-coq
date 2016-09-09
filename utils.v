@@ -1,7 +1,10 @@
 Require Import Basics.
 Require Import nnr.
+Require Import Coq.Logic.FunctionalExtensionality.
+Require Import Coq.Classes.Morphisms.
 
 Notation "a  '⨉'  b" := (prod a b) (at level 40, left associativity).
+
 
 Notation "'existsT' x .. y , p" :=
   (sigT (fun x => .. (sigT (fun y => p)) ..))
@@ -50,3 +53,22 @@ Definition id {A} := @Datatypes.id A.
 
 Definition option_join {A} : option (option A) -> option A :=
   fun x => id =<< x.
+
+Instance functional_ext_rewriting {A B C} (f : (A -> B) -> C) :
+  Proper (pointwise_relation A eq ==> eq) f.
+Proof.
+  intros x y Hxy.
+  pose proof functional_extensionality x y Hxy.
+  subst.
+  reflexivity.
+Qed.
+
+Instance functional_ext_rewriting2 {A B C D} (f : A -> (B -> C) -> D) :
+  Proper (eq ==> pointwise_relation B eq ==> eq) f.
+Proof.
+  intros x y Hxy.
+  intros z w Hzw.
+  rewrite (functional_extensionality z w Hzw).
+  subst.
+  reflexivity.
+Qed.

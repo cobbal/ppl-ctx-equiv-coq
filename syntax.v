@@ -33,7 +33,7 @@ Definition Env (T : Type) := Var -> option T.
 Definition empty_env {T : Type} : Env T := const None.
 Definition extend {T} (ρ : Env T) (x : Var) (v : T) : Env T :=
   fun y => if Var_eq_dec x y then Some v else ρ x.
-Notation "ρ [ x → v ]" := (extend ρ x v) (at level 68, left associativity).
+(* Notation "ρ [ x → v ]" := (extend ρ x v) (at level 68, left associativity). *)
 
 Reserved Notation "'TC' Γ ⊢ e : τ" (at level 70, e at level 99, no associativity).
 Inductive tc {Γ : Env Ty} : Expr -> Ty -> Type :=
@@ -65,6 +65,60 @@ Inductive Val :=
 | v_clo : Var -> Expr -> Env Val -> Val
 .
 
+Definition env_dom_eq {A B} (envA : Env A) (envB : Env B) :=
+  forall x, envA x = None <-> envB x = None.
+
+Definition env_search {A B} {envA : Env A} {envB : Env B} :
+  env_dom_eq envA envB ->
+  forall x a,
+    envA x = Some a ->
+    {b | envB x = Some b}.
+Proof.
+  intros.
+  specialize (H x).
+  destruct H.
+  destruct (envB x). {
+    exists b; auto.
+  } {
+    specialize (H1 eq_refl).
+    rewrite H1 in *.
+    inversion H0.
+  }
+Defined.
+
+(* Record env_models' {R : Val -> Ty -> Type} {ρ : Env Val} {Γ : Env Ty} : Type := *)
+(*   { *)
+(*     env_dom_match : env_dom_eq Γ ρ; *)
+(*     env_val_models : forall x τ, *)
+(*         Γ x = Some τ -> *)
+(*         {v : Val & ρ x = Some v & R v τ} *)
+(*   }. *)
+
+Reserved Notation "'TCV' ⊢ v : τ" (at level 70, v at level 99, no associativity).
+Reserved Notation "'ENV' ρ ⊨ Γ" (at level 69, no associativity).
+Inductive tc_val : Val -> Ty -> Type :=
+| TCVReal (r : R)
+  : (TCV ⊢ v_real r : ℝ)
+| TCVClo {x : Var} {body : Expr} {Γ_clo : Env Ty} {τa τr : Ty} {ρ_clo : Env Val}
+  : (ENV ρ_clo ⊨ Γ_clo) ->
+    (TC (extend Γ_clo x τa) ⊢ body : τr) ->
+    (TCV ⊢ v_clo x body ρ_clo : (τa ~> τr))
+with
+tc_env : Env Val -> Env Ty -> Type :=
+| TCEnv {Γ ρ} :
+    env_dom_eq Γ ρ ->
+    (forall x τ v,
+        Γ x = Some τ ->
+        ρ x = Some v ->
+        tc_val v τ) ->
+    tc_env ρ Γ
+where "'TCV' ⊢ v : τ" := (tc_val v τ)
+and "'ENV' ρ ⊨ Γ" := (tc_env ρ Γ).
+
+Scheme tc_val_env_rect := Induction for tc_val Sort Type
+with
+tc_env_val_rect := Induction for tc_env Sort Type.
+
 Definition Entropy := nat -> {r : R | 0 <= r <= 1}.
 
 Definition πL (σ : Entropy) : Entropy := fun n => σ (2 * n)%nat.
@@ -95,7 +149,7 @@ Inductive eval (ρ : Env Val) (σ : Entropy) : forall (e : Expr) (v : Val) (w : 
        {w0 w1 w2 : R+}
   : (EVAL ρ, (π 0 σ) ⊢ e0 ⇓ v_clo x body ρ_clo, w0) ->
     (EVAL ρ, (π 1 σ) ⊢ e1 ⇓ v1, w1) ->
-    (EVAL ρ_clo[x → v1], (π 2 σ) ⊢ body ⇓ v2, w2) ->
+    (EVAL (extend ρ_clo x v1), (π 2 σ) ⊢ body ⇓ v2, w2) ->
     (EVAL ρ, σ ⊢ e_app e0 e1 ⇓ v2, w0 [*] w1 [*] w2)
 | EFactor {e : Expr} {r : R} {w : R+} (rpos : 0 <= r)
   : (EVAL ρ, σ ⊢ e ⇓ v_real r, w) ->
@@ -109,44 +163,47 @@ Inductive eval (ρ : Env Val) (σ : Entropy) : forall (e : Expr) (v : Val) (w : 
 where "'EVAL' ρ , σ ⊢ e ⇓ v , w" := (eval ρ σ e v w)
 .
 
-Definition Config := Env Val ⨉ Expr.
-
-Definition env_dom_eq {A B} (envA : Env A) (envB : Env B) :=
-  forall x, envA x = None <-> envB x = None.
-Record env_models {ρ : Env Val} {Γ : Env Ty} : Type :=
-  {
-    env_dom_match : env_dom_eq Γ ρ;
-    env_val_models : forall x τ,
-        Γ x = Some τ ->
-        {v | ρ x = Some v}
+Record Config τ := mk_config
+  { config_Γ : Env Ty;
+    config_ρ : Env Val;
+    config_Hρ : ENV config_ρ ⊨ config_Γ;
+    config_e : Expr;
+    config_He : (TC config_Γ ⊢ config_e : τ);
   }.
-Notation "'ENV' ρ ⊨ Γ" := (@env_models ρ Γ) (at level 69, no associativity).
+
+Arguments mk_config {_ _ _} _ {_} _.
 
 Lemma env_model_extend
-           {ρ Γ} (Hρ : ENV ρ ⊨ Γ) (x : Var) (v : Val) (τ : Ty)
-  : ENV ρ[x → v] ⊨ Γ[x → τ].
+           {ρ Γ} (Hρ : ENV ρ ⊨ Γ) x {v τ} (Hv : (TCV ⊢ v : τ))
+  : ENV (extend ρ x v) ⊨ (extend Γ x τ).
 Proof.
   unfold extend.
   repeat constructor. {
     destruct Var_eq_dec; intros H. {
       inversion H.
     } {
-      apply Hρ.
+      inversion Hρ; subst.
+      rewrite <- (H0 x).
       auto.
     }
   } {
     destruct Var_eq_dec; intros H. {
       inversion H.
     } {
-      apply Hρ.
+      inversion Hρ; subst.
+      rewrite (H0 x).
       auto.
     }
   } {
     intros.
     destruct Var_eq_dec. {
-      exists v; auto.
+      inversion H.
+      inversion H0.
+      subst.
+      auto.
     } {
-      eapply env_val_models; eauto.
+      inversion Hρ; subst.
+      eapply X; eauto.
     }
   }
 Qed.
