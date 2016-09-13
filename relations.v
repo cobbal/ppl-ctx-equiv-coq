@@ -6,6 +6,7 @@ Require Import Ensembles.
 Require Import Coq.Logic.FunctionalExtensionality.
 Require Import Coq.Logic.ProofIrrelevance.
 Require Import Coq.Program.Basics.
+Require Import Coq.Program.Equality.
 Require Import Coq.Setoids.Setoid.
 Require Import nnr.
 Require Import syntax.
@@ -13,6 +14,56 @@ Require Import utils.
 Require Import Coq.Classes.Morphisms.
 
 Local Open Scope R.
+
+Arguments exist {_ _} _ _.
+Arguments existT {_ _} _ _.
+
+(* setoid rewriting under lambda *)
+(* http://coq-club.inria.narkive.com/PbdQR4E7/rewriting-under-abstractions *)
+Require Import Setoid Morphisms Program.Syntax.
+Instance refl_respectful {A B RA RB}
+         `(sa : subrelation A RA eq)
+         `(sb : subrelation B eq RB)
+  : Reflexive (RA ++> RB)%signature.
+Proof.
+  intros f x x' Hxx'.
+  apply sb.
+  f_equal.
+  apply sa; auto.
+Qed.
+
+Instance subrel_eq_respect {A B RA RB}
+         `(sa : subrelation A RA eq)
+         `(sb : subrelation B eq RB)
+  : subrelation eq (respectful RA RB).
+Proof.
+  intros f g Hfg.
+  intros a a' Raa'.
+  apply sb.
+  f_equal.
+  apply sa; auto.
+Qed.
+
+Instance pointwise_eq_ext {A B RB}
+         `(sb : subrelation B RB (@eq B))
+  : subrelation (pointwise_relation A RB) eq.
+Proof.
+  intros f g Hfg.
+  extensionality x.
+  apply sb.
+  apply (Hfg x).
+Qed.
+
+Instance eq_pointwise {A B RB}
+         `(sb : subrelation B (@eq B) RB) :
+  subrelation eq (pointwise_relation A RB).
+Proof.
+  intros f g Hfg x.
+  apply sb.
+  subst.
+  reflexivity.
+Qed.
+
 
 Definition Event X := X -> bool.
 
@@ -37,42 +88,47 @@ Axiom big_preservation :
       (EVAL ρ, σ ⊢ e ⇓ v, w) ->
       (TCV ⊢ v : τ).
 
-Definition WT_Val τ := {v : Val & TCV ⊢ v : τ}.
+Definition WT_Val τ := {v : Val | inhabited (TCV ⊢ v : τ) }.
 
 Lemma eval_a_preservation :
   forall {Γ ρ ae τ},
     (ENV ρ ⊨ Γ) ->
     (TC Γ ⊢ e_pure ae : τ) ->
-    {v : Val & TCV ⊢ v : τ & eval_a ρ ae = Some v}.
+    {v : Val | inhabited (TCV ⊢ v : τ) & eval_a ρ ae = Some v}.
 Proof.
   intros.
   inversion X0; subst; simpl. {
     eexists; eauto.
-    constructor.
+    repeat constructor.
   } {
     destruct X.
     destruct (env_search e _ _ H0) as [v ?].
     exists v; auto.
+    constructor.
     apply (t x); auto.
   } {
     eexists; eauto.
+    constructor.
     econstructor; eauto.
   }
 Defined.
 
 Definition eval_a_wt {Γ ρ ae τ} (Hρ : ENV ρ ⊨ Γ) (Hae : TC Γ ⊢ e_pure ae : τ) : WT_Val τ :=
-  let (v, tc, _) := eval_a_preservation Hρ Hae in existT _ v tc.
+  let (v, tc, _) := eval_a_preservation Hρ Hae in exist v tc.
 
-Definition ev {Γ ρ e τ} (Hρ : ENV ρ ⊨ Γ) (He : TC Γ ⊢ e : τ) σ : option (WT_Val τ) :=
+Definition WT_ev {Γ ρ e τ} (Hρ : ENV ρ ⊨ Γ) (He : TC Γ ⊢ e : τ) σ : option (WT_Val τ) :=
   match eval_dec Hρ He σ with
-  | inl (existT _ (v, w) (evl, _)) =>
-    Some (existT _ v (big_preservation Hρ He σ evl))
+  | inl (existT (v, w) (evl, _)) =>
+    Some (exist v (inhabits (big_preservation Hρ He σ evl)))
   | inr _ => None
   end.
 
+Definition ev {Γ ρ e τ} (Hρ : ENV ρ ⊨ Γ) (He : TC Γ ⊢ e : τ) σ : option Val :=
+  @proj1_sig _ _ <$> WT_ev Hρ He σ.
+
 Definition ew {Γ ρ e τ} (Hρ : ENV ρ ⊨ Γ) (He : TC Γ ⊢ e : τ) σ : R+ :=
   match eval_dec Hρ He σ with
-  | inl (existT _ (v, w) _) => w
+  | inl (existT (v, w) _) => w
   | inr _ => nnr_0
   end.
 
@@ -83,7 +139,7 @@ Definition Indicator {X} (b : Event X) : X -> R+ := fun x => ifte (b x) nnr_1 nn
 
 
 Definition eval_in {Γ ρ e τ} (Hρ : ENV ρ ⊨ Γ) (He : TC Γ ⊢ e : τ) (A : Event (WT_Val τ)) σ : R+ :=
-  option0 (Indicator A <$> ev Hρ He σ) [*] ew Hρ He σ.
+  option0 (Indicator A <$> WT_ev Hρ He σ) [*] ew Hρ He σ.
 
 Definition Meas A := (Event A -> R+).
 Axiom μEntropy : Meas Entropy.
@@ -157,18 +213,18 @@ Axiom integration_of_indicator :
          (f : Event A),
     Integration (fun x => Indicator f x) m = m f.
 
-Definition μ {Γ ρ e τ} (Hρ : ENV ρ ⊨ Γ) (He : TC Γ ⊢ e : τ) : Meas {v : Val & TCV ⊢ v : τ} :=
+Definition widen_event {τ} (e : Event Val) : Event (WT_Val τ) :=
+  fun vτ => e (proj1_sig vτ).
+
+Definition μ {Γ ρ e τ} (Hρ : ENV ρ ⊨ Γ) (He : TC Γ ⊢ e : τ) : Meas (WT_Val τ) :=
   fun V => Integration (fun σ => eval_in Hρ He V σ) μEntropy.
 
-Definition A_rel' (τ : Ty) (V_rel_τ : Val -> Val -> Type) (A0 A1 : Event Val) :=
-  forall v0 v1,
-    V_rel_τ v0 v1 ->
+Definition A_rel' (τ : Ty) (V_rel_τ : Val -> Val -> Type)
+        (A0 A1 : Event Val) :=
+  forall v0 v1 (Hv : V_rel_τ v0 v1),
     (A0 v0 = (* iff *) A1 v1).
 
-Definition widen_event {τ} (e : Event Val) : Event (WT_Val τ) :=
-  fun vτ => e (projT1 vτ).
-
-Definition E_rel' (τ : Ty) (V_rel_τ : Val -> Val -> Prop)  (c0 c1 : Config τ) : Prop :=
+Definition E_rel' (τ : Ty) (V_rel_τ : Val -> Val -> Prop) (c0 c1 : Config τ) : Prop :=
   let (Γ0, ρ0, Hρ0, e0, He0) := c0 in
   let (Γ1, ρ1, Hρ1, e1, He1) := c1 in
   forall A0 A1,
@@ -213,8 +269,10 @@ Definition V_rel_real (v0 v1 : Val) : Prop :=
 (*      }. *)
 
 Definition V_rel_arrow
-       (τa τr : Ty) (V_rel_a V_rel_r : Val -> Val -> Prop)
-       (v0 v1 : Val) : Prop
+           (τa : Ty) (τr : Ty)
+           (V_rel_a : Val -> Val -> Prop)
+           (V_rel_r : Val -> Val -> Prop)
+           (v0 v1 : Val) : Prop
   := match v0, v1 with
      | v_clo x0 body0 ρ_clo0, v_clo x1 body1 ρ_clo1 =>
        exists Γ_clo0
@@ -224,8 +282,8 @@ Definition V_rel_arrow
               (Hρ_clo1 : ENV ρ_clo1 ⊨ Γ_clo1)
               (tc_body1 : (TC (extend Γ_clo1 x1 τa) ⊢ body1 : τr)),
        forall {va0 va1}
-                (tc_va0 : (TCV ⊢ va0 : τa))
-                (tc_va1 : (TCV ⊢ va1 : τa)),
+              (tc_va0 : (TCV ⊢ va0 : τa))
+              (tc_va1 : (TCV ⊢ va1 : τa)),
            V_rel_a va0 va1 ->
            E_rel' τr V_rel_r
                  (mk_config (env_model_extend Hρ_clo0 x0 tc_va0) tc_body0)
@@ -240,6 +298,7 @@ Fixpoint V_rel τ : Val -> Val -> Prop :=
   | ℝ => V_rel_real
   | τa ~> τr => V_rel_arrow τa τr (V_rel τa) (V_rel τr)
   end.
+
 Notation "'VREL' v0 , v1 ∈ V[ τ ]" := (V_rel τ v0 v1).
 
 Definition A_rel τ := A_rel' τ (V_rel τ).
@@ -308,6 +367,19 @@ Tactic Notation "decide_eval" constr(ρ) "," uconstr(exp) "as"
        "[" ident(v) ident(w) ident(e) ident(u) "]"
   := (decide_eval' ρ exp v w e u).
 
+Ltac generalize_inhabit :=
+  match goal with
+  | [ |- context[inhabits ?t]] => generalize (inhabits t); intros ?i
+  end.
+
+Ltac irrelevate_inhabit :=
+  match goal with
+    [ H0 : inhabited ?x, H1 : inhabited ?x |- _ ] =>
+    pose proof (proof_irrelevance _ H0 H1); subst H0
+  end.
+
+Ltac inhabited_irrelevance := progress (repeat generalize_inhabit; repeat irrelevate_inhabit).
+
 
 Axiom int_const_entropy :
   forall (v : R+)
@@ -321,28 +393,50 @@ Lemma pure_is_atomic {Γ ρ} {Hρ : ENV ρ ⊨ Γ} {e τ} A
   (fun σ => Indicator A (eval_a_wt Hρ Hpure_e)).
 Proof.
   extensionality σ.
-  unfold eval_in, ev, ew.
+  unfold eval_in, ev, WT_ev, ew.
   decide_eval Hρ, _ as [v w ex u]; simpl in *. {
     inversion ex; subst.
     nnr.
     unfold nnr_mult.
     simpl.
     rewrite Rmult_1_r.
-    destruct e as [ ? | x ? | x ]; simpl in *; try (inversion H0; tauto). {
+    (* This is nearly exact copy-paste, needs cleanup *)
+    destruct e as [ ? | x ? | x ]; simpl in *. {
       inversion H0.
       unfold eval_a_wt.
       destruct eval_a_preservation.
       subst.
-      do 2 f_equal.
-      assert (x = v_real r). {
+      enough (x = v_real r) as ->. {
+        simpl.
+        inhabited_irrelevance.
+        reflexivity.
+      } {
         injection (u (x, nnr_1)); auto.
         apply EPure; auto.
       }
-      subst.
-      f_equal.
-
     } {
-      destruct (ρ x); inversion H0; auto.
+      inversion H0.
+      unfold eval_a_wt.
+      destruct eval_a_preservation.
+      subst.
+      enough (x0 = v_clo x e ρ) as ->. {
+        inhabited_irrelevance.
+        reflexivity.
+      } {
+        injection (u (x0, nnr_1)); auto.
+        apply EPure; auto.
+      }
+    } {
+      inversion H0.
+      unfold eval_a_wt.
+      destruct eval_a_preservation.
+      enough (x0 = v) as ->. {
+        inhabited_irrelevance.
+        reflexivity.
+      } {
+        injection (u (x0, nnr_1)); auto.
+        apply EPure; auto.
+      }
     }
   } {
     destruct e as [ ? | x ? | x ]; simpl in *;
@@ -352,40 +446,38 @@ try (contradict not_ex; eexists (_, _); constructor; simpl; eauto; fail).
     destruct o. {
       contradict not_ex; eexists (_, _); constructor; simpl; eauto.
     } {
-      nnr.
+      unfold eval_a_wt.
+      destruct eval_a_preservation.
+      contradict e.
+      simpl.
+      rewrite <- Heqo.
+      discriminate.
     }
   }
-Qed.
-
-Lemma eval_a_total_for_well_typed {Γ ρ e τ} :
-  (ENV ρ ⊨ Γ) ->
-  (TC Γ ⊢ e_pure e : τ) ->
-  {v | eval_a ρ e = Some v}.
-Proof.
-  intros Hρ tc.
-  inversion tc; try (eexists; reflexivity).
-  simpl.
-  destruct Hρ.
-  eapply env_search; eauto.
 Qed.
 
 Lemma pure_is_dirac {Γ ρ e τ}
   (Hρ : ENV ρ ⊨ Γ)
   (Hpure_e : TC Γ ⊢ e_pure e : τ) :
-  exists v : Val,
-    eval_a ρ e = Some v /\
+  exists v : WT_Val τ,
+    eval_a ρ e = Some (proj1_sig v) /\
     μ Hρ Hpure_e = dirac v.
 Proof.
-  destruct (eval_a_total_for_well_typed Hρ Hpure_e).
-  exists x.
-  intuition.
+  destruct (eval_a_preservation Hρ Hpure_e).
+  rewrite e0.
+  exists (exist x i); intuition.
 
   extensionality A.
   unfold μ, dirac; simpl.
   rewrite pure_is_atomic.
   apply int_const_entropy; intro σ.
-  rewrite e0.
-  auto.
+
+  unfold eval_a_wt.
+  destruct eval_a_preservation.
+  rewrite e0 in e1.
+  inversion e1; subst.
+  inhabited_irrelevance.
+  reflexivity.
 Qed.
 
 Lemma compat_real Γ r :
@@ -399,20 +491,17 @@ Proof.
   pose proof pure_is_dirac (G_rel_modeling1 Hρ) (TCReal r) as H1.
   destruct H0 as [v0 [Hea0 Hdirac0]].
   destruct H1 as [v1 [Hea1 Hdirac1]].
+  simpl in *.
 
   rewrite Hdirac0, Hdirac1.
 
-  unfold dirac.
-  unfold Indicator.
+  unfold dirac, Indicator; simpl.
   f_equal.
   apply HA.
-  simpl in Hea0, Hea1.
-  injection Hea0.
-  injection Hea1.
-  intros.
-  rewrite <- H, <- H0.
-  simpl.
-  auto.
+  inversion Hea0.
+  inversion Hea1.
+  subst.
+  reflexivity.
 Qed.
 
 Lemma compat_var Γ x τ :
@@ -428,13 +517,14 @@ Proof.
   pose proof pure_is_dirac (G_rel_modeling1 Hρ) (TCVar Γx) as H1.
   destruct H0 as [v0 [Heval0 Hdirac0]].
   destruct H1 as [v1 [Heval1 Hdirac1]].
+  simpl in *.
 
   rewrite Hdirac0, Hdirac1.
-  unfold dirac.
-  unfold Indicator.
+
+  unfold dirac, Indicator; simpl.
   f_equal.
   apply HA.
-  simpl in *.
+  pose proof G_rel_V Hρ Γx Heval0 Heval1.
   eapply G_rel_V; eauto.
 Qed.
 
@@ -453,8 +543,8 @@ Qed.
 
 Program Definition extend_grel {Γ ρ0 ρ1 v0 v1 τ} x
   (Hρ : GREL ρ0, ρ1 ∈ G[Γ])
-  (tc0 : TCV ⊢ v0 : τ)
-  (tc1 : TCV ⊢ v1 : τ)
+  (tc0 : (TCV ⊢ v0 : τ))
+  (tc1 : (TCV ⊢ v1 : τ))
   (Hv : VREL v0, v1 ∈ V[τ])
   : (GREL (extend ρ0 x v0), (extend ρ1 x v1) ∈ G[extend Γ x τ]) :=
   let (Hρ0, Hρ1, Hρ) := Hρ in
@@ -462,7 +552,6 @@ Program Definition extend_grel {Γ ρ0 ρ1 v0 v1 τ} x
            (env_model_extend Hρ0 x tc0)
            (env_model_extend Hρ1 x tc1)
            _.
-
 Next Obligation.
   intros.
   unfold extend in *.
@@ -491,10 +580,10 @@ Proof.
   pose proof pure_is_dirac (G_rel_modeling1 Hρ) (TCLam Hbody1) as H1.
   destruct H0 as [v0 [Heval0 Hdirac0]].
   destruct H1 as [v1 [Heval1 Hdirac1]].
+  simpl in *.
 
   rewrite Hdirac0, Hdirac1.
-  unfold dirac.
-  unfold Indicator.
+  unfold dirac, Indicator, widen_event; simpl.
   f_equal.
   apply HA.
 
@@ -662,9 +751,9 @@ Theorem theorem_15 :
   forall {Γ e τ ρ}
     (He : TC Γ ⊢ e : τ)
     (Hρ : ENV ρ ⊨ Γ)
-    (f : Val -> R+),
+    (f : WT_Val τ -> R+),
       Integration f (μ Hρ He) =
-      Integration (fun σ => option0 (f <$> ev Hρ He σ) [*] ew Hρ He σ) μEntropy.
+      Integration (fun σ => option0 (f <$> WT_ev Hρ He σ) [*] ew Hρ He σ) μEntropy.
 Proof.
   intros Γ e τ ρ He Hρ f.
 
@@ -690,7 +779,7 @@ Proof.
   f_equal.
   extensionality σ.
 
-  generalize (ew Hρ He σ) as w, (ev Hρ He σ) as v.
+  generalize (ew Hρ He σ) as w, (WT_ev Hρ He σ) as v.
   intros.
 
   f_equal.
@@ -719,66 +808,12 @@ Proof.
   destruct o; reflexivity.
 Qed.
 
-Definition plus_in (A : Event Val) (v v' : Val) : R+ :=
-  match v, v' with
-  | v_real r, v_real r' => Indicator A (v_real (r + r'))
+Definition plus_in (A : Event (WT_Val ℝ)) (v v' : WT_Val ℝ) : R+ :=
+  match (proj1_sig v), (proj1_sig v') with
+  | v_real r, v_real r' =>
+    Indicator A (exist (v_real (r + r')) (inhabits (TCVReal _)))
   | _, _ => nnr_0
   end.
-
-(* http://coq-club.inria.narkive.com/PbdQR4E7/rewriting-under-abstractions *)
-Require Import Setoid Morphisms Program.Syntax.
-Instance refl_respectful {A B RA RB}
-         `(sa : subrelation A RA eq)
-         `(sb : subrelation B eq RB)
-  : Reflexive (RA ++> RB)%signature.
-Proof.
-  intros f x x' Hxx'.
-  apply sb.
-  f_equal.
-  apply sa; auto.
-Qed.
-
-Instance subrel_eq_respect {A B RA RB}
-         `(sa : subrelation A RA eq)
-         `(sb : subrelation B eq RB)
-  : subrelation eq (respectful RA RB).
-Proof.
-  intros f g Hfg.
-  intros a a' Raa'.
-  apply sb.
-  f_equal.
-  apply sa; auto.
-Qed.
-
-Instance pointwise_eq_ext {A B RB}
-         `(sb : subrelation B RB (@eq B))
-  : subrelation (pointwise_relation A RB) eq.
-Proof.
-  intros f g Hfg.
-  extensionality x.
-  apply sb.
-  apply (Hfg x).
-Qed.
-
-Instance eq_pointwise {A B RB}
-         `(sb : subrelation B (@eq B) RB) :
-  subrelation eq (pointwise_relation A RB).
-Proof.
-  intros f g Hfg x.
-  apply sb.
-  subst.
-  reflexivity.
-Qed.
-
-Parameter A : Set.
-Parameter op : A -> A -> A.
-Parameter e : A.
-
-Notation "x ** y" := (op x y) (at level 61, left associativity).
-
-Axiom e_neutral_1: forall x, x ** e = x.
-Axiom e_neutral_2: forall x, e ** x = x.
-Hint Rewrite e_neutral_1 e_neutral_2 : my_hints.
 
 Lemma by_theorem_15_plus {ρ el er Γ} A
   (Hel : TC Γ ⊢ el : ℝ)
@@ -799,7 +834,7 @@ Proof.
           (fun σ0 =>
              Integration
                (fun σ1 =>
-                  option0 (plus_in A <$> ev Hρ Hel σ0 <*> ev Hρ Her σ1)
+                  option0 (plus_in A <$> WT_ev Hρ Hel σ0 <*> WT_ev Hρ Her σ1)
                           [*] (ew Hρ Her σ1))
                μEntropy
                [*] (ew Hρ Hel σ0))
@@ -807,7 +842,7 @@ Proof.
     f_equal.
     extensionality σ0.
     f_equal.
-    unfold option_map, plus_in, ew, ev.
+    unfold option_map, plus_in, ew, ev, WT_ev.
     decide_eval Hρ, Hel as [v0 w0 ex0 u0]; simpl; auto.
     rewrite <- Integration_linear_mult_l.
     nnr.
@@ -820,7 +855,7 @@ Proof.
       reflexivity.
     } {
       extensionality σ.
-      unfold eval_in, ev, ew.
+      unfold eval_in, ew, ev, WT_ev.
       decide_eval Hρ, (TCPlus _ _) as [v0 w0 ex0 u0]; simpl. {
         inversion ex0; subst.
         decide_eval Hρ, Hel as [v3 w3 ex3 u3]; simpl.
@@ -830,7 +865,10 @@ Proof.
         specialize (u4 (_, _) X0).
         inversion u3; subst.
         inversion u4; subst.
-        simpl.
+
+        unfold plus_in; simpl.
+
+        inhabited_irrelevance.
         nnr.
       } {
         decide_eval Hρ, Hel as [v3 w3 ex3 u3].
@@ -841,6 +879,86 @@ Proof.
         constructor; eauto.
       }
     }
+  }
+Qed.
+
+Definition the_other_A_rel (τ : Ty) (A0 A1 : Event (WT_Val τ)) :=
+  forall v0 v1 (Hv : V_rel τ (proj1_sig v0) (proj1_sig v1)),
+    (A0 v0 = (* iff *) A1 v1).
+
+Axiom decidable_vtc : forall v τ,
+    (TCV ⊢ v : τ) + (~inhabited (TCV ⊢ v : τ)).
+
+Lemma ty_eq_dec : forall (τ τ' : Ty),
+    {τ = τ'} + {τ <> τ'}.
+Proof.
+  decide equality.
+Defined.
+
+Definition narrow_event {τ} (A : Event (WT_Val τ)) : Event Val :=
+  fun v =>
+    match decidable_vtc v τ with
+    | inl tc => A (exist v (inhabits tc))
+    | inr _ => false
+    end.
+
+Lemma baz τ (A : Event (WT_Val τ)) : widen_event (narrow_event A) = A.
+Proof.
+  extensionality v.
+  destruct v.
+  compute.
+  destruct decidable_vtc. {
+    inhabited_irrelevance.
+    auto.
+  } {
+    contradiction.
+  }
+Qed.
+
+Lemma V_rel_implies_TCV {τ v0 v1} :
+  V_rel τ v0 v1 ->
+  inhabited (TCV ⊢ v0 : τ) /\ inhabited (TCV ⊢ v1 : τ).
+Proof.
+  intros.
+  induction τ, v0, v1; split; try contradiction H; try (repeat constructor; fail). {
+    destruct H as [Γ_clo0 [Hρ_clo0 [tc_body0 [Γ_clo1 [Hρ_clo1 [tc_body1 _]]]]]].
+    constructor.
+    econstructor; eauto.
+  } {
+    destruct H as [Γ_clo0 [Hρ_clo0 [tc_body0 [Γ_clo1 [Hρ_clo1 [tc_body1 _]]]]]].
+    constructor.
+    econstructor; eauto.
+  }
+Qed.
+
+Lemma convert_A_rel :
+  forall {Γ e0 e1 τ}
+  {He0 : TC Γ ⊢ e0 : τ}
+  {He1 : TC Γ ⊢ e1 : τ}
+  {ρ0 ρ1 : Env Val}
+  {Hρ : GREL ρ0, ρ1 ∈ G[ Γ]},
+    (forall A0 A1 : Event Val,
+        A_rel τ A0 A1 ->
+        μ (G_rel_modeling0 Hρ) He0 (widen_event A0) =
+        μ (G_rel_modeling1 Hρ) He1 (widen_event A1)) ->
+    (forall A0 A1 : Event (WT_Val τ),
+        the_other_A_rel τ A0 A1 ->
+        μ (G_rel_modeling0 Hρ) He0 A0 =
+        μ (G_rel_modeling1 Hρ) He1 A1).
+Proof.
+  intros.
+  specialize (H (narrow_event A0) (narrow_event A1)).
+  repeat rewrite baz in *.
+  apply H.
+  clear H.
+  intros v0 v1 Hv.
+  unfold narrow_event.
+  repeat destruct decidable_vtc; auto. {
+    contradict n.
+    apply (V_rel_implies_TCV Hv); auto.
+  } {
+    contradict n.
+    apply (V_rel_implies_TCV Hv); auto.
   }
 Qed.
 
@@ -864,27 +982,31 @@ Proof.
 
   unfold μ.
 
-  rewrite (by_theorem_15_plus _ tc_l0 tc_r0 (G_rel_modeling0 Hρ)).
-  rewrite (by_theorem_15_plus _ tc_l1 tc_r1 (G_rel_modeling1 Hρ)).
+  do 2 rewrite by_theorem_15_plus.
 
-  apply (lemma_3 (A_rel ℝ)); intuition.
+  pose proof convert_A_rel Hl as Hl'.
+  pose proof convert_A_rel Hr as Hr'.
+
+  apply (lemma_3 (the_other_A_rel ℝ)); intuition.
   intros vl0 vl1 Hvl.
   unfold preimage.
   f_equal.
 
-  apply (lemma_3 (A_rel ℝ)); intuition.
+  apply (lemma_3 (the_other_A_rel ℝ)); intuition.
   intros vr0 vr1 Hvr.
   unfold preimage.
   f_equal.
 
-  destruct vl0, vl1, vr0, vr1; try contradiction.
+  destruct vl0 as [[|]], vl1 as [[|]], vr0 as [[|]], vr1 as [[|]]; try contradiction.
 
-  simpl.
+  simpl in *.
 
   inversion Hvl.
   inversion Hvr.
   subst.
 
+  inhabited_irrelevance.
+  unfold plus_in; simpl.
   unfold Indicator.
   f_equal.
   apply HA.
@@ -892,17 +1014,103 @@ Proof.
   auto.
 Qed.
 
-Program Definition apply_in (A : Event Val) (σ : Entropy) {τa τr vf va}
-           (Hvf : (TCV ⊢ vf : τa ~> τr))
-           (Hva : (TCV ⊢ va : τa))
+Lemma pull_from_inhabited_tcv {v τ} : inhabited (TCV ⊢ v : τ) -> (TCV ⊢ v : τ).
+Proof.
+  intros.
+  destruct (decidable_vtc v τ); auto.
+  contradiction.
+Qed.
+
+Ltac pull_from_tcv_dont_care :=
+  progress repeat
+  match goal with
+  | [ |- context[ pull_from_inhabited_tcv ?i ] ] =>
+    generalize (pull_from_inhabited_tcv i); clear i; intro
+  end.
+
+Lemma apply_in_absurd {τa τr} (τeq : ℝ = τa ~> τr) : False.
+Proof.
+  inversion τeq.
+Qed.
+
+Lemma apply_in_convert_Hva
+      {τa τr va} (Hva : TCV ⊢ va : τa)
+      {τa0 τr0} (τeq : (τa0 ~> τr0) = (τa ~> τr))
+  : TCV ⊢ va : τa.
+Proof.
+  inversion τeq; subst; auto.
+Qed.
+
+Lemma apply_in_convert_τa {τa τr τa0 τr0} (τeq : (τa0 ~> τr0) = (τa ~> τr))
+  : τa = τa0.
+Proof.
+  inversion τeq; subst; auto.
+Qed.
+
+Lemma apply_in_convert_τr {τa τr τa0 τr0} (τeq : (τa0 ~> τr0) = (τa ~> τr))
+  : τr = τr0.
+Proof.
+  inversion τeq; subst; auto.
+Qed.
+
+Lemma apply_in_convert_Hbody
+      {τa τr τa0 τr0 Γ_clo x body}
+      (Hbody : TC extend Γ_clo x τa0 ⊢ body : τr0)
+      (τeq : (τa0 ~> τr0) = (τa ~> τr)) :
+    (TC extend Γ_clo x τa ⊢ body : τr).
+Proof.
+  inversion τeq; subst; auto.
+Qed.
+
+Definition apply_in {τa τr} (A : Event (WT_Val τr)) (σ : Entropy)
+        (vf : WT_Val (τa ~> τr))
+        (va : WT_Val τa)
   : R+ :=
-  match Hvf in (TCV ⊢ v : τf) return (τf = τa ~> τr -> R+) with
-  (* | v_clo x e ρ_clo => _ (* eval_in (env_model_extend Hρ x va) e A σ *) *)
+  let Hvf := pull_from_inhabited_tcv (proj2_sig vf) in
+  match Hvf in (TCV ⊢ vf : τf) return (τf = τa ~> τr -> R+) with
   | @TCVClo x body Γ_clo τa0 τr0 ρ_clo Hρ Hbody =>
     fun τeq =>
-      (eval_in (env_model_extend Hρ _ (τ := τa0) Hva) Hbody A σ)
-  | _ => fun _ => nnr_0
+      let Hva := pull_from_inhabited_tcv (proj2_sig va) in
+      (eval_in
+         (env_model_extend Hρ x (apply_in_convert_Hva Hva τeq))
+         (apply_in_convert_Hbody Hbody τeq)
+         A
+         σ)
+  | _ => fun τeq => False_rect _ (apply_in_absurd τeq)
   end eq_refl.
+
+Lemma elim_apply_in {τa τr} (A : Event (WT_Val τr)) (σ : Entropy)
+      {Γ ρ} (Hρ : ENV ρ ⊨ Γ)
+      x (body : Expr)
+      (tc_body : TC (extend Γ x τa) ⊢ body : τr)
+      {va : WT_Val τa}
+      (Hva : TCV ⊢ proj1_sig va : τa)
+      (Hclo : TCV ⊢ v_clo x body ρ : τa ~> τr) :
+  eval_in (env_model_extend Hρ x Hva) tc_body A σ =
+  apply_in A σ (exist (v_clo x body ρ) (inhabits Hclo)) va.
+Proof.
+  destruct va as [va tc_va].
+  simpl in *.
+
+  unfold apply_in; simpl.
+
+  pull_from_tcv_dont_care.
+
+
+  remember τa.
+  remember τr.
+  remember (v_clo x body ρ).
+  generalize (@apply_in_absurd t1 t2).
+  generalize (@apply_in_convert_Hva t1 t2 _ t0).
+  generalize (@apply_in_convert_Hbody t1 t2).
+  intros.
+  destruct t; try solve [contradict f].
+  inversion Heqv.
+  subst.
+
+  assert (Hρ ~= t).
+
+Admitted.
 
 Lemma by_theorem_15_app {ρ ef ea Γ τa τr} A
   (Hef : TC Γ ⊢ ef : (τa ~> τr))
@@ -917,8 +1125,6 @@ Lemma by_theorem_15_app {ρ ef ea Γ τa τr} A
                 ) (μ Hρ Hea)
                 ) (μ Hρ Hef).
 Proof.
-  intros Hef Hea Hρ.
-
   setoid_rewrite theorem_15; eauto.
   setoid_rewrite theorem_15; eauto.
 
@@ -929,21 +1135,20 @@ Proof.
                (fun σ1 =>
                   Integration
                     (fun σ2 =>
-                       option0 (apply_in A σ2 <$> ev ρ ef σ0 <*> ev ρ ea σ1))
+                       option0 (apply_in A σ2 <$> WT_ev Hρ Hef σ0 <*> WT_ev Hρ Hea σ1))
                     μEntropy
-                    [*] ew ρ ea σ1)
+                    [*] ew Hρ Hea σ1)
                μEntropy
-               [*] ew ρ ef σ0)
+               [*] ew Hρ Hef σ0)
           μEntropy). {
     f_equal.
     extensionality σ0.
     f_equal.
-    unfold option_map, ew, ev.
-    decide_eval ρ, ef as [v0 w0 ex0 u0]; simpl. {
+    unfold option_map, ew, ev, WT_ev.
+    decide_eval Hρ, Hef as [v0 w0 ex0 u0]; simpl. {
       f_equal.
       extensionality σ1.
-      unfold ev, ew, option_map.
-      decide_eval ρ, ea as [v1 w1 ex1 u1]; simpl; auto.
+      decide_eval Hρ, Hea as [v1 w1 ex1 u1]; simpl; auto.
     } {
       rewrite <- Integration_linear_mult_l.
       erewrite int_const_entropy; auto.
@@ -951,7 +1156,7 @@ Proof.
     }
   } {
     evar (x : Entropy -> Entropy -> Entropy -> R+).
-    replace (fun σ => eval_in ρ (e_app ef ea) A σ)
+    replace (fun σ => eval_in Hρ (TCApp Hef Hea) A σ)
     with (fun σ => x (π 0 σ) (π 1 σ) (π 2 σ)); subst x. {
       rewrite pick_3_entropies.
       f_equal.
@@ -964,41 +1169,95 @@ Proof.
       reflexivity.
     } {
       extensionality σ.
-      unfold eval_in, ev, ew.
-      decide_eval ρ, (e_app _ _) as [v0 w0 ex0 u0]; simpl. {
+      unfold eval_in, ev, ew, WT_ev.
+      decide_eval Hρ, (TCApp _ _) as [v0 w0 ex0 u0]; simpl. {
         inversion ex0; subst.
-        decide_eval ρ, ef as [v4 w4 ex4 u4]; simpl.
-        decide_eval ρ, ea as [v5 w5 ex5 u5]; simpl.
+        decide_eval Hρ, Hef as [v4 w4 ex4 u4]; simpl.
+        decide_eval Hρ, Hea as [v5 w5 ex5 u5]; simpl.
+        (* shelve. { *)
+        (*   contradict not_ex. *)
+        (*   inversion ex0; subst. *)
+        (*   eexists(_, _); eauto. *)
+        (* } { *)
+        (*   contradict not_ex. *)
+        (*   inversion ex0; subst. *)
+        (*   eexists(_, _); eauto. *)
+        (* } *)
+        (* Unshelve. *)
+
+        unfold apply_in.
+        inhabited_irrelevance.
+        simpl.
+        pull_from_tcv_dont_care.
+
+        generalize (@apply_in_absurd τa τr).
+        generalize (@apply_in_convert_Hva τa τr _ t0).
+        generalize (@apply_in_convert_Hbody τa τr).
+        generalize (@apply_in_convert_τa τa τr).
+        generalize (@apply_in_convert_τr τa τr).
+        intros.
+        destruct t. {
+          apply False_rect.
+          apply f; auto; econstructor; eauto.
+        }
+
+        specialize (H0 τa0 τr0 eq_refl).
+        specialize (H τa0 τr0 eq_refl).
+        subst τa0 τr0.
 
         specialize (u4 (_, _) X).
         specialize (u5 (_, _) X0).
         inversion u4; subst.
         inversion u5; subst.
-        simpl.
 
+        unfold eval_in, ev, ew, WT_ev.
 
+        decide_eval (env_model_extend t x (t2 τa τr eq_refl)), _ as [v6 w6 ex6 u6]. {
+          inhabited_irrelevance.
+          simpl.
 
-        replace (Indicator _ _ [*] _)
-        with (Indicator A v0 [*] w3 [*] w2 [*] w1)
-          by nnr.
+          replace (Indicator _ _ [*] (_ [*] _))
+          with (Indicator A (exist v0 i1) [*] w3 [*] w2 [*] w1)
+            by nnr.
+          do 2 f_equal.
 
-        do 2 f_equal.
-
-        unfold eval_in, ev, ew.
-        decide_eval (extend ρ_clo x v1), body as [v6 w6 ex6 u6].
-        specialize (u6 (_, _) X1).
-        inversion u6; subst.
-        auto.
+          specialize (u6 (v0, w3) X1).
+          inversion u6; subst.
+          do 3 f_equal.
+          apply proof_irrelevance.
+        }
       } {
-        decide_eval ρ, ef as [v3 w3 ex3 u3].
-        decide_eval ρ, ea as [v4 w4 ex4 u4].
-        destruct v3 as [|x body ρ_clo]; try solve [nnr].
-        simpl.
-        unfold apply_in, eval_in, ev, ew.
-        decide_eval (extend ρ_clo x v4), _ as [v5 w5 ex5 u5].
-        contradict not_ex.
-        eexists (_, _).
-        econstructor; eauto.
+        decide_eval Hρ, Hef as [v3 w3 ex3 u3].
+        decide_eval Hρ, Hea as [v4 w4 ex4 u4].
+        destruct v3 as [|x body ρ_clo]. {
+          simpl.
+          unfold apply_in, eval_in, ev, ew, WT_ev; simpl.
+          inhabited_irrelevance.
+          pull_from_tcv_dont_care.
+          inversion t.
+        } {
+          simpl.
+          unfold apply_in, eval_in, ev, ew, WT_ev; simpl.
+          inhabited_irrelevance.
+          pull_from_tcv_dont_care.
+
+          generalize (@apply_in_absurd τa τr).
+          generalize (@apply_in_convert_Hva τa τr _ t0).
+          generalize (@apply_in_convert_Hbody τa τr).
+          generalize (@apply_in_convert_τa τa τr).
+          generalize (@apply_in_convert_τr τa τr).
+          intros.
+          destruct t. {
+            apply False_rect.
+            apply f; auto; econstructor; eauto.
+          }
+          simpl.
+
+          decide_eval (env_model_extend t x0 (t2 _ _ eq_refl)), _ as [v5 w5 ex5 u5].
+          contradict not_ex.
+          eexists (_, _).
+          econstructor; eauto.
+        }
       }
     }
   }
@@ -1010,10 +1269,12 @@ Lemma compat_app Γ ef0 ef1 ea0 ea1 τa τr :
   (EXP Γ ⊢ e_app ef0 ea0 ≈ e_app ef1 ea1 : τr).
 Proof.
   intros Hf Ha.
-  destruct Hf as [[TCf0 TCf1] Hf].
-  destruct Ha as [[TCa0 TCa1] Ha].
-  repeat econstructor; eauto.
 
+  destruct Hf as [tc_f0 tc_f1 Hf].
+  destruct Ha as [tc_a0 tc_a1 Ha].
+  simpl in *.
+  refine (mk_related_exprs (TCApp tc_f0 tc_a0) (TCApp tc_f1 tc_a1) _).
+  simpl.
   intros ρ0 ρ1 Hρ.
   intros A0 A1 HA.
 
@@ -1022,25 +1283,101 @@ Proof.
 
   unfold μ.
 
-  rewrite (by_theorem_15_app _ TCf0 TCa0 (G_rel_modeling0 Hρ)).
-  rewrite (by_theorem_15_app _ TCf1 TCa1 (G_rel_modeling1 Hρ)).
+  do 2 rewrite by_theorem_15_app.
 
-  apply (lemma_3 (A_rel (τa ~> τr))); intuition.
+
+  pose proof convert_A_rel Hf as Hf'.
+  pose proof convert_A_rel Ha as Ha'.
+
+  apply (lemma_3 (the_other_A_rel (τa ~> τr))); intuition.
   intros vf0 vf1 Hvf.
   unfold preimage.
   f_equal.
 
-  apply (lemma_3 (A_rel τa)); intuition.
+  apply (lemma_3 (the_other_A_rel τa)); intuition.
   intros va0 va1 Hva.
   unfold preimage.
   f_equal.
 
-  destruct vf0 as [|x0 body0 ρ_clo0], vf1 as [|x1 body1 ρ_clo1];
-try contradiction.
+  destruct vf0 as [[|x0 body0 ρ_clo0]]; try contradiction.
+  destruct vf1 as [[|x1 body1 ρ_clo1]]; try contradiction.
+  destruct va0 as [va0 Hva0].
+  destruct va1 as [va1 Hva1].
 
-  unfold apply_in.
-  change (μ (extend ρ_clo0 x0 va0) body0 A0 = μ (extend ρ_clo1 x1 va1) body1 A1).
-  apply Hvf; auto.
+  (* destruct i. *)
+  (* inversion t; subst. *)
+  (* rename Γ_clo into Γ_clo0, X into Hρ_clo0, X0 into Hbody0. *)
+  (* assert (Hρ_clo0' : ENV (extend ρ_clo0 x0 va0) ⊨ (extend Γ_clo0 x0 τa)). { *)
+  (*   apply env_model_extend; auto. *)
+  (*   apply pull_from_inhabited_tcv. *)
+  (*   auto. *)
+  (* } *)
+
+  (* destruct i0. *)
+  (* inversion t0; subst. *)
+  (* rename Γ_clo into Γ_clo1, X into Hρ_clo1, X0 into Hbody1. *)
+  (* assert (Hρ_clo1' : ENV (extend ρ_clo1 x1 va1) ⊨ (extend Γ_clo1 x1 τa)). { *)
+  (*   apply env_model_extend; auto. *)
+  (*   apply pull_from_inhabited_tcv. *)
+  (*   auto. *)
+  (* } *)
+
+  destruct Hvf as [Γ_clo0 [Hρ_clo0 [tc_body0 [Γ_clo1 [Hρ_clo1 [tc_body1 Hvf]]]]]].
+  simpl in *.
+  specialize (Hvf va0 va1).
+  specialize (Hvf (pull_from_inhabited_tcv Hva0) (pull_from_inhabited_tcv Hva1)).
+  specialize (Hvf Hva A0 A1 HA).
+
+  revert Hvf.
+  generalize (pull_from_inhabited_tcv Hva0) as Hva0'; intro.
+  generalize (pull_from_inhabited_tcv Hva1) as Hva1'; intro.
+  intros.
+
+  unfold μ in Hvf.
+
+  assert (@eq (WT_Val τa) (exist va0 Hva0) (exist va0 (inhabits Hva0'))). {
+    f_equal.
+    apply proof_irrelevance.
+  }
+  setoid_rewrite H.
+  clear H Hva0.
+  assert (@eq (WT_Val τa) (exist va1 Hva1) (exist va1 (inhabits Hva1'))). {
+    f_equal.
+    apply proof_irrelevance.
+  }
+  setoid_rewrite H.
+  clear H Hva1.
+
+  setoid_rewrite <- elim_apply_in.
+  apply Hvf.
+
+
+  assert (forall σ,
+             eval_in (env_model_extend Hρ_clo0 x0 Hva0') tc_body0 (widen_event A0) σ =
+             apply_in (widen_event A0) σ (exist (v_clo x0 body0 ρ_clo0) i) (exist va0 Hva0)). {
+
+
+    intros.
+    unfold apply_in; simpl.
+    pull_from_tcv_dont_care.
+    (* generalize (@apply_in_absurd τa τr). *)
+    (* generalize (@apply_in_convert_Hva τa τr _ t0). *)
+    (* generalize (@apply_in_convert_Hbody τa τr). *)
+    (* generalize (@apply_in_convert_τa τa τr). *)
+    (* generalize (@apply_in_convert_τr τa τr). *)
+    (* intros. *)
+    (* destruct t; try solve [contradict f]. *)
+  }
+  assert (forall σ,
+             eval_in (env_model_extend Hρ_clo1 x1 Hva1') tc_body1 (widen_event A1) σ =
+             apply_in (widen_event A1) σ (exist (v_clo x1 body1 ρ_clo1) i0) (exist va1 Hva1)). {
+    admit.
+  }
+
+  setoid_rewrite <- H.
+  setoid_rewrite <- H0.
+
+  apply Hvf.
 Qed.
 
 Lemma compat_sample Γ :

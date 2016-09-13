@@ -119,6 +119,19 @@ Scheme tc_val_env_rect := Induction for tc_val Sort Type
 with
 tc_env_val_rect := Induction for tc_env Sort Type.
 
+Lemma lookup_WT_Val {Γ ρ} (Hρ : ENV ρ ⊨ Γ) {x τ v} :
+  Γ x = Some τ ->
+  ρ x = Some v ->
+  {v : Val | inhabited (TCV ⊢ v : τ)}.
+Proof.
+  intros.
+  exists v.
+  inversion Hρ.
+  subst.
+  constructor.
+  eapply X; eauto.
+Qed.
+
 Definition Entropy := nat -> {r : R | 0 <= r <= 1}.
 
 Definition πL (σ : Entropy) : Entropy := fun n => σ (2 * n)%nat.
@@ -143,7 +156,7 @@ Inductive eval (ρ : Env Val) (σ : Entropy) : forall (e : Expr) (v : Val) (w : 
 | EPure (ae : AExpr) (v : Val) :
     eval_a ρ ae = Some v ->
     (EVAL ρ, σ ⊢ e_pure ae ⇓ v, nnr_1)
-| EApp {e0 e1 : Expr}
+| EApp {e0 e1 : Expr} 
        {x : Var} {body : Expr} {ρ_clo : Env Val}
        {v1 v2 : Val}
        {w0 w1 w2 : R+}
@@ -174,25 +187,27 @@ Record Config τ := mk_config
 Arguments mk_config {_ _ _} _ {_} _.
 
 Lemma env_model_extend
-           {ρ Γ} (Hρ : ENV ρ ⊨ Γ) x {v τ} (Hv : (TCV ⊢ v : τ))
+      {ρ Γ} (Hρ : ENV ρ ⊨ Γ) x {v τ} (Hv : (TCV ⊢ v : τ))
   : ENV (extend ρ x v) ⊨ (extend Γ x τ).
 Proof.
   unfold extend.
-  repeat constructor. {
-    destruct Var_eq_dec; intros H. {
-      inversion H.
+  constructor. {
+    constructor. {
+      destruct Var_eq_dec; intros H. {
+        inversion H.
+      } {
+        inversion Hρ; subst.
+        rewrite <- (H0 x).
+        auto.
+      }
     } {
-      inversion Hρ; subst.
-      rewrite <- (H0 x).
-      auto.
-    }
-  } {
-    destruct Var_eq_dec; intros H. {
-      inversion H.
-    } {
-      inversion Hρ; subst.
-      rewrite (H0 x).
-      auto.
+      destruct Var_eq_dec; intros H. {
+        inversion H.
+      } {
+        inversion Hρ; subst.
+        rewrite (H0 x).
+        auto.
+      }
     }
   } {
     intros.
@@ -207,3 +222,15 @@ Proof.
     }
   }
 Qed.
+
+Lemma ty_eq_dec : forall (τ τ' : Ty),
+    {τ = τ'} + {τ <> τ'}.
+Proof.
+  decide equality.
+Defined.
+
+Axiom decidable_tc : forall Γ e,
+    ({τ : Ty & TC Γ ⊢ e : τ}) + (~exists τ, inhabited (TC Γ ⊢ e : τ)).
+
+Axiom decidable_vtc : forall v τ,
+    (TCV ⊢ v : τ) + (~inhabited (TCV ⊢ v : τ)).
