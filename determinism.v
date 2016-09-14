@@ -33,12 +33,13 @@ Definition dV_rel_arrow
        (v : Val)
   : Type
   := match v with
-     | v_clo x body ρ_clo =>
+     | v_clo x τa' body ρ_clo =>
+       (τa = τa') ⨉
        { Γ_clo : Env Ty &
        { Hρ_clo : ENV ρ_clo ⊨ Γ_clo &
        { tc_body : (TC (extend Γ_clo x τa) ⊢ body : τr) &
-        forall {va} (Hva : dV_rel_a va) (tc_va : TCV ⊢ va : τa),
-        (dE_rel τr dV_rel_r (mk_config (env_model_extend Hρ_clo x tc_va) tc_body))
+        forall {va} (Hva : dV_rel_a (proj1_sig va)),
+        (dE_rel τr dV_rel_r (mk_config (env_model_extend Hρ_clo x va) tc_body))
        }}}
      | _ => False
      end.
@@ -81,7 +82,8 @@ Proof.
   destruct τ, v; simpl in *; try tauto. {
     constructor.
   } {
-    destruct X as [? [? [? ?]]].
+    destruct X as [? [? [? [? ?]]]].
+    subst.
     econstructor; eauto.
   }
 Qed.
@@ -179,16 +181,17 @@ Qed.
 
 Lemma compat_lam Γ x body τa τr :
   related_expr (extend Γ x τa) body τr ->
-  related_expr Γ (e_pure (e_lam x body)) (τa ~> τr).
+  related_expr Γ (e_pure (e_lam x τa body)) (τa ~> τr).
 Proof.
   intros Hbody.
   destruct Hbody as [tc_body Hbody].
   exists (TCLam tc_body).
   intros ρ Hρ σ.
   left.
-  exists (v_clo x body ρ, nnr_1).
+  exists (v_clo x τa body ρ, nnr_1).
   constructor; [constructor |]. {
     simpl.
+    split; auto.
     exists Γ.
     exists (dG_rel_modeling Hρ).
     exists tc_body.
@@ -222,12 +225,12 @@ Proof.
 
   destruct Hef as [[[vf wf] [[Hvf EVAL_f] uf]] | not_ex]. {
     destruct Hea as [[[va wa] [[Hva EVAL_a] ua]] | not_ex]. {
-      destruct vf as [| x body ρ_clo]; [inversion Hvf; contradiction |].
-      destruct Hvf as [Γ_clo [Hρ_clo [tc_body Hvf]]]; simpl in Hvf.
-
-      unfold dE_rel in Hvf.
-
-      destruct (Hvf va Hva (tc_of_dV_rel Hva) (π 2 σ)) as [[[vr wr] [[Hvr EVAL_r] ur]] | not_ex]. {
+      destruct vf as [| x τa' body ρ_clo]; [inversion Hvf; contradiction |].
+      destruct Hvf as [? [Γ_clo [Hρ_clo [tc_body Hvf]]]]; simpl in Hvf.
+      subst τa'.
+      set (wt_va := (exist _ va (inhabits (tc_of_dV_rel Hva))) : WT_Val τa).
+      simpl in wt_va.
+      destruct (Hvf wt_va Hva (π 2 σ)) as [[[vr wr] [[Hvr EVAL_r] ur]] | not_ex]. {
         left.
         exists (vr, wf [*] wa [*] wr).
         repeat econstructor; eauto.
@@ -450,6 +453,7 @@ Proof.
     repeat constructor.
   } {
     intros.
+    split; auto.
     exists Γ_clo.
     exists t.
     exists t0.

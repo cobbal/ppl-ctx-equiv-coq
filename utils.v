@@ -5,9 +5,7 @@ Require Import Coq.Classes.Morphisms.
 
 Notation "a  '⨉'  b" := (prod a b) (at level 40, left associativity).
 
-
-Notation "'existsT' x .. y , p" :=
-  (sigT (fun x => .. (sigT (fun y => p)) ..))
+Notation "'existsT' x .. y , p" := (sigT (fun x => .. (sigT (fun y => p)) ..))
   (at level 200, x binder, right associativity,
    format "'[' 'existsT'  '/ ' x .. y , '/ ' p ']'")
   : type_scope.
