@@ -3,5 +3,7 @@
 *.vo
 .*.aux
 Makefile.coq
-
 lean
+lia.cache
+auto-subst
+old-and-broken

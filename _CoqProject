@@ -1,6 +1,8 @@
--R . OpSemProofs
+-R ./auto-subst/theories Autosubst -R . OpSemProofs
 nnr.v
 relations.v
+using_relations.v
 determinism.v
 syntax.v
 utils.v
+Entropy.v

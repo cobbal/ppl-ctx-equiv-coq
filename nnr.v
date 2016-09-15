@@ -3,15 +3,9 @@
 Require Import Basics.
 Require Import Reals.
 Require Import Ensembles.
-Require Import Coq.fourier.Fourier.
+(* Require Import Coq.fourier.Fourier. *)
 Require Import Coq.Logic.FunctionalExtensionality.
 Require Import Coq.Logic.ProofIrrelevance.
-
-SearchPattern (nat -> R).
-SearchAbout Rlt.
-SearchAbout Rmin.
-
-SearchAbout Rmult.
 
 Local Open Scope R.
 
@@ -40,9 +34,7 @@ Program Definition nnr_div (a b : R+) (bpos : 0 < _r b) : R+ :=
 Next Obligation.
   destruct a, b; simpl in *.
 
-  SearchAbout Rdiv.
   apply Rmult_le_pos; auto.
-  SearchAbout Rinv.
   apply Rlt_le.
   apply Rinv_0_lt_compat; auto.
 Qed.
@@ -79,13 +71,22 @@ Proof.
   nnr.
 Qed.
 
+Lemma nnr_mult_one_l (r : R+) : nnr_1 [*] r = r.
+Proof.
+  nnr.
+Qed.
+
+Lemma nnr_mult_one_r (r : R+) : r [*] nnr_1 = r.
+Proof.
+  nnr.
+Qed.
+
 Lemma nnr_mult_pos_l (a b : R+) :
   0 < _r (a [*] b) -> 0 < _r a.
 Proof.
   intros.
   destruct a, b.
   simpl in *.
-  SearchAbout Rmult.
 
   destruct nnr_pos1. {
     apply (Rmult_lt_reg_r _r1); auto.
@@ -96,4 +97,10 @@ Proof.
     rewrite Rmult_0_r.
     apply Rlt_irrefl.
   }
+Qed.
+
+Lemma nnr_mult_assoc (a b c : R+) :
+  (a [*] b) [*] c = a [*] (b [*] c).
+Proof.
+  nnr.
 Qed.
