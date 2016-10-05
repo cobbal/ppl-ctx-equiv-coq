@@ -79,6 +79,16 @@ Proof.
   nnr.
 Qed.
 
+Lemma nnr_mult_one_l (r : R+) : nnr_1 [*] r = r.
+Proof.
+  nnr.
+Qed.
+
+Lemma nnr_mult_one_r (r : R+) : r [*] nnr_1 = r.
+Proof.
+  nnr.
+Qed.
+
 Lemma nnr_mult_pos_l (a b : R+) :
   0 < _r (a [*] b) -> 0 < _r a.
 Proof.
@@ -96,4 +106,10 @@ Proof.
     rewrite Rmult_0_r.
     apply Rlt_irrefl.
   }
+Qed.
+
+Lemma nnr_mult_assoc (a b c : R+) :
+  (a [*] b) [*] c = a [*] (b [*] c).
+Proof.
+  nnr.
 Qed.

@@ -152,6 +152,27 @@ Scheme tc_val_env_rect := Induction for tc_val Sort Type
 with
 tc_env_val_rect := Induction for tc_env Sort Type.
 
+Lemma lookup_tc_env {Γ ρ} (Hρ : ENV ρ ⊨ Γ) {x τ v} :
+  lookup Γ x = Some τ ->
+  lookup ρ x = Some v ->
+  (TCV ⊢ v : τ).
+Proof.
+  intros.
+  revert x H H0.
+  induction Hρ; intros. {
+    destruct x; inversion H.
+  } {
+    destruct x; simpl in *. {
+      inversion H.
+      inversion H0.
+      subst.
+      auto.
+    } {
+      eapply IHHρ; eauto.
+    }
+  }
+Qed.
+
 Definition Entropy := nat -> {r : R | 0 <= r <= 1}.
 
 Definition πL (σ : Entropy) : Entropy := fun n => σ (2 * n)%nat.
@@ -400,6 +421,14 @@ intros. {
     f_equal.
     apply IHt0; auto.
   }
+Qed.
+
+Lemma tc_env_highlander {Γ ρ} (a b : ENV ρ ⊨ Γ) : a = b.
+Proof.
+  induction a; dependent destruction b; auto.
+  rewrite (IHa b); auto.
+  f_equal.
+  apply tcv_highlander.
 Qed.
 
 Definition WT_Val τ := {v : Val & (TCV ⊢ v : τ) }.

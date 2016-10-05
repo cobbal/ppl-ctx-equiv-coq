@@ -347,7 +347,7 @@ Ltac decide_eval' ρ exp v w e u :=
   [|
    try (contradict not_ex; eexists (_, _); repeat constructor; eassumption);
    try solve [nnr]].
-Tactic Notation "decide_eval" constr(ρ) "," uconstr(exp) "as"
+Tactic Notation "decide_eval" uconstr(ρ) "," uconstr(exp) "as"
        "[" ident(v) ident(w) ident(e) ident(u) "]"
   := (decide_eval' ρ exp v w e u).
 
@@ -1435,7 +1435,7 @@ Proof.
   auto.
 Qed.
 
-Lemma fundamental_property Γ e τ :
+Lemma fundamental_property {Γ e τ} :
   (TC Γ ⊢ e : τ) ->
   (EXP Γ ⊢ e ≈ e : τ).
 Proof.
@@ -1451,3 +1451,241 @@ Proof.
 Qed.
 
 Print Assumptions fundamental_property.
+
+SearchAbout WT_Val.
+
+Print Val_rect.
+
+Lemma WT_Val_rect
+        (P : forall τ v, (TCV ⊢ v : τ) -> Type)
+        (case_real :
+           forall r tc,
+             P ℝ (v_real r) tc)
+        (case_clo :
+           forall τa τr body ρ tc Γ,
+             ENV ρ ⊨ Γ ->
+             (forall x τ v,
+                 lookup Γ x = Some τ ->
+                 lookup ρ x = Some v ->
+                 existsT Hv, P τ v Hv) ->
+             P (τa ~> τr) (v_clo τa body ρ) tc)
+  : forall τ v Hv, P τ v Hv.
+Proof.
+  intros.
+  Check tc_val_env_rect.
+  induction Hv using tc_val_env_rect
+  with
+  (P := fun v τ Hv => P τ v Hv)
+    (P0 := fun ρ Γ Hρ =>
+             forall x τ v
+                    (Γx : lookup Γ x = Some τ)
+                    (ρx : lookup ρ x = Some v),
+               P τ v (lookup_tc_env Hρ Γx ρx)). {
+    apply case_real.
+  } {
+    apply case_clo with (Γ := Γ_clo); auto.
+    intros.
+    eexists.
+    apply (IHHv x τ v H H0).
+  } {
+    intros.
+    destruct x; discriminate Γx.
+  } {
+    intros.
+
+    destruct x; intros. {
+      simpl in *.
+      inversion Γx.
+      inversion ρx.
+      subst.
+      rewrite <- (tcv_highlander Hv).
+      auto.
+    } {
+      simpl in Γx, ρx.
+      specialize (IHHv _ _ _ Γx ρx).
+      rewrite <- (tcv_highlander (lookup_tc_env t Γx ρx)).
+      auto.
+    }
+  }
+Qed.
+
+Lemma tc_nil_clo_body {τa τr body ρ} :
+  ρ = nil ->
+  (TCV ⊢ v_clo τa body ρ : τa ~> τr) ->
+  (TC extend nil τa ⊢ body : τr).
+Proof.
+  intros.
+  subst.
+  inversion X.
+  inversion X0.
+  subst.
+  auto.
+Qed.
+
+(* Lemma append_models {Γ0 Γ1 ρ0 ρ1} : *)
+(*   ENV ρ0 ⊨ Γ0 -> *)
+(*   ENV ρ1 ⊨ Γ1 -> *)
+(*   ENV ρ0 ++ ρ1 ⊨ Γ0 ++ Γ1. *)
+(* Proof. *)
+(*   intros. *)
+(*   induction X; auto. *)
+(*   simpl. *)
+(*   constructor; auto. *)
+(* Qed. *)
+
+(* Lemma reverse_models {Γ ρ} : *)
+(*   ENV ρ ⊨ Γ -> *)
+(*   ENV rev ρ ⊨ rev Γ. *)
+(* Proof. *)
+(*   intros. *)
+(*   induction X. { *)
+(*     constructor. *)
+(*   } { *)
+(*     simpl. *)
+(*     apply append_models; auto. *)
+(*     repeat constructor; auto. *)
+(*   } *)
+(* Qed. *)
+
+
+Fixpoint close_expr {Γ ρ} (Hρ : ENV ρ ⊨ Γ) (e : Expr) : Expr :=
+  match Hρ with
+  | TCENil => e
+  | @TCECons _ τ _ _ Hρ' Hv =>
+    close_expr Hρ' (e_app (e_pure (e_lam τ e)) (expr_of_val' Hv))
+  end
+with
+expr_of_val' {τ v} (Hv : (TCV ⊢ v : τ)) : Expr :=
+  match Hv with
+  | TCVReal r => e_pure (e_real r)
+  | @TCVClo body _ τa _ _ Hρ Hbody =>
+    close_expr Hρ (e_pure (e_lam τa body))
+  end.
+
+(* Lemma foo1 {Γ ρ} (Hρ : ENV ρ ⊨ Γ) {v τ} (Hv : TCV ⊢ v : τ) e τr : *)
+(*   TC (τ :: Γ) ⊢ close_expr Hρ e : τr -> *)
+(*   TC Γ ⊢ close_expr (TCECons Hρ Hv) e : τr. *)
+(* Proof. *)
+(* Admitted. *)
+
+(* Lemma foo2 {Γ ρ} (Hρ : ENV ρ ⊨ Γ) {v τ} (Hv : TCV ⊢ v : τ) e τr : *)
+(*   TC Γ ⊢ close_expr (TCECons Hρ Hv) e : τr -> *)
+(*   TC (τ :: Γ) ⊢ close_expr Hρ e : τr. *)
+(* Proof. *)
+(*   intros. *)
+(*   induction Hρ. { *)
+(*     simpl. *)
+(*     simpl in H. *)
+(*     inversion H; subst. *)
+(*     inversion H2; subst. *)
+(*     apply H1. *)
+(*   } *)
+(* Admitted. *)
+
+(* Lemma expr_of_val {τ v} (Hv : (TCV ⊢ v : τ)) : *)
+(*   (TC nil ⊢ expr_of_val' Hv : τ). *)
+(* Proof. *)
+(*   destruct Hv; try constructor. *)
+(*   simpl. *)
+
+(*   (* replace Γ_clo with ([] ++ Γ_clo) in * by trivial. *) *)
+(*   (* set (Γ := nil) in *. *) *)
+(*   (* clearbody Γ. *) *)
+(*   (* revert Γ t0. *) *)
+
+(*   induction t; intros. { *)
+(*     simpl. *)
+(*     constructor. *)
+(*     (* rewrite app_nil_r in t0. *) *)
+(*     auto. *)
+(*   } { *)
+(*     apply foo1. *)
+(*     pose proof foo1 t t1. *)
+
+
+(* Qed. *)
+
+(* Lemma expr_of_val_wt_ex {v τ} (Hv : (TCV ⊢ v : τ)) : *)
+(*   {e : Expr & expr_of_val' v = Some e}. *)
+(* Proof. *)
+(*   induction Hv using tc_val_env_rect *)
+(*   with (P0 := fun ρ Γ Hρ => *)
+(*                 forall x v τ, *)
+(*                   lookup Γ x = Some τ -> *)
+(*                   lookup ρ x = Some v -> *)
+(*                   {e : Expr & expr_of_val' v = Some e}). { *)
+(*     eexists. *)
+(*     reflexivity. *)
+(*   } { *)
+(*     induction t; intros. { *)
+(*       eexists. *)
+(*       reflexivity. *)
+(*     } { *)
+(*       eexists. *)
+(*       simpl. *)
+(*       destruct decidable_tcv as [[?τ Hv]|]. { *)
+(*         assert (τ0 = τ) by (eapply vtype_highlander; eauto). *)
+(*         subst. *)
+(*         destruct IHt. *)
+(*       } { *)
+(*         contradict n. *)
+(*         exists τ. *)
+(*         auto. *)
+(*       } *)
+(*     } *)
+(*   } *)
+(* Qed. *)
+
+Lemma fundamental_property_of_values v τ :
+  (TCV ⊢ v : τ) ->
+  (VREL v, v ∈ V[τ]).
+Proof.
+  intros.
+  destruct X using tc_val_env_rect
+  with (P0 := fun ρ Γ Hρ => GREL ρ, ρ ∈ G[Γ]). {
+    reflexivity.
+  } {
+    simpl.
+    split; auto.
+
+    exists Γ_clo.
+    exists t.
+    exists t0.
+    exists Γ_clo.
+    exists t.
+    exists t0.
+    intros ? ? Hva ? ? HA.
+
+    pose proof fundamental_property t0.
+    destruct H as [He He0 H].
+    simpl in H.
+    specialize (H _ _ (extend_grel va0 va1 IHX Hva)).
+    specialize (H A0 A1 HA).
+    assert (He = t0) by apply tc_highlander.
+    assert (He0 = t0) by apply tc_highlander.
+    subst.
+    replace (G_rel_modeling0 _) with (env_model_extend t va0)
+      in H by apply tc_env_highlander.
+    replace (G_rel_modeling1 _) with (env_model_extend t va1)
+      in H by apply tc_env_highlander.
+    exact H.
+  } {
+    repeat constructor.
+    intros.
+    destruct x; inversion H.
+  } {
+    repeat constructor; auto.
+    intros.
+    destruct x. {
+      simpl in *.
+      inversion H.
+      inversion H0.
+      inversion H1.
+      subst τ0 v0 v1.
+      auto.
+    } {
+      simpl in *.
+      eapply (G_rel_V IHX); eauto.
+    }
+  }
+Qed.

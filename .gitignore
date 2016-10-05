@@ -3,5 +3,5 @@
 *.vo
 .*.aux
 Makefile.coq
-
 lean
+lia.cache
