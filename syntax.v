@@ -10,7 +10,6 @@ Require Import nnr.
 Require Import utils.
 Require Import List.
 
-
 Local Open Scope R.
 
 Definition Var := nat.
@@ -48,10 +47,13 @@ Definition empty_env {T : Type} : Env T := nil.
 Definition extend {T} (ρ : Env T) (v : T) : Env T :=
   v :: ρ.
 Fixpoint lookup {T} (ρ : Env T) x : option T :=
-  match x, ρ with
-  | _, nil => None
-  | O, (v :: _) => Some v
-  | S x', (_ :: ρ') => lookup ρ' x'
+  match ρ with
+  | nil => None
+  | v :: ρ' =>
+    match x with
+    | O => Some v
+    | S x' => lookup ρ' x'
+    end
   end.
 
 Reserved Notation "'TC' Γ ⊢ e : τ" (at level 70, e at level 99, no associativity).
@@ -115,44 +117,30 @@ Definition Val_Val_Env_rect
             end) ρ)
     end.
 
-(* Definition env_dom_eq {A B} (envA : Env A) (envB : Env B) := *)
-(*   forall x, lookup envA x = None <-> lookup envB x = None. *)
-
-Definition env_dom_eq {A B} (envA : Env A) (envB : Env B) :=
-  length envA = length envB.
-
-(* Record env_models' {R : Val -> Ty -> Type} {ρ : Env Val} {Γ : Env Ty} : Type := *)
-(*   { *)
-(*     env_dom_match : env_dom_eq Γ ρ; *)
-(*     env_val_models : forall x τ, *)
-(*         Γ x = Some τ -> *)
-(*         {v : Val & ρ x = Some v & R v τ} *)
-(*   }. *)
-
 Reserved Notation "'TCV' ⊢ v : τ" (at level 70, v at level 99, no associativity).
-Reserved Notation "'ENV' ρ ⊨ Γ" (at level 69, no associativity).
+Reserved Notation "'TCEnv' ⊢ ρ : Γ" (at level 70, ρ at level 99, no associativity).
 Inductive tc_val : Val -> Ty -> Type :=
 | TCVReal (r : R)
   : (TCV ⊢ v_real r : ℝ)
 | TCVClo {body : Expr} {Γ_clo : Env Ty} {τa τr : Ty} {ρ_clo : Env Val}
-  : (ENV ρ_clo ⊨ Γ_clo) ->
+  : (TCEnv ⊢ ρ_clo : Γ_clo) ->
     (TC (extend Γ_clo τa) ⊢ body : τr) ->
     (TCV ⊢ v_clo τa body ρ_clo : (τa ~> τr))
 with
 tc_env : Env Val -> Env Ty -> Type :=
 | TCENil : tc_env nil nil
 | TCECons {v τ ρ Γ} :
-    tc_env ρ Γ ->
-    tc_val v τ ->
-    tc_env (v :: ρ) (τ :: Γ)
+    (TCEnv ⊢ ρ : Γ)  ->
+    (TCV ⊢ v : τ) ->
+    (TCEnv ⊢ extend ρ v : extend Γ τ)
 where "'TCV' ⊢ v : τ" := (tc_val v τ)
-and "'ENV' ρ ⊨ Γ" := (tc_env ρ Γ).
+and "'TCEnv' ⊢ ρ : Γ" := (tc_env ρ Γ).
 
 Scheme tc_val_env_rect := Induction for tc_val Sort Type
 with
 tc_env_val_rect := Induction for tc_env Sort Type.
 
-Lemma lookup_tc_env {Γ ρ} (Hρ : ENV ρ ⊨ Γ) {x τ v} :
+Lemma lookup_tc_env {Γ ρ} (Hρ : TCEnv ⊢ ρ : Γ) {x τ v} :
   lookup Γ x = Some τ ->
   lookup ρ x = Some v ->
   (TCV ⊢ v : τ).
@@ -183,7 +171,7 @@ Fixpoint π (n : nat) (σ : Entropy) : Entropy :=
   | O => πL σ
   | S n' => π n' (πR σ)
   end.
-
+Opaque π.
 
 Definition eval_a ρ (e : AExpr) : option Val :=
   match e with
@@ -220,16 +208,14 @@ where "'EVAL' ρ , σ ⊢ e ⇓ v , w" := (eval ρ σ e v w)
 Record Config τ := mk_config
   { config_Γ : Env Ty;
     config_ρ : Env Val;
-    config_Hρ : ENV config_ρ ⊨ config_Γ;
+    config_Hρ : (TCEnv ⊢ config_ρ : config_Γ);
     config_e : Expr;
     config_He : (TC config_Γ ⊢ config_e : τ);
   }.
 
 Arguments mk_config {_ _ _} _ {_} _.
 
-(* There can be only one! *)
-
-Lemma type_highlander :
+Lemma expr_type_unique :
   forall {e Γ τa τb}
          (tc_a : (TC Γ ⊢ e : τa))
          (tc_b : (TC Γ ⊢ e : τb)),
@@ -260,8 +246,9 @@ auto. {
   }
 Qed.
 
-Lemma tc_highlander :
-  forall {e Γ τ} (tc_a tc_b : (TC Γ ⊢ e : τ)), tc_a = tc_b.
+Lemma tc_unique :
+  forall {e Γ τ} (tc_a tc_b : (TC Γ ⊢ e : τ)),
+    tc_a = tc_b.
 Proof.
   intro e.
 
@@ -274,7 +261,7 @@ auto;
 dependent destruction tc_a;
 dependent destruction tc_b;
 auto. {
-    pose proof type_highlander tc_a1 tc_b1.
+    pose proof expr_type_unique tc_a1 tc_b1.
     inversion H.
     subst.
     rewrite (IHe0_1 _ _ tc_a1 tc_b1).
@@ -296,46 +283,7 @@ auto. {
   }
 Qed.
 
-(* Fixpoint ty_env_highlander *)
-(*   {Γa Γb : Env Ty} *)
-(*   {ρ : Env Val} *)
-(*   (HΓa : (ENV ρ ⊨ Γa)) *)
-(*   (HΓb : (ENV ρ ⊨ Γb)) : *)
-(*   Γa = Γb *)
-(* with *)
-(* vtype_highlander *)
-(*   {v τa τb} *)
-(*   (tc_a : (TCV ⊢ v : τa)) *)
-(*   (tc_b : (TCV ⊢ v : τb)) : *)
-(*   τa = τb. *)
-(* Proof. { *)
-(*     revert Γa Γb HΓa HΓb. *)
-(*     induction ρ; intros; *)
-(* dependent destruction HΓa; *)
-(* dependent destruction HΓb; *)
-(* subst. { *)
-(*       auto. *)
-(*     } { *)
-(*       f_equal. { *)
-(*         eapply vtype_highlander; eauto. *)
-(*       } { *)
-(*         apply IHρ; auto. *)
-(*       } *)
-(*     } *)
-(*   } { *)
-(*     intros. *)
-(*     destruct tc_a; dependent destruction tc_b. { *)
-(*       auto. *)
-(*     } { *)
-(*       f_equal. *)
-(*       specialize (ty_env_highlander Γ_clo Γ_clo0 ρ_clo t t1). *)
-(*       subst. *)
-(*       eapply type_highlander; eauto. *)
-(*     } *)
-(*   } *)
-(* Qed. *)
-
-Lemma vtype_highlander :
+Lemma val_type_unique :
   forall {v τa τb}
          (tc_a : (TCV ⊢ v : τa))
          (tc_b : (TCV ⊢ v : τb)),
@@ -344,7 +292,7 @@ Proof.
   intros.
   revert τb tc_b.
   einduction tc_a using tc_val_env_rect
-  with (P0 := fun ρ Γ Hρ => forall Γb, (ENV ρ ⊨ Γb) -> Γ = Γb);
+  with (P0 := fun ρ Γ Hρ => forall Γb, (TCEnv ⊢ ρ : Γb) -> Γ = Γb);
 intros; auto. {
     inversion tc_b; subst.
     auto.
@@ -353,26 +301,26 @@ intros; auto. {
     f_equal.
     specialize (IHt Γ_clo0 X).
     subst.
-    eapply type_highlander; eauto.
+    eapply expr_type_unique; eauto.
   } {
     inversion X.
     auto.
   } {
     dependent destruction X.
-    assert (ENV (v :: ρ) ⊨ (τ :: Γ)) by (constructor; auto).
+    assert (TCEnv ⊢ extend ρ v : extend Γ τ) by (constructor; auto).
     f_equal. {
-      apply IHt0; auto.
-    } {
       apply IHt; auto.
+    } {
+      apply IHt0; auto.
     }
   }
 Qed.
 
-Lemma ty_env_highlander
+Lemma env_type_unique
   {Γa Γb : Env Ty}
   {ρ : Env Val}
-  (HΓa : (ENV ρ ⊨ Γa))
-  (HΓb : (ENV ρ ⊨ Γb))
+  (HΓa : (TCEnv ⊢ ρ : Γa))
+  (HΓb : (TCEnv ⊢ ρ : Γb))
   : Γa = Γb.
 Proof.
   revert Γa Γb HΓa HΓb.
@@ -380,14 +328,14 @@ Proof.
     auto.
   } {
     f_equal. {
-      eapply vtype_highlander; eauto.
-    } {
       apply IHρ; auto.
+    } {
+      eapply val_type_unique; eauto.
     }
   }
 Qed.
 
-Lemma tcv_highlander : forall {v τ} (a b : TCV ⊢ v : τ), a = b.
+Lemma tc_val_unique : forall {v τ} (a b : TCV ⊢ v : τ), a = b.
 Proof.
   intros.
   revert b.
@@ -395,7 +343,7 @@ Proof.
   einduction a using tc_val_env_rect
   with (P0 :=
           fun ρ Γa Hρa =>
-            forall (Γb : Env Ty) (Hρb : ENV ρ ⊨ Γb),
+            forall (Γb : Env Ty) (Hρb : TCEnv ⊢ ρ : Γb),
               Γa = Γb /\ Hρa ~= Hρb);
 intros. {
     dependent destruction b; auto.
@@ -404,14 +352,12 @@ intros. {
     destruct (IHt _ t1).
     do 2 subst.
     f_equal.
-    apply tc_highlander.
+    apply tc_unique.
   } {
     dependent destruction Hρb; auto.
   } {
-    assert (τ :: Γ = a). {
-      assert (ENV (v :: ρ) ⊨ (τ :: Γ)) by (constructor; auto).
-      exact (ty_env_highlander X Hρb).
-    }
+    assert (extend Γ τ = a)
+      by (refine (env_type_unique (TCECons _ _) Hρb); auto).
     split; auto.
     subst.
     enough (TCECons t t0 = Hρb); subst; auto.
@@ -423,27 +369,33 @@ intros. {
   }
 Qed.
 
-Lemma tc_env_highlander {Γ ρ} (a b : ENV ρ ⊨ Γ) : a = b.
+Lemma tc_env_unique {Γ ρ} (a b : (TCEnv ⊢ ρ : Γ)) : a = b.
 Proof.
   induction a; dependent destruction b; auto.
   rewrite (IHa b); auto.
   f_equal.
-  apply tcv_highlander.
+  apply tc_val_unique.
 Qed.
 
-Definition WT_Val τ := {v : Val & (TCV ⊢ v : τ) }.
+Record WT_Val τ :=
+  mk_WT_Val {
+      WT_Val_v :> Val;
+      WT_Val_tc : (TCV ⊢ WT_Val_v : τ);
+    }.
+Arguments mk_WT_Val {_ _} _.
+Arguments WT_Val_v {_} _.
+Arguments WT_Val_tc {_} _.
 
-Definition env_search {ρ Γ} (Hρ : ENV ρ ⊨ Γ) :
-  forall x τ,
-    lookup Γ x = Some τ ->
-    {v : WT_Val τ | lookup ρ x = Some (projT1 v)}.
+Definition env_search {ρ Γ} (Hρ : TCEnv ⊢ ρ : Γ) {x τ} :
+  lookup Γ x = Some τ ->
+  {v : WT_Val τ | lookup ρ x = Some (WT_Val_v v)}.
 Proof.
   intros.
   revert ρ Γ H Hρ.
   induction x; intros. {
     destruct Γ; inversion H; subst.
     destruct ρ; inversion Hρ; subst.
-    exists (existT _ v X0).
+    exists (mk_WT_Val X0).
     auto.
   } {
     destruct Γ; inversion H; subst.
@@ -454,22 +406,22 @@ Proof.
 Defined.
 
 Lemma WT_Val_eq {τ} {v v' : WT_Val τ} :
-  projT1 v = projT1 v' -> v = v'.
+  @eq Val v v' -> @eq (WT_Val τ) v v'.
 Proof.
   intros.
   destruct v, v'.
-  simpl in H.
+  simpl in *.
   subst.
   f_equal.
-  apply tcv_highlander.
+  apply tc_val_unique.
 Qed.
 
-Lemma env_model_extend
-      {ρ Γ} (Hρ : ENV ρ ⊨ Γ) {τ} (v : WT_Val τ)
-  : ENV (extend ρ (projT1 v)) ⊨ (extend Γ τ).
+Lemma tc_env_extend
+      {ρ Γ} (Hρ : TCEnv ⊢ ρ : Γ) {τ} (v : WT_Val τ)
+  : (TCEnv ⊢ extend ρ v : extend Γ τ).
 Proof.
-  destruct v.
   constructor; auto.
+  apply v.
 Qed.
 
 Fixpoint decidable_tc Γ (e : Expr) {struct e} :
@@ -485,7 +437,7 @@ Proof. {
             intro z.
             destruct z as [? []].
             inversion H; subst.
-            pose proof (type_highlander H2 Hf).
+            pose proof (expr_type_unique H2 Hf).
             inversion H0.
           } {
             destruct (ty_eq_dec τf1 τa); [left | right]. {
@@ -495,9 +447,9 @@ Proof. {
               intro z.
               destruct z as [? []].
               inversion H; subst.
-              pose proof (type_highlander H2 Hf).
+              pose proof (expr_type_unique H2 Hf).
               inversion H0; subst.
-              pose proof (type_highlander H4 Ha).
+              pose proof (expr_type_unique H4 Ha).
               contradiction.
             }
           }
@@ -523,7 +475,7 @@ Proof. {
           intro z.
           destruct z as [? []].
           inversion H; subst.
-          pose proof (type_highlander t1 H1).
+          pose proof (expr_type_unique t1 H1).
           inversion H0.
         }
       } {
@@ -544,7 +496,7 @@ Proof. {
           intro z.
           destruct z as [? []].
           inversion H; subst.
-          pose proof (type_highlander H4 t2).
+          pose proof (expr_type_unique H4 t2).
           inversion H0.
         } {
           intro z.
@@ -557,7 +509,7 @@ Proof. {
         intro z.
         destruct z as [? []].
         inversion H; subst.
-        pose proof (type_highlander H2 t1).
+        pose proof (expr_type_unique H2 t1).
         inversion H0.
       } {
         intro z.
@@ -609,9 +561,9 @@ Require Import Coq.Logic.Classical.
 
 Lemma decidable_tc_env
       (decidable_tcv :
-         forall v, ({τ : Ty & TCV ⊢ v : τ}) + (~exists τ, inhabited (TCV ⊢ v : τ)))
+         forall v, ({τ : Ty & (TCV ⊢ v : τ)}) + (~exists τ, inhabited (TCV ⊢ v : τ)))
       (ρ : Env Val) :
-  ({Γ : Env Ty & ENV ρ ⊨ Γ}) + (~exists Γ, inhabited (ENV ρ ⊨ Γ)).
+  ({Γ : Env Ty & (TCEnv ⊢ ρ : Γ)}) + (~exists Γ, inhabited (TCEnv ⊢ ρ : Γ)).
 Proof.
   induction ρ. {
     left.
@@ -622,7 +574,7 @@ Proof.
       destruct IHρ; [|right]. {
         left.
         destruct s, s0.
-        exists (x :: x0).
+        exists (extend x0 x).
         constructor; auto.
       } {
         intro z.
@@ -648,8 +600,8 @@ Lemma decidable_tcv (v : Val) :
 Proof.
   einduction v using Val_Val_Env_rect
   with (P0 := fun ρ =>
-                (({Γ : Env Ty & ENV ρ ⊨ Γ}) +
-                 (~exists Γ, inhabited (ENV ρ ⊨ Γ)))%type).
+                (({Γ : Env Ty & (TCEnv ⊢ ρ : Γ)}) +
+                 (~exists Γ, inhabited (TCEnv ⊢ ρ : Γ)))%type).
   {
     left.
     repeat econstructor; eauto.
@@ -663,7 +615,7 @@ Proof.
         intro z.
         destruct z as [? []].
         inversion X; subst.
-        pose proof (ty_env_highlander Hρ X0).
+        pose proof (env_type_unique Hρ X0).
         subst.
         apply n.
         repeat econstructor; eauto.

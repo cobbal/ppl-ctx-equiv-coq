@@ -18,63 +18,11 @@ Import EqNotations.
 
 Local Open Scope R.
 
-(* setoid rewriting under lambda *)
-(* http://coq-club.inria.narkive.com/PbdQR4E7/rewriting-under-abstractions *)
-Require Import Setoid Morphisms Program.Syntax.
-Instance refl_respectful {A B RA RB}
-         `(sa : subrelation A RA eq)
-         `(sb : subrelation B eq RB)
-  : Reflexive (RA ++> RB)%signature.
-Proof.
-  intros f x x' Hxx'.
-  apply sb.
-  f_equal.
-  apply sa; auto.
-Qed.
-
-Instance subrel_eq_respect {A B RA RB}
-         `(sa : subrelation A RA eq)
-         `(sb : subrelation B eq RB)
-  : subrelation eq (respectful RA RB).
-Proof.
-  intros f g Hfg.
-  intros a a' Raa'.
-  apply sb.
-  f_equal.
-  apply sa; auto.
-Qed.
-
-Instance pointwise_eq_ext {A B RB}
-         `(sb : subrelation B RB (@eq B))
-  : subrelation (pointwise_relation A RB) eq.
-Proof.
-  intros f g Hfg.
-  extensionality x.
-  apply sb.
-  apply (Hfg x).
-Qed.
-
-Instance eq_pointwise {A B RB}
-         `(sb : subrelation B (@eq B) RB) :
-  subrelation eq (pointwise_relation A RB).
-Proof.
-  intros f g Hfg x.
-  apply sb.
-  subst.
-  reflexivity.
-Qed.
-
-
 Definition Event X := X -> bool.
-
-(* Axiom eval_dec : *)
-(*   forall ρ e σ, *)
-(*     (existsT! vw : (Val * R+), let (v, w) := vw in EVAL ρ, σ ⊢ e ⇓ v, w) + *)
-(*     ((existsT vw : (Val * R+), let (v, w) := vw in EVAL ρ, σ ⊢ e ⇓ v, w) -> False). *)
 
 Definition eval_dec :
   forall {Γ ρ e τ},
-    (ENV ρ ⊨ Γ) ->
+    (TCEnv ⊢ ρ : Γ) ->
     (TC Γ ⊢ e : τ) ->
     forall σ,
       (existsT! vw : (Val * R+), let (v, w) := vw in EVAL ρ, σ ⊢ e ⇓ v, w) +
@@ -82,46 +30,45 @@ Definition eval_dec :
   := @determinism.eval_dec.
 
 Definition big_preservation :
-  forall {Γ ρ e τ v w},
-    (ENV ρ ⊨ Γ) ->
+  forall {Γ ρ e τ v w σ},
+    (TCEnv ⊢ ρ : Γ) ->
     (TC Γ ⊢ e : τ) ->
-    forall σ,
-      (EVAL ρ, σ ⊢ e ⇓ v, w) ->
-      (TCV ⊢ v : τ)
+    (EVAL ρ, σ ⊢ e ⇓ v, w) ->
+    (TCV ⊢ v : τ)
   := @determinism.big_preservation.
 
 Lemma eval_a_preservation :
   forall {Γ ρ ae τ},
-    (ENV ρ ⊨ Γ) ->
+    (TCEnv ⊢ ρ : Γ) ->
     (TC Γ ⊢ e_pure ae : τ) ->
-    {v : WT_Val τ & eval_a ρ ae = Some (projT1 v)}.
+    {v : WT_Val τ & eval_a ρ ae = Some (v : Val)}.
 Proof.
   intros.
   inversion H; subst; simpl. {
-    exists (existT _ (v_real r) (TCVReal r)); auto.
+    exists (mk_WT_Val (TCVReal r)); auto.
   } {
-    destruct (env_search X _ _ H1) as [v ?].
+    destruct (env_search X H1) as [v ?].
     exists v; auto.
   } {
     assert (WT_Val (τa ~> τr)). {
       exists (v_clo τa body ρ).
       econstructor; eauto.
     }
-    exists (existT _ (v_clo τa body ρ) (TCVClo X H1)); auto.
+    exists (mk_WT_Val (TCVClo X H1)); auto.
   }
 Defined.
 
-Definition eval_a_wt {Γ ρ ae τ} (Hρ : ENV ρ ⊨ Γ) (Hae : TC Γ ⊢ e_pure ae : τ) : WT_Val τ :=
+Definition eval_a_wt {Γ ρ ae τ} (Hρ : TCEnv ⊢ ρ : Γ) (Hae : TC Γ ⊢ e_pure ae : τ) : WT_Val τ :=
   projT1 (eval_a_preservation Hρ Hae).
 
-Definition ev {Γ ρ e τ} (Hρ : ENV ρ ⊨ Γ) (He : TC Γ ⊢ e : τ) σ : option (WT_Val τ) :=
+Definition ev {Γ ρ e τ} (Hρ : TCEnv ⊢ ρ : Γ) (He : TC Γ ⊢ e : τ) σ : option (WT_Val τ) :=
   match eval_dec Hρ He σ with
   | inl (existT _ (v, w) (evl, _)) =>
-    Some (existT _ v (big_preservation Hρ He σ evl))
+    Some (mk_WT_Val (big_preservation Hρ He evl))
   | inr _ => None
   end.
 
-Definition ew {Γ ρ e τ} (Hρ : ENV ρ ⊨ Γ) (He : TC Γ ⊢ e : τ) σ : R+ :=
+Definition ew {Γ ρ e τ} (Hρ : TCEnv ⊢ ρ : Γ) (He : TC Γ ⊢ e : τ) σ : R+ :=
   match eval_dec Hρ He σ with
   | inl (existT _ (v, w) _) => w
   | inr _ => nnr_0
@@ -133,7 +80,7 @@ Definition ifte {X} (a : bool) (b c : X) := if a then b else c.
 Definition Indicator {X} (b : Event X) : X -> R+ := fun x => ifte (b x) nnr_1 nnr_0.
 
 
-Definition eval_in {Γ ρ e τ} (Hρ : ENV ρ ⊨ Γ) (He : TC Γ ⊢ e : τ) (A : Event (WT_Val τ)) σ : R+ :=
+Definition eval_in {Γ ρ e τ} (Hρ : TCEnv ⊢ ρ : Γ) (He : TC Γ ⊢ e : τ) (A : Event (WT_Val τ)) σ : R+ :=
   option0 (Indicator A <$> ev Hρ He σ) [*] ew Hρ He σ.
 
 Definition Meas A := (Event A -> R+).
@@ -208,10 +155,7 @@ Axiom integration_of_indicator :
          (f : Event A),
     Integration (fun x => Indicator f x) m = m f.
 
-Definition widen_event {τ} (e : Event Val) : Event (WT_Val τ) :=
-  fun vτ => e (projT1 vτ).
-
-Definition μ {Γ ρ e τ} (Hρ : ENV ρ ⊨ Γ) (He : TC Γ ⊢ e : τ) : Meas (WT_Val τ) :=
+Definition μ {Γ ρ e τ} (Hρ : TCEnv ⊢ ρ : Γ) (He : TC Γ ⊢ e : τ) : Meas (WT_Val τ) :=
   fun V => Integration (fun σ => eval_in Hρ He V σ) μEntropy.
 
 Definition A_rel' (τ : Ty) (V_rel_τ : Val -> Val -> Type)
@@ -224,34 +168,13 @@ Definition E_rel' (τ : Ty) (V_rel_τ : Val -> Val -> Prop) (c0 c1 : Config τ) 
   let (Γ1, ρ1, Hρ1, e1, He1) := c1 in
   forall A0 A1,
     A_rel' τ V_rel_τ A0 A1 ->
-    μ Hρ0 He0 (widen_event A0) = μ Hρ1 He1 (widen_event A1).
+    μ Hρ0 He0 A0 = μ Hρ1 He1 A1.
 
 Definition V_rel_real (v0 v1 : Val) : Prop :=
   match v0, v1 with
   | v_real r0, v_real r1 => v0 = v1
   | _, _ => False
   end.
-
-(* Record V_rel_arrow_record *)
-(*        {τa τr : Ty} {V_rel_a V_rel_r : Val -> Val -> Prop} *)
-(*        {x0 x1 : Var} {body0 body1 : Expr} {ρ_clo0 ρ_clo1 : Env Val} *)
-(*   : Prop *)
-(*   := {  *)
-(* V_rel_Γ_clo0 : Env Ty; *)
-(*        V_rel_Hρ_clo0 : ENV ρ_clo0 ⊨ V_rel_Γ_clo0; *)
-(*        V_rel_tc_body0 : (TC (extend V_rel_Γ_clo0 x0 τa) ⊢ body0 : τr); *)
-(*        V_rel_Γ_clo1 : Env Ty; *)
-(*        V_rel_Hρ_clo1 : ENV ρ_clo1 ⊨ V_rel_Γ_clo1; *)
-(*        V_rel_tc_body1 : (TC (extend V_rel_Γ_clo1 x1 τa) ⊢ body1 : τr); *)
-(*        V_rel_thingy : *)
-(*          forall {va0 va1} *)
-(*                 (tc_va0 : (TCV ⊢ va0 : τa)) *)
-(*                 (tc_va1 : (TCV ⊢ va1 : τa)), *)
-(*            V_rel_a va0 va1 -> *)
-(*            E_rel τr V_rel_r *)
-(*                  (mk_config (env_model_extend V_rel_Hρ_clo0 tc_va0) V_rel_tc_body0) *)
-(*                  (mk_config (env_model_extend V_rel_Hρ_clo1 tc_va1) V_rel_tc_body1) *)
-(*      }. *)
 
 Definition V_rel_arrow
            (τa : Ty) (τr : Ty)
@@ -262,44 +185,44 @@ Definition V_rel_arrow
      | v_clo τa'0 body0 ρ_clo0, v_clo τa'1 body1 ρ_clo1 =>
        (τa = τa'0) ⨉ (τa = τa'1) ⨉
        exists Γ_clo0
-              (Hρ_clo0 : ENV ρ_clo0 ⊨ Γ_clo0)
+              (Hρ_clo0 : TCEnv ⊢ ρ_clo0 : Γ_clo0)
               (tc_body0 : (TC (extend Γ_clo0 τa) ⊢ body0 : τr)),
        exists Γ_clo1
-              (Hρ_clo1 : ENV ρ_clo1 ⊨ Γ_clo1)
+              (Hρ_clo1 : TCEnv ⊢ ρ_clo1 : Γ_clo1)
               (tc_body1 : (TC (extend Γ_clo1 τa) ⊢ body1 : τr)),
        forall {va0 va1 : WT_Val τa},
-           V_rel_a (projT1 va0) (projT1 va1) ->
+           V_rel_a va0 va1 ->
            E_rel' τr V_rel_r
-                  (mk_config (env_model_extend Hρ_clo0 va0) tc_body0)
-                  (mk_config (env_model_extend Hρ_clo1 va1) tc_body1)
+                  (mk_config (tc_env_extend Hρ_clo0 va0) tc_body0)
+                  (mk_config (tc_env_extend Hρ_clo1 va1) tc_body1)
      | _, _ => False
      end.
 
-Reserved Notation "'VREL' v0 , v1 ∈ V[ τ ]"
-         (at level 69, v0 at level 99, v1 at level 99, τ at level 99).
+(* Reserved Notation "'VREL' v0 , v1 ∈ V[ τ ]" *)
+(*          (at level 69, v0 at level 99, v1 at level 99, τ at level 99). *)
 Fixpoint V_rel τ : Val -> Val -> Prop :=
   match τ with
   | ℝ => V_rel_real
   | τa ~> τr => V_rel_arrow τa τr (V_rel τa) (V_rel τr)
   end.
 
-Notation "'VREL' v0 , v1 ∈ V[ τ ]" := (V_rel τ v0 v1).
+(* Notation "'VREL' v0 , v1 ∈ V[ τ ]" := (V_rel τ v0 v1). *)
 
 Definition A_rel τ := A_rel' τ (V_rel τ).
 Definition E_rel τ := E_rel' τ (V_rel τ).
 
-Notation "'EREL' e0 , e1 ∈ E[ τ ]" :=
-  (E_rel τ e0 e1)
-    (at level 69, e0 at level 99, e1 at level 99, τ at level 99).
-Notation "'AREL' A0 , A1 ∈ A[ τ ]" :=
-  (A_rel τ A0 A1)
-    (at level 69, A0 at level 99, A1 at level 99, τ at level 99).
+(* Notation "'EREL' e0 , e1 ∈ E[ τ ]" := *)
+(*   (E_rel τ e0 e1) *)
+(*     (at level 69, e0 at level 99, e1 at level 99, τ at level 99). *)
+(* Notation "'AREL' A0 , A1 ∈ A[ τ ]" := *)
+(*   (A_rel τ A0 A1) *)
+(*     (at level 69, A0 at level 99, A1 at level 99, τ at level 99). *)
 
 
 Record G_rel {Γ : Env Ty} {ρ0 ρ1 : Env Val} : Type :=
   mk_G_rel {
-      G_rel_modeling0 : ENV ρ0 ⊨ Γ;
-      G_rel_modeling1 : ENV ρ1 ⊨ Γ;
+      G_rel_modeling0 : TCEnv ⊢ ρ0 : Γ;
+      G_rel_modeling1 : TCEnv ⊢ ρ1 : Γ;
       G_rel_V : forall {x v0 v1 τ},
           lookup Γ x = Some τ ->
           lookup ρ0 x = Some v0 ->
@@ -308,9 +231,9 @@ Record G_rel {Γ : Env Ty} {ρ0 ρ1 : Env Val} : Type :=
     }.
 
 Arguments G_rel _ _ _ : clear implicits.
-Notation "'GREL' ρ0 , ρ1 ∈ G[ Γ ]" :=
-  (G_rel Γ ρ0 ρ1)
-    (at level 69, ρ0 at level 99, ρ1 at level 99, Γ at level 99).
+(* Notation "'GREL' ρ0 , ρ1 ∈ G[ Γ ]" := *)
+(*   (G_rel Γ ρ0 ρ1) *)
+(*     (at level 69, ρ0 at level 99, ρ1 at level 99, Γ at level 99). *)
 
 (* Definition related_expr (Γ : Env Ty) (e : Expr) (τ : Ty) : Type := *)
 (*   {He : (TC Γ ⊢ e : τ) & *)
@@ -321,7 +244,7 @@ Record related_exprs (Γ : Env Ty) (τ : Ty) (e0 e1 : Expr) : Type :=
   mk_related_exprs
   { rel_expr_He0 : (TC Γ ⊢ e0 : τ);
     rel_expr_He1 : (TC Γ ⊢ e1 : τ);
-    rel_expr_erel {ρ0 ρ1} (Hρ : GREL ρ0, ρ1 ∈ G[Γ]) :
+    rel_expr_erel {ρ0 ρ1} (Hρ : G_rel Γ ρ0 ρ1) :
       (E_rel τ
              (mk_config (G_rel_modeling0 Hρ) rel_expr_He0)
              (mk_config (G_rel_modeling1 Hρ) rel_expr_He1))
@@ -371,7 +294,7 @@ Axiom int_const_entropy :
      (forall x, f x = v) ->
      Integration f μEntropy = v.
 
-Lemma pure_is_atomic {Γ ρ} {Hρ : ENV ρ ⊨ Γ} {e τ} A
+Lemma pure_is_atomic {Γ ρ} {Hρ : TCEnv ⊢ ρ : Γ} {e τ} A
       (Hpure_e : (TC Γ ⊢ e_pure e : τ)) :
   (fun σ => eval_in Hρ Hpure_e A σ) =
   (fun σ => Indicator A (eval_a_wt Hρ Hpure_e)).
@@ -436,10 +359,10 @@ try (contradict not_ex; eexists (_, _); constructor; simpl; eauto; fail).
 Qed.
 
 Lemma pure_is_dirac {Γ ρ e τ}
-  (Hρ : ENV ρ ⊨ Γ)
+  (Hρ : TCEnv ⊢ ρ : Γ)
   (Hpure_e : TC Γ ⊢ e_pure e : τ) :
   exists v : WT_Val τ,
-    eval_a ρ e = Some (projT1 v) /\
+    eval_a ρ e = Some (v : Val) /\
     μ Hρ Hpure_e = dirac v.
 Proof.
   destruct (eval_a_preservation Hρ Hpure_e).
@@ -528,14 +451,14 @@ Qed.
 Program
 Definition extend_grel {Γ ρ0 ρ1 τ}
            (v0 v1 : WT_Val τ)
-           (Hρ : (GREL ρ0, ρ1 ∈ G[Γ]))
-           (Hv : VREL (projT1 v0), (projT1 v1) ∈ V[τ])
-  : (GREL (extend ρ0 (projT1 v0)), (extend ρ1 (projT1 v1)) ∈ G[extend Γ τ]) :=
+           (Hρ : G_rel Γ ρ0 ρ1)
+           (Hv : V_rel τ v0 v1)
+  : G_rel (extend Γ τ) (extend ρ0 v0) (extend ρ1 v1) :=
   let (Hρ0, Hρ1, Hρ) := Hρ in
   mk_G_rel
     _ _ _
-    (env_model_extend Hρ0 v0)
-    (env_model_extend Hρ1 v1)
+    (tc_env_extend Hρ0 v0)
+    (tc_env_extend Hρ1 v1)
     _.
 
 Next Obligation.
@@ -569,7 +492,7 @@ Proof.
   simpl in *.
 
   rewrite Hdirac0, Hdirac1.
-  unfold dirac, Indicator, widen_event; simpl.
+  unfold dirac, Indicator; simpl.
   f_equal.
   apply HA.
 
@@ -738,7 +661,7 @@ Qed.
 Theorem theorem_15 :
   forall {Γ e τ ρ}
     (He : TC Γ ⊢ e : τ)
-    (Hρ : ENV ρ ⊨ Γ)
+    (Hρ : TCEnv ⊢ ρ : Γ)
     (f : WT_Val τ -> R+),
       Integration f (μ Hρ He) =
       Integration (fun σ => option0 (f <$> ev Hρ He σ) [*] ew Hρ He σ) μEntropy.
@@ -797,16 +720,16 @@ Proof.
 Qed.
 
 Definition plus_in (A : Event (WT_Val ℝ)) (v v' : WT_Val ℝ) : R+ :=
-  match (projT1 v), (projT1 v') with
+  match (v : Val), (v' : Val) with
   | v_real r, v_real r' =>
-    Indicator A (existT _ (v_real (r + r')) (TCVReal _))
+    Indicator A (mk_WT_Val (TCVReal (r + r')))
   | _, _ => nnr_0
   end.
 
 Lemma by_theorem_15_plus {ρ el er Γ} A
   (Hel : TC Γ ⊢ el : ℝ)
   (Her : TC Γ ⊢ er : ℝ)
-  (Hρ : ENV ρ ⊨ Γ) :
+  (Hρ : TCEnv ⊢ ρ : Γ) :
     Integration (fun σ => eval_in Hρ (TCPlus Hel Her) A σ) μEntropy =
     Integration (fun vl =>
     Integration (fun vr =>
@@ -856,7 +779,7 @@ Proof.
 
         unfold plus_in; simpl.
 
-        setoid_rewrite <- (tcv_highlander (TCVReal (r0 + r1))).
+        setoid_rewrite <- (tc_val_unique (TCVReal (r0 + r1))).
         nnr.
       } {
         decide_eval Hρ, Hel as [v3 w3 ex3 u3].
@@ -871,37 +794,36 @@ Proof.
 Qed.
 
 Definition the_other_A_rel (τ : Ty) (A0 A1 : Event (WT_Val τ)) :=
-  forall v0 v1 (Hv : V_rel τ (projT1 v0) (projT1 v1)),
+  forall (v0 v1 : WT_Val τ) (Hv : V_rel τ v0 v1),
     (A0 v0 = (* iff *) A1 v1).
-
-Print eq_rect.
 
 Definition narrow_event {τ} (A : Event (WT_Val τ)) : Event Val :=
   fun v =>
     match decidable_tcv v with
     | inl (existT _ τ' tc) =>
       match ty_eq_dec τ' τ with
-      | left Heq => A (existT _ v (rew Heq in tc))
+      | left Heq => A (mk_WT_Val (rew Heq in tc))
       | right _ => false
       end
     | inr _ => false
     end.
 
-Lemma narrow_widen_inverse τ (A : Event (WT_Val τ)) : widen_event (narrow_event A) = A.
+Lemma narrow_cast_inverse τ (A : Event (WT_Val τ)) :
+  (narrow_event A : Event (WT_Val τ)) = A .
 Proof.
   extensionality v.
   destruct v.
-  unfold widen_event, narrow_event.
+  unfold narrow_event.
   simpl.
   destruct decidable_tcv as [[]|]. {
     destruct ty_eq_dec. {
       subst.
       do 2 f_equal.
       compute.
-      eapply tcv_highlander.
+      eapply tc_val_unique.
     } {
-      pose proof (vtype_highlander t t0).
-      contradict n; auto.
+      contradict n.
+      eapply val_type_unique; eauto.
     }
   } {
     contradict n.
@@ -933,11 +855,11 @@ Lemma convert_A_rel :
   {He0 : TC Γ ⊢ e0 : τ}
   {He1 : TC Γ ⊢ e1 : τ}
   {ρ0 ρ1 : Env Val}
-  {Hρ : GREL ρ0, ρ1 ∈ G[ Γ]},
+  {Hρ : G_rel Γ ρ0 ρ1},
     (forall A0 A1 : Event Val,
         A_rel τ A0 A1 ->
-        μ (G_rel_modeling0 Hρ) He0 (widen_event A0) =
-        μ (G_rel_modeling1 Hρ) He1 (widen_event A1)) ->
+        μ (G_rel_modeling0 Hρ) He0 A0 =
+        μ (G_rel_modeling1 Hρ) He1 A1) ->
     (forall A0 A1 : Event (WT_Val τ),
         the_other_A_rel τ A0 A1 ->
         μ (G_rel_modeling0 Hρ) He0 A0 =
@@ -945,7 +867,7 @@ Lemma convert_A_rel :
 Proof.
   intros.
   specialize (H (narrow_event A0) (narrow_event A1)).
-  repeat rewrite narrow_widen_inverse in *.
+  repeat rewrite narrow_cast_inverse in *.
   apply H.
   clear H.
   intros v0 v1 Hv.
@@ -953,26 +875,21 @@ Proof.
   repeat destruct decidable_tcv; auto. {
     destruct s, s0.
     repeat destruct ty_eq_dec; subst; auto. {
-      apply False_rect.
+      contradict n.
       destruct (V_rel_implies_TCV Hv) as [[] []].
-      pose proof (vtype_highlander t0 X0).
-      contradiction.
+      eapply val_type_unique; eauto.
     } {
-      apply False_rect.
+      contradict n.
       destruct (V_rel_implies_TCV Hv) as [[] []].
-      pose proof (vtype_highlander t X).
-      contradiction.
+      eapply val_type_unique; eauto.
     }
   } {
-    apply False_rect.
+    contradict n.
     destruct (V_rel_implies_TCV Hv) as [[] []].
-    apply n.
     repeat econstructor; eauto.
-
   } {
-    apply False_rect.
+    contradict n.
     destruct (V_rel_implies_TCV Hv) as [[] []].
-    apply n.
     repeat econstructor; eauto.
   }
 Qed.
@@ -1028,13 +945,7 @@ Proof.
   auto.
 Qed.
 
-(* Ltac pull_from_tcv_dont_care := *)
-(*   progress repeat *)
-(*   match goal with *)
-(*   | [ |- context[ pull_from_inhabited_tcv ?i ] ] => *)
-(*     generalize (pull_from_inhabited_tcv i); clear i; intro *)
-(*   end. *)
-
+(* theese used to be obligations, but I needed more control than 'Program' gave me *)
 Lemma apply_in_absurd {τa τr} (τeq : ℝ = τa ~> τr) : False.
 Proof.
   inversion τeq.
@@ -1065,11 +976,11 @@ Definition apply_in {τa τr} (A : Event (WT_Val τr)) (σ : Entropy)
         (vf : WT_Val (τa ~> τr))
         (va : WT_Val τa)
   : R+ :=
-  match projT2 vf in (TCV ⊢ vf : τf) return (τf = τa ~> τr -> R+) with
+  match WT_Val_tc vf in (TCV ⊢ vf : τf) return (τf = τa ~> τr -> R+) with
   | @TCVClo body Γ_clo τa0 τr0 ρ_clo Hρ Hbody =>
     fun τeq =>
       (eval_in
-         (env_model_extend Hρ va)
+         (tc_env_extend Hρ va)
          (apply_in_convert_Hbody Hbody τeq)
          A
          σ)
@@ -1077,12 +988,12 @@ Definition apply_in {τa τr} (A : Event (WT_Val τr)) (σ : Entropy)
   end eq_refl.
 
 Lemma elim_apply_in {τa τr} (A : Event (WT_Val τr)) (σ : Entropy)
-      {Γ ρ} (Hρ : ENV ρ ⊨ Γ)
+      {Γ ρ} (Hρ : TCEnv ⊢ ρ : Γ)
       (body : Expr)
       (tc_body : TC (extend Γ τa) ⊢ body : τr)
       {va : WT_Val τa}
-  : eval_in (env_model_extend Hρ va) tc_body A σ =
-    apply_in A σ (existT _ (v_clo τa body ρ) (TCVClo Hρ tc_body)) va.
+  : eval_in (tc_env_extend Hρ va) tc_body A σ =
+    apply_in A σ (mk_WT_Val (TCVClo Hρ tc_body)) va.
 Proof.
   simpl in *.
   unfold apply_in; simpl.
@@ -1092,7 +1003,7 @@ Qed.
 Lemma by_theorem_15_app {ρ ef ea Γ τa τr} A
   (Hef : TC Γ ⊢ ef : (τa ~> τr))
   (Hea : TC Γ ⊢ ea : τa)
-  (Hρ : ENV ρ ⊨ Γ) :
+  (Hρ : TCEnv ⊢ ρ : Γ) :
     Integration (fun σ => eval_in Hρ (TCApp Hef Hea) A σ) μEntropy =
     Integration (fun vf =>
     Integration (fun va =>
@@ -1176,18 +1087,16 @@ Proof.
 
         unfold eval_in, ev, ew.
 
-        set (Hρ' := env_model_extend _ _).
-        decide_eval Hρ', _ as [v6 w6 ex6 u6]. {
+        decide_eval _, _ as [v6 w6 ex6 u6]. {
           simpl.
 
-          do 2 set (existT _ _ _).
+          do 2 set (mk_WT_Val _).
 
           specialize (u6 (v0, w3) X1).
           inversion u6; subst.
-          enough (s = s0) by (rewrite H; nnr).
-          subst s s0.
-          apply WT_Val_eq.
-          simpl.
+          enough (w = w0) by (rewrite H; nnr).
+          subst w w0.
+          apply WT_Val_eq; simpl.
           auto.
         }
       } {
@@ -1195,7 +1104,7 @@ Proof.
         decide_eval Hρ, Hea as [v4 w4 ex4 u4].
         destruct v3 as [|x body ρ_clo]. {
           simpl.
-          set (big_preservation _ _ _ _).
+          set (big_preservation _ _ _).
           inversion t.
         } {
           simpl.
@@ -1211,8 +1120,7 @@ Proof.
             apply f; auto; econstructor; eauto.
           }
 
-          set (env_model_extend _ _).
-          decide_eval t2, _ as [v5 w5 ex5 u5].
+          decide_eval _, _ as [v5 w5 ex5 u5].
           contradict not_ex.
           eexists (_, _).
           econstructor; eauto.
@@ -1261,24 +1169,6 @@ Proof.
   destruct vf0 as [[|x0 body0 ρ_clo0]]; try contradiction.
   destruct vf1 as [[|x1 body1 ρ_clo1]]; try contradiction.
 
-  (* destruct i. *)
-  (* inversion t; subst. *)
-  (* rename Γ_clo into Γ_clo0, X into Hρ_clo0, X0 into Hbody0. *)
-  (* assert (Hρ_clo0' : ENV (extend ρ_clo0 x0 va0) ⊨ (extend Γ_clo0 x0 τa)). { *)
-  (*   apply env_model_extend; auto. *)
-  (*   apply pull_from_inhabited_tcv. *)
-  (*   auto. *)
-  (* } *)
-
-  (* destruct i0. *)
-  (* inversion t0; subst. *)
-  (* rename Γ_clo into Γ_clo1, X into Hρ_clo1, X0 into Hbody1. *)
-  (* assert (Hρ_clo1' : ENV (extend ρ_clo1 x1 va1) ⊨ (extend Γ_clo1 x1 τa)). { *)
-  (*   apply env_model_extend; auto. *)
-  (*   apply pull_from_inhabited_tcv. *)
-  (*   auto. *)
-  (* } *)
-
   destruct Hvf as [? [Γ_clo0 [Hρ_clo0 [tc_body0 [Γ_clo1 [Hρ_clo1 [tc_body1 Hvf]]]]]]].
   inversion p; repeat subst.
   simpl in *.
@@ -1286,22 +1176,8 @@ Proof.
 
   unfold μ in Hvf.
 
-  (* assert (@eq (WT_Val τa) (exist va0 Hva0) (exist va0 (inhabits Hva0'))). { *)
-  (*   f_equal. *)
-  (*   apply proof_irrelevance. *)
-  (* } *)
-  (* setoid_rewrite H. *)
-  (* clear H Hva0. *)
-  (* assert (@eq (WT_Val τa) (exist va1 Hva1) (exist va1 (inhabits Hva1'))). { *)
-  (*   f_equal. *)
-  (*   apply proof_irrelevance. *)
-  (* } *)
-  (* setoid_rewrite H. *)
-  (* clear H Hva1. *)
-
-
-  rewrite (tcv_highlander t (TCVClo Hρ_clo0 tc_body0)).
-  rewrite (tcv_highlander t0 (TCVClo Hρ_clo1 tc_body1)).
+  rewrite (tc_val_unique _ (TCVClo Hρ_clo0 tc_body0)).
+  rewrite (tc_val_unique _ (TCVClo Hρ_clo1 tc_body1)).
   setoid_rewrite <- elim_apply_in.
   apply Hvf.
 Qed.
@@ -1338,10 +1214,10 @@ Proof.
 Qed.
 
 Definition factor_in (A : Event (WT_Val ℝ)) (v : WT_Val ℝ) : R+ :=
-  match projT1 v with
+  match (v : Val) with
   | v_real r =>
     match Rle_dec 0 r with
-    | left rpos => Indicator A (existT _ (v_real r) (TCVReal _)) [*] mknnr r rpos
+    | left rpos => Indicator A (mk_WT_Val (TCVReal r)) [*] mknnr r rpos
     | _ => nnr_0
     end
   | _ => nnr_0
@@ -1349,7 +1225,7 @@ Definition factor_in (A : Event (WT_Val ℝ)) (v : WT_Val ℝ) : R+ :=
 
 Lemma by_theorem_15_factor {ρ e Γ} A
       (He : (TC Γ ⊢ e : ℝ))
-      (Hρ : ENV ρ ⊨ Γ) :
+      (Hρ : TCEnv ⊢ ρ : Γ) :
   Integration (fun σ => eval_in Hρ (TCFactor He) A σ) μEntropy =
     Integration (factor_in A) (μ Hρ He).
 Proof.
@@ -1366,9 +1242,9 @@ Proof.
       injection (u1 (_, _) X); intros.
       subst.
       destruct Rle_dec. {
-        do 2 set (existT _ _ _).
-        rewrite (@WT_Val_eq _ s s0); [nnr |].
-        subst s s0.
+        do 2 set (mk_WT_Val _).
+        rewrite (@WT_Val_eq _ w0 w1); [nnr |].
+        subst w0 w1.
         simpl.
         auto.
       } {
@@ -1419,8 +1295,8 @@ Proof.
   unfold factor_in.
   simpl.
 
-  inversion t.
-  inversion t0.
+  inversion WT_Val_tc.
+  inversion WT_Val_tc0.
   subst.
 
   simpl in Hv.
@@ -1429,6 +1305,7 @@ Proof.
 
   destruct Rle_dec; auto.
   unfold Indicator.
+  simpl.
   do 2 f_equal.
   apply HA.
   simpl.
@@ -1452,10 +1329,6 @@ Qed.
 
 Print Assumptions fundamental_property.
 
-SearchAbout WT_Val.
-
-Print Val_rect.
-
 Lemma WT_Val_rect
         (P : forall τ v, (TCV ⊢ v : τ) -> Type)
         (case_real :
@@ -1463,7 +1336,7 @@ Lemma WT_Val_rect
              P ℝ (v_real r) tc)
         (case_clo :
            forall τa τr body ρ tc Γ,
-             ENV ρ ⊨ Γ ->
+             TCEnv ⊢ ρ : Γ ->
              (forall x τ v,
                  lookup Γ x = Some τ ->
                  lookup ρ x = Some v ->
@@ -1498,12 +1371,12 @@ Proof.
       inversion Γx.
       inversion ρx.
       subst.
-      rewrite <- (tcv_highlander Hv).
+      rewrite <- (tc_val_unique Hv).
       auto.
     } {
       simpl in Γx, ρx.
       specialize (IHHv _ _ _ Γx ρx).
-      rewrite <- (tcv_highlander (lookup_tc_env t Γx ρx)).
+      rewrite <- (tc_val_unique (lookup_tc_env t Γx ρx)).
       auto.
     }
   }
@@ -1522,127 +1395,13 @@ Proof.
   auto.
 Qed.
 
-(* Lemma append_models {Γ0 Γ1 ρ0 ρ1} : *)
-(*   ENV ρ0 ⊨ Γ0 -> *)
-(*   ENV ρ1 ⊨ Γ1 -> *)
-(*   ENV ρ0 ++ ρ1 ⊨ Γ0 ++ Γ1. *)
-(* Proof. *)
-(*   intros. *)
-(*   induction X; auto. *)
-(*   simpl. *)
-(*   constructor; auto. *)
-(* Qed. *)
-
-(* Lemma reverse_models {Γ ρ} : *)
-(*   ENV ρ ⊨ Γ -> *)
-(*   ENV rev ρ ⊨ rev Γ. *)
-(* Proof. *)
-(*   intros. *)
-(*   induction X. { *)
-(*     constructor. *)
-(*   } { *)
-(*     simpl. *)
-(*     apply append_models; auto. *)
-(*     repeat constructor; auto. *)
-(*   } *)
-(* Qed. *)
-
-
-Fixpoint close_expr {Γ ρ} (Hρ : ENV ρ ⊨ Γ) (e : Expr) : Expr :=
-  match Hρ with
-  | TCENil => e
-  | @TCECons _ τ _ _ Hρ' Hv =>
-    close_expr Hρ' (e_app (e_pure (e_lam τ e)) (expr_of_val' Hv))
-  end
-with
-expr_of_val' {τ v} (Hv : (TCV ⊢ v : τ)) : Expr :=
-  match Hv with
-  | TCVReal r => e_pure (e_real r)
-  | @TCVClo body _ τa _ _ Hρ Hbody =>
-    close_expr Hρ (e_pure (e_lam τa body))
-  end.
-
-(* Lemma foo1 {Γ ρ} (Hρ : ENV ρ ⊨ Γ) {v τ} (Hv : TCV ⊢ v : τ) e τr : *)
-(*   TC (τ :: Γ) ⊢ close_expr Hρ e : τr -> *)
-(*   TC Γ ⊢ close_expr (TCECons Hρ Hv) e : τr. *)
-(* Proof. *)
-(* Admitted. *)
-
-(* Lemma foo2 {Γ ρ} (Hρ : ENV ρ ⊨ Γ) {v τ} (Hv : TCV ⊢ v : τ) e τr : *)
-(*   TC Γ ⊢ close_expr (TCECons Hρ Hv) e : τr -> *)
-(*   TC (τ :: Γ) ⊢ close_expr Hρ e : τr. *)
-(* Proof. *)
-(*   intros. *)
-(*   induction Hρ. { *)
-(*     simpl. *)
-(*     simpl in H. *)
-(*     inversion H; subst. *)
-(*     inversion H2; subst. *)
-(*     apply H1. *)
-(*   } *)
-(* Admitted. *)
-
-(* Lemma expr_of_val {τ v} (Hv : (TCV ⊢ v : τ)) : *)
-(*   (TC nil ⊢ expr_of_val' Hv : τ). *)
-(* Proof. *)
-(*   destruct Hv; try constructor. *)
-(*   simpl. *)
-
-(*   (* replace Γ_clo with ([] ++ Γ_clo) in * by trivial. *) *)
-(*   (* set (Γ := nil) in *. *) *)
-(*   (* clearbody Γ. *) *)
-(*   (* revert Γ t0. *) *)
-
-(*   induction t; intros. { *)
-(*     simpl. *)
-(*     constructor. *)
-(*     (* rewrite app_nil_r in t0. *) *)
-(*     auto. *)
-(*   } { *)
-(*     apply foo1. *)
-(*     pose proof foo1 t t1. *)
-
-
-(* Qed. *)
-
-(* Lemma expr_of_val_wt_ex {v τ} (Hv : (TCV ⊢ v : τ)) : *)
-(*   {e : Expr & expr_of_val' v = Some e}. *)
-(* Proof. *)
-(*   induction Hv using tc_val_env_rect *)
-(*   with (P0 := fun ρ Γ Hρ => *)
-(*                 forall x v τ, *)
-(*                   lookup Γ x = Some τ -> *)
-(*                   lookup ρ x = Some v -> *)
-(*                   {e : Expr & expr_of_val' v = Some e}). { *)
-(*     eexists. *)
-(*     reflexivity. *)
-(*   } { *)
-(*     induction t; intros. { *)
-(*       eexists. *)
-(*       reflexivity. *)
-(*     } { *)
-(*       eexists. *)
-(*       simpl. *)
-(*       destruct decidable_tcv as [[?τ Hv]|]. { *)
-(*         assert (τ0 = τ) by (eapply vtype_highlander; eauto). *)
-(*         subst. *)
-(*         destruct IHt. *)
-(*       } { *)
-(*         contradict n. *)
-(*         exists τ. *)
-(*         auto. *)
-(*       } *)
-(*     } *)
-(*   } *)
-(* Qed. *)
-
 Lemma fundamental_property_of_values v τ :
   (TCV ⊢ v : τ) ->
-  (VREL v, v ∈ V[τ]).
+  (V_rel τ v v).
 Proof.
   intros.
   destruct X using tc_val_env_rect
-  with (P0 := fun ρ Γ Hρ => GREL ρ, ρ ∈ G[Γ]). {
+  with (P0 := fun ρ Γ Hρ => G_rel Γ ρ ρ). {
     reflexivity.
   } {
     simpl.
@@ -1661,13 +1420,13 @@ Proof.
     simpl in H.
     specialize (H _ _ (extend_grel va0 va1 IHX Hva)).
     specialize (H A0 A1 HA).
-    assert (He = t0) by apply tc_highlander.
-    assert (He0 = t0) by apply tc_highlander.
+    assert (He = t0) by apply tc_unique.
+    assert (He0 = t0) by apply tc_unique.
     subst.
-    replace (G_rel_modeling0 _) with (env_model_extend t va0)
-      in H by apply tc_env_highlander.
-    replace (G_rel_modeling1 _) with (env_model_extend t va1)
-      in H by apply tc_env_highlander.
+    replace (G_rel_modeling0 _) with (tc_env_extend t va0)
+      in H by apply tc_env_unique.
+    replace (G_rel_modeling1 _) with (tc_env_extend t va1)
+      in H by apply tc_env_unique.
     exact H.
   } {
     repeat constructor.

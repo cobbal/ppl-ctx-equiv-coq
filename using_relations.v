@@ -16,7 +16,6 @@ Require Import micromega.Lia.
 Import EqNotations.
 
 (* Local Open Scope R. *)
-
 Opaque π.
 
 Fixpoint appears_free_in (x : Var) (e : Expr) : bool :=
@@ -87,7 +86,7 @@ Notation "'λ' τ , e" := (e_pure (e_lam τ e)) (at level 69, right associativit
 Notation "e0 @ e1" := (e_app e0 e1) (at level 68, left associativity).
 Notation "e0 +! e1" := (e_plus e0 e1) (at level 68, left associativity).
 
-Definition ex_left e1 e2 := (λ ℝ, (`O) +! inc_free_vars e1) @ e2.
+Definition ex_left e1 e2 := (λ ℝ, (`O) +! inc_free_vars e2) @ e1.
 Definition ex_right e1 e2 := e1 +! e2.
 
 Program Fixpoint insert_at {X} (l : list X) (n : nat) (x : X) (Hn : n <= length l) {struct n} : list X :=
@@ -241,10 +240,10 @@ Proof.
     unfold plus_in.
     simpl.
 
-    pose proof big_preservation TCENil He1 (π 0 σ) ex3.
+    pose proof big_preservation TCENil He1 ex3.
     inversion X1; subst.
 
-    pose proof big_preservation TCENil He2 (π 1 σ) ex4.
+    pose proof big_preservation TCENil He2 ex4.
     inversion X2; subst.
 
     specialize (u3 (_, _) X).
@@ -254,7 +253,7 @@ Proof.
     subst.
 
     repeat f_equal.
-    apply tcv_highlander.
+    apply tc_val_unique.
   } {
     simpl.
     unfold ev, ew.
@@ -262,10 +261,10 @@ Proof.
     decide_eval TCENil, He2 as [v4 w4 ex4 u4].
     contradict not_ex.
 
-    pose proof big_preservation TCENil He1 (π 0 σ) ex3.
+    pose proof big_preservation TCENil He1 ex3.
     inversion X; subst.
 
-    pose proof big_preservation TCENil He2 (π 1 σ) ex4.
+    pose proof big_preservation TCENil He2 ex4.
     inversion X0; subst.
 
     eexists (_, _).
@@ -273,7 +272,7 @@ Proof.
   }
 Qed.
 
-Lemma length_of_models {Γ ρ} : (ENV ρ ⊨ Γ) -> length ρ = length Γ.
+Lemma length_of_models {Γ ρ} : (TCEnv ⊢ ρ : Γ) -> length ρ = length Γ.
 Proof.
   intros.
   induction X; auto.
@@ -283,9 +282,9 @@ Proof.
 Qed.
 
 Lemma insert_models {Γ ρ v τ} n Hlenρ HlenΓ :
-  (ENV ρ ⊨ Γ) ->
+  (TCEnv ⊢ ρ : Γ) ->
   (TCV ⊢ v : τ) ->
-  (ENV insert_at ρ n v Hlenρ ⊨ insert_at Γ n τ HlenΓ).
+  (TCEnv ⊢ insert_at ρ n v Hlenρ : insert_at Γ n τ HlenΓ).
 Proof.
   revert Γ ρ Hlenρ HlenΓ.
   induction n; intros ? ? ? ? Hρ Hv. {
@@ -352,6 +351,151 @@ Proof.
   }
 Qed.
 
+Check eval_rect.
+
+
+(* Expr_rect *)
+(*      : forall P : Expr -> Type, *)
+(*        (forall e : Expr, P e -> forall e0 : Expr, P e0 -> P (e @ e0)) -> *)
+(*        (forall e : Expr, P e -> P (e_factor e)) -> *)
+(*        P e_sample -> *)
+(*        (forall e : Expr, P e -> forall e0 : Expr, P e0 -> P (e +! e0)) -> *)
+(*        (forall a : AExpr, P (e_pure a)) -> forall e : Expr, P e *)
+
+(* Val_Val_Env_rect *)
+(* : forall (P : Val -> Type) (P0 : Env Val -> Type), *)
+(*   (forall r : R, P (v_real r)) -> *)
+(*   (forall (τ : Ty) (e : Expr) (ρ : Env Val), P0 ρ -> P (v_clo τ e ρ)) -> *)
+(*   P0 Datatypes.nil -> *)
+(*   (forall (v : Val) (ρ' : Env Val), P v -> P0 ρ' -> P0 (v :: ρ')) -> forall v : Val, P v *)
+
+(* eval_rect *)
+(*      : forall *)
+(*          P : forall (ρ : Env Val) (σ : Entropy) (e : Expr) (v : Val) (w : R+), *)
+(*              EVAL ρ, σ ⊢ e ⇓ v, w -> Type, *)
+(*        (forall (ρ : Env Val) (σ : Entropy) (ae : AExpr) (v : Val) (e : eval_a ρ ae = Some v), *)
+(*         P ρ σ (e_pure ae) v nnr_1 (EPure ρ σ ae v e)) -> *)
+(*        (forall (ρ : Env Val) (σ : Entropy) (e0 e1 : Expr) (τa : Ty) (body : Expr)  *)
+(*           (ρ_clo : Env Val) (v1 v2 : Val) (w0 w1 w2 : R+) *)
+(*           (e : EVAL ρ, π 0 σ ⊢ e0 ⇓ v_clo τa body ρ_clo, w0), *)
+(*         P ρ (π 0 σ) e0 (v_clo τa body ρ_clo) w0 e -> *)
+(*         forall e2 : EVAL ρ, π 1 σ ⊢ e1 ⇓ v1, w1, *)
+(*         P ρ (π 1 σ) e1 v1 w1 e2 -> *)
+(*         forall e3 : EVAL extend ρ_clo v1, π 2 σ ⊢ body ⇓ v2, w2, *)
+(*         P (extend ρ_clo v1) (π 2 σ) body v2 w2 e3 -> *)
+(*         P ρ σ (e0 @ e1) v2 (w0 [*] w1 [*] w2) (EApp ρ σ e e2 e3)) -> *)
+(*        (forall (ρ : Env Val) (σ : Entropy) (e : Expr) (r : R) (w : R+) (rpos : (0 <= r)%R) *)
+(*           (e0 : EVAL ρ, σ ⊢ e ⇓ v_real r, w), *)
+(*         P ρ σ e (v_real r) w e0 -> *)
+(*         P ρ σ (e_factor e) (v_real r) ({| _r := r; nnr_pos := rpos |} [*] w) (EFactor ρ σ rpos e0)) -> *)
+(*        (forall (ρ : Env Val) (σ : Entropy), *)
+(*         P ρ σ e_sample (v_real (proj1_sig (σ 0))) nnr_1 (ESample ρ σ)) -> *)
+(*        (forall (ρ : Env Val) (σ : Entropy) (e0 e1 : Expr) (r0 r1 : R) (w0 w1 : R+) *)
+(*           (e : EVAL ρ, π 0 σ ⊢ e0 ⇓ v_real r0, w0), *)
+(*         P ρ (π 0 σ) e0 (v_real r0) w0 e -> *)
+(*         forall e2 : EVAL ρ, π 1 σ ⊢ e1 ⇓ v_real r1, w1, *)
+(*         P ρ (π 1 σ) e1 (v_real r1) w1 e2 -> *)
+(*         P ρ σ (e0 +! e1) (v_real (r0 + r1)) (w0 [*] w1) (EPlus ρ σ e e2)) -> *)
+(*        forall (ρ : Env Val) (σ : Entropy) (e : Expr) (v : Val) (w : R+) (e0 : EVAL ρ, σ ⊢ e ⇓ v, w), *)
+(*        P ρ σ e v w e0 *)
+
+
+(* Lemma eval_super_rect *)
+(*       (PE : forall {ρ σ e v w}, *)
+(*           forall {Γ τ}, *)
+(*             (TCEnv ⊢ ρ : Γ) -> *)
+(*             (TC Γ ⊢ e : τ) -> *)
+(*             (EVAL ρ, σ ⊢ e ⇓ v, w) -> *)
+(*           Type) *)
+(*       (Pv : Val -> Type) *)
+
+(*       (case_real : forall Γ ρ σ r (Hρ : (TCEnv ⊢ ρ : Γ)), *)
+(*           PE Hρ (TCReal r) (EPure ρ σ (e_real r) (v_real r) eq_refl)) *)
+(*       (case_lam : forall Γ ρ σ τa τr body *)
+(*                          (Hρ : (TCEnv ⊢ ρ : Γ)) *)
+(*                          (Hbody : (TC (extend Γ τa) ⊢ body : τr)), *)
+(*           (forall (va : WT_Val τa) vr σ w *)
+(*                   (Ebody : EVAL extend ρ (va : Val), σ ⊢ body ⇓ vr, w), *)
+(*               PE (tc_env_extend Hρ va) Hbody Ebody) -> *)
+(*           PE Hρ (TCLam Hbody) (EPure ρ σ (e_lam τa body) (v_clo τa body ρ) eq_refl)) *)
+(*       (case_var : forall Γ ρ σ x v τ *)
+(*                          (Hρ : (TCEnv ⊢ ρ : Γ)) *)
+(*                          (Γx : lookup Γ x = Some τ) *)
+(*                          (ρx : lookup ρ x = Some v), *)
+(*           PE Hρ (TCVar Γx) (EPure ρ σ (e_var x) v ρx)) *)
+
+(*       (case_app : *)
+(*          forall Γ ρ σ e0 e1 τa τr body Γ_clo ρ_clo v1 v2 w0 w1 w2 *)
+(*                 (Hρ : (TCEnv ⊢ ρ : Γ)) *)
+(*                 (Hρ_clo : (TCEnv ⊢ ρ_clo : Γ_clo)) *)
+(*                 (Hbody : TC extend Γ_clo τa ⊢ body : τr) *)
+(*                 (He0 : (TC Γ ⊢ e0 : τa ~> τr)) *)
+(*                 (He1 : (TC Γ ⊢ e1 : τa)) *)
+(*                 (E0 : (EVAL ρ, π 0 σ ⊢ e0 ⇓ (v_clo τa body ρ_clo), w0)) *)
+(*                 (E1 : (EVAL ρ, π 1 σ ⊢ e1 ⇓ v1, w1)) *)
+(*                 (E2 : (EVAL extend ρ_clo v1, π 2 σ ⊢ body ⇓ v2, w2)), *)
+(*            PE Hρ He0 E0 -> *)
+(*            PE Hρ He1 E1 -> *)
+(*            PE (tc_env_extend Hρ_clo (mk_WT_Val (big_preservation Hρ He1 E1))) Hbody E2 -> *)
+(*            PE Hρ (TCApp He0 He1) (EApp ρ σ E0 E1 E2)) *)
+(*       (case_factor : *)
+(*          forall Γ ρ σ e r w rpos *)
+(*                 (Hρ : (TCEnv ⊢ ρ : Γ)) *)
+(*                 (He : (TC Γ ⊢ e : ℝ)) *)
+(*                 (E0 : EVAL ρ, σ ⊢ e ⇓ v_real r, w), *)
+(*            PE Hρ He E0 -> *)
+(*            PE Hρ (TCFactor He) (EFactor ρ σ rpos E0)) *)
+(*       (case_sample : *)
+(*          forall Γ ρ σ *)
+(*                 (Hρ : (TCEnv ⊢ ρ : Γ)), *)
+(*            PE Hρ TCSample (ESample ρ σ)) *)
+(*       (case_plus : *)
+(*          forall Γ ρ σ e0 e1 r0 r1 w0 w1 *)
+(*                 (Hρ : (TCEnv ⊢ ρ : Γ)) *)
+(*                 (He0 : (TC Γ ⊢ e0 : ℝ)) *)
+(*                 (He1 : (TC Γ ⊢ e1 : ℝ)) *)
+(*                 (E0 : (EVAL ρ, π 0 σ ⊢ e0 ⇓ v_real r0, w0)) *)
+(*                 (E1 : (EVAL ρ, π 1 σ ⊢ e1 ⇓ v_real r1, w1)), *)
+(*          PE Hρ He0 E0 -> *)
+(*          PE Hρ He1 E1 -> *)
+(*          PE Hρ (TCPlus He0 He1) (EPlus ρ σ E0 E1)) *)
+
+(*   : forall Γ ρ σ e v w τ *)
+(*            (Hρ : (TCEnv ⊢ ρ : Γ)) *)
+(*            (He : (TC Γ ⊢ e : τ)) *)
+(*            (E : EVAL ρ, σ ⊢ e ⇓ v, w), *)
+(*     PE Hρ He E. *)
+(* Proof. *)
+(*   intros. *)
+(*   induction E; auto. { *)
+(*     induction ae; auto. { *)
+(*       inversion e; subst. *)
+(*       inversion He; subst. *)
+
+(*       assert (e = eq_refl) by apply proof_irrelevance. *)
+(*       assert (He = TCReal r) by apply tc_unique. *)
+(*       subst. *)
+
+(*       apply case_real. *)
+(*     } { *)
+(*       inversion e; subst. *)
+(*       inversion He; subst. *)
+
+(*       assert (e = eq_refl) by apply proof_irrelevance. *)
+(*       assert (He = TCLam H2) by apply tc_unique. *)
+(*       subst. *)
+
+(*       apply case_lam. *)
+
+(*       intros. *)
+(*     } *)
+(*   } *)
+(* Qed. *)
+
+
+
+
+
 Lemma lookup_after_insert {X} {ρ : Env X} {n x} (H : n <= length ρ) vi :
   x >= n ->
   lookup (insert_at ρ n vi H) (S x) = lookup ρ x.
@@ -374,13 +518,39 @@ Proof.
   }
 Qed.
 
-Lemma eval_ignored_variable {Γ ρ vi τi σ e τ v0 v1 w} :
+Lemma eval_ignored_variable_l {Γ ρ vi τi σ e τ vr w n} :
+  forall (Hn : n <= length ρ),
+    (TCEnv ⊢ ρ : Γ) ->
+    (TC Γ ⊢ e : τ) ->
+    (TCV ⊢ vi : τi) ->
+    (EVAL insert_at ρ n vi Hn, σ ⊢ inc_vars n e ⇓ vr, w) ->
+    {v : Val & EVAL ρ, σ ⊢ e ⇓ v, w & V_rel τ v vr}.
+Proof.
+  intros.
+  revert Γ τ X H X0.
+  dependent induction X1; intros. {
+    destruct e; try discriminate x.
+    destruct a. {
+      destruct ae; inversion x.
+      simpl in *.
+      inversion e0; subst.
+      inversion H; subst.
+      eexists (v_real r); constructor; auto.
+    } {
+
+    }
+
+  }
+
+Qed.
+
+Lemma eval_ignored_variable_l {Γ ρ vi τi σ e τ v0 v1 w} :
   (TC Γ ⊢ e : τ) ->
   (TCV ⊢ vi : τi) ->
-  (ENV ρ ⊨ Γ) ->
+  (TCEnv ⊢ ρ : Γ) ->
   (EVAL ρ, σ ⊢ e ⇓ v1, w) ->
   (EVAL extend ρ vi, σ ⊢ inc_free_vars e ⇓ v0, w) ->
-  (VREL v0, v1 ∈ V[τ]).
+  (V_rel τ v0 v1).
 Proof.
   intros He Hvi Hρ E0.
   unfold inc_free_vars.
@@ -393,7 +563,7 @@ Proof.
   assert (TCV ⊢ v1 : τ) by (eapply big_preservation; eauto).
   assert (TCV ⊢ v0 : τ). {
     assert (n <= length Γ) by exact (rew length_of_models Hρ in H).
-    refine (big_preservation (insert_models _ _ _ _ _) (tc_inc' τi H0 He) σ X); auto.
+    refine (big_preservation (insert_models _ _ _ _ _) (tc_inc' τi H0 He) X); auto.
   }
 
 
@@ -453,110 +623,14 @@ Proof.
     }
   } {
     inversion He; subst.
-    pose proof big_preservation Hρ H2 _ E0_1.
-    pose proof big_preservation Hρ H4 _ E0_2.
+    pose proof big_preservation Hρ H2 E0_1.
+    pose proof big_preservation Hρ H4 E0_2.
     inversion X2; subst.
-    pose proof env_model_extend X4 (existT _ v1 X3).
+    pose proof tc_env_extend X4 (mk_WT_Val X3).
     simpl in *.
     eapply IHE0_3; eauto.
 
-    inversion
-
-
-  }
-
-  dependent induction X; intros. {
-    destruct e; try discriminate x.
-    destruct ae, a; try discriminate x; simpl in *; try solve [destruct lt_dec; inversion x]. {
-      inversion x; subst.
-      inversion e0; subst.
-      inversion E0; subst.
-      inversion H1; subst.
-      inversion He; subst.
-      constructor.
-    } {
-      inversion x; subst.
-      inversion e0; subst.
-      inversion E0; subst.
-      inversion H1; subst.
-      inversion He; subst.
-      clear x e0 E0 H1 He.
-      simpl.
-      split; auto.
-
-      assert (n <= length Γ). {
-        rewrite <- (length_of_models Hρ).
-        auto.
-      }
-      exists (insert_at Γ n τi H0).
-      exists (insert_models _ _ _ Hρ Hvi).
-
-      pose proof tc_inc' (n := S n) τi (ext_len _ H0) H4.
-      rewrite <- extend_of_insert in H1.
-      exists H1.
-
-      exists Γ.
-      exists Hρ.
-      exists H4.
-
-      intros ? ? Hva.
-      intros ? ? HA.
-
-      unfold μ.
-      f_equal.
-      extensionality σ0.
-
-      unfold eval_in, ev, ew.
-      decide_eval _, _ as [v0 w0 ex0 u0]. {
-        decide_eval _, _ as [v1 w1 ex1 u1]. {
-          clear u0 u1.
-          (* specialize (u0 (v1, w1)). *)
-          (* simpl in u0. *)
-          simpl.
-
-          unfold Indicator, widen_event.
-          simpl.
-          do 2 f_equal. {
-            apply HA.
-            simpl.
-            admit.
-          } {
-
-          }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-          assert (EVAL extend (insert_at ρ n vi H) (projT1 va0), σ0 ⊢ inc_vars (S n) e1 ⇓ v1, w1). {
-            admit.
-          }
-          injection (u0 X); intros; subst.
-          unfold Indicator, widen_event.
-          do 2 f_equal.
-          apply HA.
-          simpl.
-          apply fundamental_property_of_values.
-
-          apply (big_preservation (env_model_extend Hρ _) H4 _ ex1).
-        } {
-          contradict not_ex.
-          exists (v0, w0).
-        }
-      }
-
-
-    }
+    admit.
   }
 Admitted.
 
@@ -597,7 +671,7 @@ Proof.
     (* assert (inc_free_vars e1 = e1). { *)
     (* } *)
 
-    apply eval_ignored_variable_l in X3.
+    pose proof eval_ignored_variable_l He1 (TCVReal r1) TCENil X3.
 
     unfold ev, ew.
     decide_eval TCENil, He1 as [v3 w3 ex3 u3].
@@ -644,9 +718,9 @@ Proof.
 Qed.
 
 Lemma simpleish e1 e2 :
-    (TC nil ⊢ e1 : ℝ) ->
-    (TC nil ⊢ e2 : ℝ) ->
-    (EXP nil ⊢ ex_left e1 e2 ≈ ex_right e1 e2 : ℝ).
+  (TC nil ⊢ e1 : ℝ) ->
+  (TC nil ⊢ e2 : ℝ) ->
+  (EXP nil ⊢ ex_left e1 e2 ≈ ex_right e1 e2 : ℝ).
 Proof.
   intros He1 He2.
 

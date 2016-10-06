@@ -13,7 +13,7 @@ Require Import utils.
 
 Local Open Scope R.
 
-Definition dE_rel (τ : Ty) (dV_rel_τ : Val -> Type) (c : Config τ) : Type :=
+Definition dE_rel' (τ : Ty) (dV_rel_τ : Val -> Type) (c : Config τ) : Type :=
   let (Γ, ρ, Hρ, e, He) := c in
   forall σ,
     (existsT (vw : Val * R+),
@@ -38,10 +38,10 @@ Definition dV_rel_arrow
      | v_clo τa' body ρ_clo =>
        (τa = τa') ⨉
        { Γ_clo : Env Ty &
-       { Hρ_clo : ENV ρ_clo ⊨ Γ_clo &
+       { Hρ_clo : (TCEnv ⊢ ρ_clo : Γ_clo) &
        { tc_body : (TC (extend Γ_clo τa) ⊢ body : τr) &
-        forall {va : WT_Val τa} (Hva : dV_rel_a (projT1 va)),
-          (dE_rel τr dV_rel_r (mk_config (env_model_extend Hρ_clo va) tc_body))
+        forall {va : WT_Val τa} (Hva : dV_rel_a va),
+          (dE_rel' τr dV_rel_r (mk_config (tc_env_extend Hρ_clo va) tc_body))
        }}}
      | _ => False
      end.
@@ -56,28 +56,30 @@ Fixpoint dV_rel τ : Val -> Type :=
 
 Hint Unfold dV_rel dV_rel_real dV_rel_arrow.
 
-Notation "'dVREL' v ∈ V[ τ ]" := (dV_rel τ v).
+Definition dE_rel τ := dE_rel' τ (dV_rel τ).
 
-Notation "'dEREL' e ∈ E[ τ ]" :=
-  (dE_rel τ (dV_rel τ) e)
-    (at level 69, e at level 99, τ at level 99).
+(* Notation "'dVREL' v ∈ V[ τ ]" := (dV_rel τ v). *)
+
+(* Notation "'dEREL' e ∈ E[ τ ]" := *)
+(*   (dE_rel τ (dV_rel τ) e) *)
+(*     (at level 69, e at level 99, τ at level 99). *)
 
 Record dG_rel {Γ : Env Ty} {ρ : Env Val} : Type :=
   {
-    dG_rel_modeling : (ENV ρ ⊨ Γ);
+    dG_rel_modeling : (TCEnv ⊢ ρ : Γ);
     dG_rel_V : forall {x v τ},
                      lookup Γ x = Some τ ->
                      lookup ρ x = Some v ->
                      dV_rel τ v
   }.
-
 Arguments dG_rel _ _ : clear implicits.
-Notation "'dGREL' ρ ∈ G[ Γ ]" :=
-  (dG_rel Γ ρ)
-    (at level 69, ρ at level 99, Γ at level 99).
+
+(* Notation "'dGREL' ρ ∈ G[ Γ ]" := *)
+(*   (dG_rel Γ ρ) *)
+(*     (at level 69, ρ at level 99, Γ at level 99). *)
 
 Lemma tc_of_dV_rel {τ v} :
-  (dVREL v ∈ V[τ]) ->
+  dV_rel τ v ->
   (TCV ⊢ v : τ).
 Proof.
   intros.
@@ -91,15 +93,18 @@ Proof.
 Qed.
 
 Lemma extend_dgrel {Γ ρ v τ} :
-  (dGREL ρ ∈ G[Γ]) ->
-  (dVREL v ∈ V[τ]) ->
-  (dGREL (extend ρ v) ∈ G[extend Γ τ]).
+  (dG_rel Γ ρ) ->
+  (dV_rel τ v) ->
+  (dG_rel (extend Γ τ) (extend ρ v)).
 Proof.
   intros.
   split. {
-    replace v with (projT1 ((existT _ v (tc_of_dV_rel X0)) : WT_Val τ)) by auto.
-    apply env_model_extend.
-    apply X.
+    constructor. {
+      apply X.
+    } {
+      apply tc_of_dV_rel.
+      auto.
+    }
   } {
     intros.
     induction x. {
@@ -109,16 +114,16 @@ Proof.
       subst.
       auto.
     } {
-      destruct X.
-      apply (dG_rel_V0 x); auto.
+      destruct X as [_ X].
+      apply (X x); auto.
     }
   }
 Qed.
 
 Definition related_expr (Γ : Env Ty) (e : Expr) (τ : Ty) : Type :=
   {He : (TC Γ ⊢ e : τ) &
-        forall {ρ} (Hρ : dGREL ρ ∈ G[Γ]),
-          (dEREL (mk_config (dG_rel_modeling Hρ) He) ∈ E[τ])}.
+        forall {ρ} (Hρ : dG_rel Γ ρ),
+          (dE_rel τ (mk_config (dG_rel_modeling Hρ) He))}.
 
 Lemma compat_real Γ r :
   related_expr Γ (e_pure (e_real r)) ℝ.
@@ -146,10 +151,10 @@ Proof.
 
   pose proof (dG_rel_modeling Hρ).
 
-  destruct (env_search X _ _ Γτ) as [v ρv].
-  exists (projT1 v, nnr_1).
+  destruct (env_search X Γτ) as [v ρv].
+  exists (v : Val, nnr_1).
   repeat constructor; auto. {
-    exact (dG_rel_V Hρ Γτ ρv).
+    eapply (dG_rel_V Hρ); eauto.
   } {
     intros.
     inversion X0; subst.
@@ -210,8 +215,7 @@ Proof.
       destruct vf as [| τa' body ρ_clo]; [inversion Hvf; contradiction |].
       destruct Hvf as [? [Γ_clo [Hρ_clo [tc_body Hvf]]]]; simpl in Hvf.
       subst τa'.
-      set (wt_va := (existT _ va (tc_of_dV_rel Hva)) : WT_Val τa).
-      simpl in wt_va.
+      pose (wt_va := mk_WT_Val (tc_of_dV_rel Hva)).
       destruct (Hvf wt_va Hva (π 2 σ)) as [[[vr wr] [[Hvr EVAL_r] ur]] | not_ex]. {
         left.
         exists (vr, wf [*] wa [*] wr).
@@ -243,7 +247,7 @@ Proof.
         inversion ua.
         subst.
 
-          eexists (_, _); eauto.
+        eexists (_, _); eauto.
       }
     } {
       right.
@@ -376,7 +380,7 @@ Proof.
   }
 Qed.
 
-Lemma fundamental_property Γ e τ :
+Lemma fundamental_property {Γ e τ} :
   (TC Γ ⊢ e : τ) ->
   related_expr Γ e τ.
 Proof.
@@ -391,31 +395,25 @@ Proof.
   - eapply compat_plus; eauto.
 Qed.
 
-Lemma fundamental_environment Γ ρ :
-  (ENV ρ ⊨ Γ) ->
-  (dGREL ρ ∈ G[Γ]).
+Lemma fundamental_environment {Γ ρ} :
+  (TCEnv ⊢ ρ : Γ) ->
+  (dG_rel Γ ρ).
 Proof.
   intros Hρ.
 
-  (* einduction Hρ using tc_env_val_rect *)
-  (* with (P0 := fun ρ Γ Hρ => dGREL ρ ∈ G[Γ]). *)
-
-
-  refine (tc_env_val_rect
-            (fun v τ Hv => dVREL v ∈ V[τ])
-            (fun ρ Γ Hρ => dGREL ρ ∈ G[Γ])
-            _ _ _ _ _ _ Hρ). {
+  induction Hρ using tc_env_val_rect
+  with (P := fun v τ Hv => dV_rel τ v). {
     intros.
     repeat constructor.
   } {
     intros.
     split; auto.
     exists Γ_clo.
+    exists Hρ.
     exists t.
-    exists t0.
     intros.
-    pose proof fundamental_property _ _ _ t0.
-    destruct X0.
+    pose proof fundamental_property t.
+    destruct X.
     refine (d _ _).
     apply extend_dgrel; auto.
   } {
@@ -433,22 +431,22 @@ Proof.
       subst.
       auto.
     } {
-      eapply X; eauto.
+      eapply IHHρ; eauto.
     }
   }
 Qed.
 
 Theorem eval_dec :
   forall {Γ ρ e τ},
-    (ENV ρ ⊨ Γ) ->
+    (TCEnv ⊢ ρ : Γ) ->
     (TC Γ ⊢ e : τ) ->
     forall σ,
       (existsT! vw : (Val * R+), let (v, w) := vw in EVAL ρ, σ ⊢ e ⇓ v, w) +
       ((existsT vw : (Val * R+), let (v, w) := vw in EVAL ρ, σ ⊢ e ⇓ v, w) -> False).
 Proof.
   intros.
-  destruct (fundamental_property Γ e τ H).
-  specialize (d ρ (fundamental_environment Γ ρ X) σ).
+  destruct (fundamental_property H).
+  specialize (d ρ (fundamental_environment X) σ).
   destruct d; [| right; auto].
 
   left.
@@ -461,16 +459,15 @@ Proof.
 Qed.
 
 Theorem big_preservation :
-  forall {Γ ρ e τ v w},
-    (ENV ρ ⊨ Γ) ->
+  forall {Γ ρ e τ v w σ},
+    (TCEnv ⊢ ρ : Γ) ->
     (TC Γ ⊢ e : τ) ->
-    forall σ,
-      (EVAL ρ, σ ⊢ e ⇓ v, w) ->
-      (TCV ⊢ v : τ).
+    (EVAL ρ, σ ⊢ e ⇓ v, w) ->
+    (TCV ⊢ v : τ).
 Proof.
   intros.
-  destruct (fundamental_property Γ e τ H).
-  specialize (d ρ (fundamental_environment Γ ρ X) σ).
+  destruct (fundamental_property H).
+  specialize (d ρ (fundamental_environment X) σ).
   destruct d. {
     destruct s as [[v' w'] [[? ?] ?]].
     specialize (e1 v w X0).
