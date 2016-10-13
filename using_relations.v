@@ -537,102 +537,102 @@ Proof.
       inversion H; subst.
       eexists (v_real r); constructor; auto.
     } {
-
-    }
-
-  }
-
-Qed.
-
-Lemma eval_ignored_variable_l {Γ ρ vi τi σ e τ v0 v1 w} :
-  (TC Γ ⊢ e : τ) ->
-  (TCV ⊢ vi : τi) ->
-  (TCEnv ⊢ ρ : Γ) ->
-  (EVAL ρ, σ ⊢ e ⇓ v1, w) ->
-  (EVAL extend ρ vi, σ ⊢ inc_free_vars e ⇓ v0, w) ->
-  (V_rel τ v0 v1).
-Proof.
-  intros He Hvi Hρ E0.
-  unfold inc_free_vars.
-  assert (0 <= length ρ) by (destruct ρ; simpl; lia).
-  replace (extend ρ vi) with (insert_at ρ 0 vi H) by trivial.
-  revert H.
-  generalize 0.
-  intros.
-
-  assert (TCV ⊢ v1 : τ) by (eapply big_preservation; eauto).
-  assert (TCV ⊢ v0 : τ). {
-    assert (n <= length Γ) by exact (rew length_of_models Hρ in H).
-    refine (big_preservation (insert_models _ _ _ _ _) (tc_inc' τi H0 He) X); auto.
-  }
-
-
-  revert v0 X1 Γ He Hvi Hρ X.
-
-  induction E0; intros. {
-    destruct ae. {
-      simpl in e.
-      inversion e; subst.
-      inversion He; subst.
-      inversion X; subst.
-      simpl in H1.
-      inversion H1.
-      subst.
-      reflexivity.
-    } {
-      simpl in e.
-      inversion e; subst.
-      inversion He; subst.
-      inversion X; subst.
-      simpl in H1.
-      inversion H1.
-      subst.
-      clear e He X H1.
-      simpl.
-      split; auto.
       admit.
-    } {
-      rename v1 into x.
-      simpl in X.
-      destruct lt_dec. {
-        inversion X; subst.
-        clear X.
-        simpl in *.
-
-        replace v0 with v; try apply fundamental_property_of_values; auto.
-
-        pose proof lookup_before_insert H vi l.
-        rewrite H1 in H0.
-        rewrite e in H0.
-        inversion H0.
-        auto.
-      } {
-        inversion X; subst.
-        clear X.
-        simpl in *.
-
-        replace v0 with v; try apply fundamental_property_of_values; auto.
-
-        apply not_lt in n0.
-        pose proof lookup_after_insert H vi n0.
-        rewrite H1 in H0.
-        rewrite e in H0.
-        inversion H0.
-        auto.
-      }
     }
-  } {
-    inversion He; subst.
-    pose proof big_preservation Hρ H2 E0_1.
-    pose proof big_preservation Hρ H4 E0_2.
-    inversion X2; subst.
-    pose proof tc_env_extend X4 (mk_WT_Val X3).
-    simpl in *.
-    eapply IHE0_3; eauto.
-
     admit.
   }
+
 Admitted.
+
+(* Lemma eval_ignored_variable_l {Γ ρ vi τi σ e τ v0 v1 w} : *)
+(*   (TC Γ ⊢ e : τ) -> *)
+(*   (TCV ⊢ vi : τi) -> *)
+(*   (TCEnv ⊢ ρ : Γ) -> *)
+(*   (EVAL ρ, σ ⊢ e ⇓ v1, w) -> *)
+(*   (EVAL extend ρ vi, σ ⊢ inc_free_vars e ⇓ v0, w) -> *)
+(*   (V_rel τ v0 v1). *)
+(* Proof. *)
+(*   intros He Hvi Hρ E0. *)
+(*   unfold inc_free_vars. *)
+(*   assert (0 <= length ρ) by (destruct ρ; simpl; lia). *)
+(*   replace (extend ρ vi) with (insert_at ρ 0 vi H) by trivial. *)
+(*   revert H. *)
+(*   generalize 0. *)
+(*   intros. *)
+
+(*   assert (TCV ⊢ v1 : τ) by (eapply big_preservation; eauto). *)
+(*   assert (TCV ⊢ v0 : τ). { *)
+(*     assert (n <= length Γ) by exact (rew length_of_models Hρ in H). *)
+(*     refine (big_preservation (insert_models _ _ _ _ _) (tc_inc' τi H0 He) X); auto. *)
+(*   } *)
+
+
+(*   revert v0 X1 Γ He Hvi Hρ X. *)
+
+(*   induction E0; intros. { *)
+(*     destruct ae. { *)
+(*       simpl in e. *)
+(*       inversion e; subst. *)
+(*       inversion He; subst. *)
+(*       inversion X; subst. *)
+(*       simpl in H1. *)
+(*       inversion H1. *)
+(*       subst. *)
+(*       reflexivity. *)
+(*     } { *)
+(*       simpl in e. *)
+(*       inversion e; subst. *)
+(*       inversion He; subst. *)
+(*       inversion X; subst. *)
+(*       simpl in H1. *)
+(*       inversion H1. *)
+(*       subst. *)
+(*       clear e He X H1. *)
+(*       simpl. *)
+(*       split; auto. *)
+(*       admit. *)
+(*     } { *)
+(*       rename v1 into x. *)
+(*       simpl in X. *)
+(*       destruct lt_dec. { *)
+(*         inversion X; subst. *)
+(*         clear X. *)
+(*         simpl in *. *)
+
+(*         replace v0 with v; try apply fundamental_property_of_values; auto. *)
+
+(*         pose proof lookup_before_insert H vi l. *)
+(*         rewrite H1 in H0. *)
+(*         rewrite e in H0. *)
+(*         inversion H0. *)
+(*         auto. *)
+(*       } { *)
+(*         inversion X; subst. *)
+(*         clear X. *)
+(*         simpl in *. *)
+
+(*         replace v0 with v; try apply fundamental_property_of_values; auto. *)
+
+(*         apply not_lt in n0. *)
+(*         pose proof lookup_after_insert H vi n0. *)
+(*         rewrite H1 in H0. *)
+(*         rewrite e in H0. *)
+(*         inversion H0. *)
+(*         auto. *)
+(*       } *)
+(*     } *)
+(*   } { *)
+(*     inversion He; subst. *)
+(*     pose proof big_preservation Hρ H2 E0_1. *)
+(*     pose proof big_preservation Hρ H4 E0_2. *)
+(*     inversion X2; subst. *)
+(*     pose proof tc_env_extend X4 (mk_WT_Val X3). *)
+(*     simpl in *. *)
+(*     eapply IHE0_3; eauto. *)
+
+(*     admit. *)
+(*   } *)
+(* Admitted. *)
 
 Lemma eval_ignored_variable_r {Γ τ σ e v w} :
   (EVAL Γ, σ ⊢ e ⇓ v, w) ->
@@ -671,51 +671,54 @@ Proof.
     (* assert (inc_free_vars e1 = e1). { *)
     (* } *)
 
-    pose proof eval_ignored_variable_l He1 (TCVReal r1) TCENil X3.
+  (*   pose proof eval_ignored_variable_l He1 (TCVReal r1) TCENil X3. *)
 
-    unfold ev, ew.
-    decide_eval TCENil, He1 as [v3 w3 ex3 u3].
-    decide_eval TCENil, He2 as [v4 w4 ex4 u4].
+  (*   unfold ev, ew. *)
+  (*   decide_eval TCENil, He1 as [v3 w3 ex3 u3]. *)
+  (*   decide_eval TCENil, He2 as [v4 w4 ex4 u4]. *)
 
-    unfold plus_in.
-    simpl.
+  (*   unfold plus_in. *)
+  (*   simpl. *)
 
-    pose proof big_preservation TCENil He1 σe1 ex3.
-    inversion X; subst.
+  (*   pose proof big_preservation TCENil He1 σe1 ex3. *)
+  (*   inversion X; subst. *)
 
-    pose proof big_preservation TCENil He2 σe2 ex4.
-    inversion X1; subst.
+  (*   pose proof big_preservation TCENil He2 σe2 ex4. *)
+  (*   inversion X1; subst. *)
 
-    injection (u3 (_, _) X3).
-    injection (u4 (_, _) X0).
-    intros.
-    subst.
+  (*   injection (u3 (_, _) X3). *)
+  (*   injection (u4 (_, _) X0). *)
+  (*   intros. *)
+  (*   subst. *)
 
-    rewrite nnr_mult_assoc.
-    f_equal; try solve [nnr].
-    f_equal.
-    rewrite (Rplus_comm r1 r0).
-    f_equal.
-    apply tcv_highlander.
-  } {
-    simpl.
-    unfold ev, ew.
-    decide_eval TCENil, He1 as [v3 w3 ex3 u3].
-    decide_eval TCENil, He2 as [v4 w4 ex4 u4].
-    contradict not_ex.
+  (*   rewrite nnr_mult_assoc. *)
+  (*   f_equal; try solve [nnr]. *)
+  (*   f_equal. *)
+  (*   rewrite (Rplus_comm r1 r0). *)
+  (*   f_equal. *)
+  (*   apply tcv_highlander. *)
+  (* } { *)
+  (*   simpl. *)
+  (*   unfold ev, ew. *)
+  (*   decide_eval TCENil, He1 as [v3 w3 ex3 u3]. *)
+  (*   decide_eval TCENil, He2 as [v4 w4 ex4 u4]. *)
+  (*   contradict not_ex. *)
 
-    pose proof big_preservation TCENil He1 _ ex3.
-    inversion X; subst.
+  (*   pose proof big_preservation TCENil He1 _ ex3. *)
+  (*   inversion X; subst. *)
 
-    pose proof big_preservation TCENil He2 _ ex4.
-    inversion X0; subst.
+  (*   pose proof big_preservation TCENil He2 _ ex4. *)
+  (*   inversion X0; subst. *)
 
-    eexists (v_real (r0 + r), nnr_1 [*] w4 [*] (nnr_1 [*] w3)).
-    repeat econstructor; eauto.
-    apply eval_ignored_variable_r.
-    auto.
-  }
-Qed.
+  (*   eexists (v_real (r0 + r), nnr_1 [*] w4 [*] (nnr_1 [*] w3)). *)
+  (*   repeat econstructor; eauto. *)
+  (*   apply eval_ignored_variable_r. *)
+  (*   auto. *)
+  (* } *)
+Admitted.
+
+(* try `0 + e0 = e0` instead *)
+(* try `e0 + e1 = e1 + e0` instead *)
 
 Lemma simpleish e1 e2 :
   (TC nil ⊢ e1 : ℝ) ->
@@ -736,6 +739,8 @@ Proof.
   clear G_rel_V.
 
   unfold μ.
+
+  Check lemma_3.
 
   apply (lemma_3 (fun σ0 σ1 => μEntropy σ0 = μEntropy σ1)); auto.
   intros W.

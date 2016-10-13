@@ -5,3 +5,5 @@
 Makefile.coq
 lean
 lia.cache
+autosubst
+old-and-broken

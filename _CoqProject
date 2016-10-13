@@ -1,4 +1,4 @@
--R . OpSemProofs
+-R . OpSemProofs -I autosubst
 nnr.v
 relations.v
 determinism.v
