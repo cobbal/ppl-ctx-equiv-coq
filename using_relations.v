@@ -12,352 +12,13 @@ Require Import syntax.
 Require Import utils.
 Require Import Coq.Classes.Morphisms.
 Require Import relations.
-Require Import micromega.Lia.
-Import EqNotations.
+Require Import ctxequiv.
 
+Require Import micromega.Lia.
 (* Local Open Scope R. *)
-Opaque π.
 
-Inductive Ctx :=
-| c_hole : Ctx
-| c_app_l : Ctx -> Expr -> Ctx
-| c_app_r : Expr -> Ctx -> Ctx
-| c_factor : Ctx -> Ctx
-| c_plus_l : Ctx -> Expr -> Ctx
-| c_plus_r : Expr -> Ctx -> Ctx
-| c_lam : Ty -> Ctx -> Ctx
-.
-
-Inductive tc_ctx (Γ : Env Ty) (τh : Ty) : Ctx -> Env Ty -> Ty -> Type :=
-| TCXHole : tc_ctx Γ τh c_hole Γ τh
-| TCXApp_l τa τr c ea :
-    tc_ctx Γ τh c Γ (τa ~> τr) ->
-    (TC Γ ⊢ ea : τa) ->
-    tc_ctx Γ τh (c_app_l c ea) Γ τr
-| TCXApp_r τa τr ef c :
-    (TC Γ ⊢ ef : τa ~> τr) ->
-    tc_ctx Γ τh c Γ τa  ->
-    tc_ctx Γ τh (c_app_r ef c) Γ τr
-| TCXFactor c :
-    tc_ctx Γ τh c Γ ℝ ->
-    tc_ctx Γ τh (c_factor c) Γ ℝ
-| TCXPlus_l c er :
-    tc_ctx Γ τh c Γ ℝ ->
-    (TC Γ ⊢ er : ℝ) ->
-    tc_ctx Γ τh (c_plus_l c er) Γ ℝ
-| TCXPlus_r el c :
-    (TC Γ ⊢ el : ℝ) ->
-    tc_ctx Γ τh c Γ ℝ ->
-    tc_ctx Γ τh (c_plus_r el c) Γ ℝ
-| TCXPlus_lam τa τr c :
-    (tc_ctx (extend Γ τa) τh c Γ τr) ->
-    tc_ctx Γ τh (c_lam τa c) Γ (τa ~> τr)
-.
-
-Fixpoint plug (C : Ctx) (e : Expr) : Expr :=
-  match C with
-  | c_hole => e
-  | c_app_l c0 e1 => e_app (plug c0 e) e1
-  | c_app_r e0 c1 => e_app e0 (plug c1 e)
-  | c_factor c0 => e_factor (plug c0 e)
-  | c_plus_l c0 e1 => e_plus (plug c0 e) e1
-  | c_plus_r e0 c1 => e_plus e0 (plug c1 e)
-  | c_lam τa cbody => e_lam τa (plug cbody e)
-  end.
-
-Lemma tc_ctx_of_tc {ΓC Γe τe τr C e} :
-  (TC Γe ⊢ e : τe) ->
-  (tc_ctx ΓC τe C Γe τr) ->
-  (TC ΓC ⊢ plug C e : τr).
-Proof.
-  intros.
-  induction X0; simpl; try econstructor; eauto.
-Defined.
-
-Definition ctx_equiv {Γ τ} (e0 e1 : Expr)
-           (He0 : (TC Γ ⊢ e0 : τ))
-           (He1 : (TC Γ ⊢ e1 : τ)) :=
-  forall C (HC : tc_ctx · τ C Γ ℝ) A,
-    μ (tc_ctx_of_tc He0 HC) A = μ (tc_ctx_of_tc He1 HC) A.
-
-Lemma all_envs_inhabited Γ : inhabited (WT_Env Γ).
-Proof.
-  constructor.
-  induction Γ. {
-    exact WT_nil.
-  } {
-    apply extend_WT_Env; auto.
-    induction a. {
-      exact (v_real 0).
-    } {
-      exists (mk_Val (e_lam a1 IHa2) I).
-      constructor.
-      replace (extend · a1) with (· ++ (extend · a1)) by auto.
-      apply weakening.
-      apply IHa2.
-    }
-  }
-Qed.
-
-Require Import micromega.Lia.
-
-Lemma lookup_less {A} {Γ : Env A} {x τ} :
-  (lookup Γ x = Some τ) ->
-  x < length Γ.
-Proof.
-  intros.
-  revert Γ H.
-  induction x; intros. {
-    destruct Γ; try discriminate.
-    simpl.
-    lia.
-  } {
-    destruct Γ; try discriminate.
-    simpl in *.
-    specialize (IHx Γ H).
-    lia.
-  }
-Qed.
-
-Lemma upn_foo n (x : Var) (σ : nat -> Expr) :
-  x < n ->
-  upn n σ x = ids x.
-Proof.
-  intros.
-  revert n H.
-  induction x, n; try lia; auto.
-
-  unfold upn, up.
-  fold up upn.
-  simpl.
-
-  intros.
-  rewrite IHx; try lia.
-  autosubst.
-Qed.
-
-Lemma subst_of_closed {Γ e τ} :
-  (TC Γ ⊢ e : τ) ->
-  forall σ,
-    e.[upn (length Γ) σ] = e.
-Proof.
-  intros He σ.
-  induction He; simpl; try solve [f_equal; auto].
-  simpl.
-  rewrite upn_foo; auto.
-  exact (lookup_less e).
-Qed.
-
-Program Fixpoint close {Γ e τ} (ρ : WT_Env Γ) (He : (TC Γ ⊢ e : τ)) :
-  (TC · ⊢ e.[subst_of_WT_Env ρ] : τ) :=
-  match He with
-  | TCReal r => TCReal r
-  | @TCVar _ x _ Γx => _
-  | TCLam Hbody => TCLam (body_subst _ _)
-  | TCApp Hef Hea => TCApp (close ρ Hef) (close ρ Hea)
-  | TCFactor He' => TCFactor (close ρ He')
-  | TCSample => TCSample
-  | TCPlus Hel Her => TCPlus (close ρ Hel) (close ρ Her)
-  end.
-Next Obligation.
-  subst.
-  unfold subst_of_WT_Env, downgrade_env.
-  simpl.
-  destruct ρ as [ρ Hρ].
-  revert Γ ρ Hρ Γx.
-  induction x; intros. {
-    destruct Γ; try discriminate.
-    inversion Γx; subst.
-    simpl in *.
-    inversion Hρ; subst.
-    simpl.
-    auto.
-  } {
-    simpl in *.
-    destruct Γ; try discriminate.
-    destruct Hρ; try discriminate.
-    specialize (IHx _ _ Hρ Γx).
-    auto.
-  }
-Qed.
-
-Lemma related_close {Γ ρ0 ρ1}
-      (Hρ : G_rel Γ ρ0 ρ1)
-      {e0 e1 τ}
-      (He : (EXP Γ ⊢ e0 ≈ e1 : τ)) :
-  let (He0, He1, He) := He in
-  forall A0 A1,
-    A_rel τ A0 A1 ->
-    μ (close ρ0 He0) A0 = μ (close ρ1 He1) A1.
-Proof.
-  destruct He as [He0 He1 He].
-  intros A0 A1 HA.
-  specialize (He _ _ Hρ).
-  destruct He as [? [? He]].
-  replace (close ρ0 He0) with x by apply tc_unique.
-  replace (close ρ1 He1) with x0 by apply tc_unique.
-  apply He.
-  auto.
-Qed.
-
-Lemma related_close1 {Γ ρ0 ρ1 e τ}
-      (Hρ : G_rel Γ ρ0 ρ1)
-      (He : (TC Γ ⊢ e : τ)) :
-  forall A0 A1,
-    A_rel τ A0 A1 ->
-    μ (close ρ0 He) A0 = μ (close ρ1 He) A1.
-Proof.
-  intros.
-  pose proof related_close Hρ (fundamental_property He).
-  destruct (fundamental_property He) as [x x0 _].
-  replace x with He in * by apply tc_unique.
-  replace x0 with He in * by apply tc_unique.
-  apply H0.
-  auto.
-Qed.
-
-Lemma μ_rewrite {e e'}
-  : e = e' ->
-    forall τ He He',
-    @μ e τ He = @μ e' τ He'.
-Proof.
-  intros.
-  subst.
-  f_equal.
-  apply tc_unique.
-Qed.
-
-Lemma close_nil {e τ} (He : TC · ⊢ e : τ)
-  : μ (close WT_nil He) = μ He.
-Proof.
-  apply μ_rewrite.
-  autosubst.
-Qed.
-
-Lemma related_is_contextually_equivalent {Γ τ e0 e1} :
-  forall (re : (EXP Γ ⊢ e0 ≈ e1 : τ)),
-    let (He0, He1, _) := re in
-    ctx_equiv e0 e1 He0 He1.
-Proof.
-  intros.
-  pose proof re as re'.
-  destruct re as [He0 He1 _].
-  intros ? ? ?.
-  pose (A0 := narrow_event A).
-  pose (A1 := narrow_event A).
-  assert (A_rel ℝ A0 A1). {
-    repeat intro.
-    simpl in Hv.
-    destruct v0 using Val_rect; try contradiction Hv.
-    destruct v1 using Val_rect; try contradiction Hv.
-    simpl in *.
-    inversion Hv.
-    auto.
-  }
-  replace A with (A0 : Event (WT_Val ℝ)) at 1 by apply narrow_cast_inverse.
-  replace A with (A1 : Event (WT_Val ℝ)) at 1 by apply narrow_cast_inverse.
-  clearbody A0 A1.
-  clear A.
-
-  (* revert HCe0 HCe1. *)
-  revert HC.
-
-  enough (forall ΓC ρC0 ρC1 (Hρ : G_rel ΓC ρC0 ρC1)
-                 (HC : tc_ctx ΓC τ C Γ ℝ),
-             μ (close ρC0 (tc_ctx_of_tc He0 HC)) A0 =
-             μ (close ρC1 (tc_ctx_of_tc He1 HC)) A1). {
-
-    intros.
-
-    specialize (H0 _ _ _ G_rel_nil HC).
-    (* do 2 set (close _ _) in H0. *)
-    (* clearbody t t0. *)
-
-    rewrite <- (close_nil (tc_ctx_of_tc He0 HC)).
-    rewrite <- (close_nil (tc_ctx_of_tc He1 HC)).
-    auto.
-  }
-
-  intros.
-  revert ΓC ρC0 ρC1 Hρ HC A0 A1 H re'.
-  generalize ℝ as τC.
-
-  dependent induction HC; intros; simpl in *. {
-    destruct re' as [_ _ re].
-    specialize (re _ _ Hρ).
-    destruct re as [? [? re]].
-    specialize (re _ _ H).
-    replace (close ρC0 He0) with x by apply tc_unique.
-    replace (close ρC1 He1) with x0 by apply tc_unique.
-    exact re.
-  } {
-    apply work_of_app; auto.
-    apply related_close1; auto.
-  } {
-    apply work_of_app; auto.
-    apply related_close1; auto.
-  } {
-    apply work_of_factor; auto.
-  } {
-    apply work_of_plus; auto.
-    apply related_close1; auto.
-  } {
-    apply work_of_plus; auto.
-    apply related_close1; auto.
-  } {
-    do 2 set (TCLam _).
-    enough (dirac (WT_Val_of_pure t I) A0 =
-            dirac (WT_Val_of_pure t0 I) A1). {
-      subst t t0.
-      rewrite <- 2 (pure_is_dirac (TCLam _) I) in H0.
-      exact H0.
-    }
-
-    unfold dirac, Indicator; simpl.
-    f_equal.
-    apply H.
-
-    split; auto.
-    inversion t.
-    inversion t0.
-    subst.
-    exists X; eauto.
-    exists X0; eauto.
-    clear t t0.
-    rename X into Hplug0.
-    rename X0 into Hplug1.
-
-    intros va0 va1 Hva.
-    exists (ty_subst1 va0 Hplug0).
-    exists (ty_subst1 va1 Hplug1).
-    intros Ar0 Ar1 HAr.
-
-    specialize (IHHC He0 He1 _ _ (extend_grel _ _ Hρ Hva)).
-    specialize (IHHC _ _ HAr re').
-
-    (* ick *)
-    set (plug c e0).[up (subst_of_WT_Env ρC0)].[va0 : Expr/].
-    set (plug c e0).[subst_of_WT_Env (extend_WT_Env ρC0 va0)].
-    assert (y = y0) by (subst y y0; autosubst).
-    rewrite (μ_rewrite
-               H0 τr
-               (ty_subst1 va0 Hplug0)
-               (close (extend_WT_Env ρC0 va0) (tc_ctx_of_tc He0 HC))).
-    repeat subst.
-    clear H0.
-
-    set (plug c e1).[up (subst_of_WT_Env ρC1)].[va1 : Expr/].
-    set (plug c e1).[subst_of_WT_Env (extend_WT_Env ρC1 va1)].
-    assert (y = y0) by (subst y y0; autosubst).
-    rewrite (μ_rewrite
-               H0 τr
-               (ty_subst1 va1 Hplug1)
-               (close (extend_WT_Env ρC1 va1) (tc_ctx_of_tc He1 HC))).
-    repeat subst.
-    clear H0.
-    auto.
-  }
-Qed.
+Transparent π.
+Arguments π _ _ _ : simpl never.
 
 Notation "x ~> y" := (Arrow x y) (at level 69, right associativity, y at level 70).
 Notation "` x" := (e_var x) (at level 72).
@@ -444,7 +105,6 @@ Qed.
 Lemma project_same_integral f n :
   Integration (f ∘ π n) μEntropy = Integration f μEntropy.
 Proof.
-  Transparent π.
   induction n. {
     unfold π.
     apply πL_same_integral.
@@ -454,7 +114,6 @@ Proof.
     replace (f ∘ π (S n)) with (f ∘ π n ∘ πR) by auto.
     apply πR_same_integral.
   }
-  Opaque π.
 Qed.
 
 Lemma add_zero_related {e}
@@ -640,12 +299,10 @@ Qed.
 Lemma swap_01_1 σ : (π 1 (swap_01 σ) = π 0 σ).
 Proof.
   unfold swap_01.
-  Transparent π.
-  simpl.
+  unfold π.
   rewrite πR_join.
   rewrite πL_join.
   auto.
-  Opaque π.
 Qed.
 
 Lemma make_odd z : false = Nat.even z -> Even.odd z.
@@ -829,29 +486,34 @@ Proof.
   repeat constructor; auto.
 Qed.
 
-Lemma break_right {e1 e2}
-    (He1 : (TC nil ⊢ e1 : ℝ))
-    (He2 : (TC nil ⊢ e2 : ℝ))
-    σ A :
-  eval_in (tc_right He1 He2) A σ =
-  option0 (plus_in A <$> ev He1 (π 0 σ) <*> ev He2 (π 1 σ))
-          [*] ew He1 (π 0 σ)
-          [*] ew He2 (π 1 σ).
+Lemma break_right {Γ e1 e2}
+      (ρ : WT_Env Γ)
+      (σ0 σ1 σr : Entropy)
+      (He1 : (TC Γ ⊢ e1 : ℝ))
+      (He2 : (TC Γ ⊢ e2 : ℝ))
+      A :
+  eval_in (close ρ (tc_right He1 He2)) A (join σ0 (join σ1 σr)) =
+  option0 (plus_in A <$> ev (close ρ He1) σ0 <*> ev (close ρ He2) σ1)
+          [*] ew (close ρ He1) σ0
+          [*] ew (close ρ He2) σ1.
 Proof.
   intros.
   unfold eval_in.
   unfold ev at 1, ew at 1.
   decide_eval _ as [v0 w0 ex0 u0]. {
     inversion ex0; subst; try absurd_Val.
+    unfold π in *.
+    repeat rewrite πR_join in *.
+    rewrite πL_join in *.
     unfold ev, ew.
     simpl.
 
-    decide_eval He1 as [v3 w3 ex3 u3].
-    pose proof big_preservation He1 ex3.
+    decide_eval (close ρ He1) as [v3 w3 ex3 u3].
+    pose proof big_preservation (close ρ He1) ex3.
     destruct v3 using Val_rect; inversion X1; subst.
 
-    decide_eval He2 as [v5 w5 ex5 u5].
-    pose proof big_preservation He2 ex5.
+    decide_eval (close ρ He2) as [v5 w5 ex5 u5].
+    pose proof big_preservation (close ρ He2) ex5.
     destruct v5 using Val_rect; inversion X2; subst.
 
     rewrite <- nnr_mult_assoc.
@@ -873,40 +535,49 @@ Proof.
   } {
     simpl.
     unfold ev, ew.
-    decide_eval He1 as [v3 w3 ex3 u3].
-    decide_eval He2 as [v4 w4 ex4 u4].
+    decide_eval _ as [v3 w3 ex3 u3].
+    decide_eval _ as [v4 w4 ex4 u4].
     contradict not_ex.
 
-    pose proof big_preservation He1 ex3.
+    pose proof big_preservation (close ρ He1) ex3.
     destruct v3 using Val_rect; inversion X; subst.
 
-    pose proof big_preservation He2 ex4.
+    pose proof big_preservation (close ρ He2) ex4.
     destruct v4 using Val_rect; inversion X0; subst.
 
     eexists (v_real (r + r0) : Val, w3 [*] w4).
-    econstructor; eauto.
+
+    econstructor; eauto. {
+      simpl.
+      rewrite πL_join.
+      eauto.
+    } {
+      unfold π.
+      rewrite πR_join.
+      rewrite πL_join.
+      eauto.
+    }
   }
 Qed.
 
-Lemma break_left {e1 e2}
-      (He1 : (TC nil ⊢ e1 : ℝ))
-      (He2 : (TC nil ⊢ e2 : ℝ))
+Lemma break_left {Γ e1 e2}
+      (ρ : WT_Env Γ)
+      (He1 : (TC Γ ⊢ e1 : ℝ))
+      (He2 : (TC Γ ⊢ e2 : ℝ))
       σ A :
   let σe1 := (π 0 (π 2 σ)) in
   let σe2 := (π 1 σ) in
-  eval_in (tc_left He1 He2) A σ =
-  option0 (plus_in A <$> ev He1 σe1 <*> ev He2 σe2)
-          [*] ew He1 σe1
-          [*] ew He2 σe2.
+  eval_in (close ρ (tc_left He1 He2)) A σ =
+  option0 (plus_in A <$> ev (close ρ He1) σe1 <*> ev (close ρ He2) σe2)
+          [*] ew (close ρ He1) σe1
+          [*] ew (close ρ He2) σe2.
 Proof.
   intros.
-
-  Opaque π.
 
   unfold eval_in.
   unfold ev at 1, ew at 1.
   decide_eval _ as [v0 w0 ex0 u0]. {
-    pose proof big_preservation (tc_left He1 He2) ex0.
+    pose proof big_preservation (close ρ (tc_left He1 He2)) ex0.
     destruct v0 using Val_rect; inversion X; subst.
     inversion ex0; subst; try absurd_Val.
     inversion X0; subst.
@@ -915,16 +586,18 @@ Proof.
     simpl in *.
     destruct is_v0, is_v1.
 
-    replace (e1.[ren S].[v1 : Expr/]) with e1 in * by autosubst.
+    replace (e1.[ren S].[up (subst_of_WT_Env ρ)].[v1 : Expr/])
+    with e1.[subst_of_WT_Env ρ] in *
+      by autosubst.
 
     unfold ev, ew.
 
-    decide_eval He1 as [v4 w4 ex4 u4].
-    pose proof big_preservation He1 ex4.
+    decide_eval (close ρ He1) as [v4 w4 ex4 u4].
+    pose proof big_preservation (close ρ He1) ex4.
     destruct v4 using Val_rect; inversion X2; subst.
 
-    decide_eval He2 as [v5 w5 ex5 u5].
-    pose proof big_preservation He2 ex5.
+    decide_eval (close ρ He2) as [v5 w5 ex5 u5].
+    pose proof big_preservation (close ρ He2) ex5.
     destruct v5 using Val_rect; inversion X3; subst.
 
     simpl.
@@ -945,12 +618,12 @@ Proof.
   } {
     simpl.
     unfold ev, ew.
-    decide_eval He1 as [v4 w4 ex4 u4].
-    pose proof big_preservation He1 ex4.
+    decide_eval (close ρ He1) as [v4 w4 ex4 u4].
+    pose proof big_preservation (close ρ He1) ex4.
     destruct v4 using Val_rect; inversion X; subst.
 
-    decide_eval He2 as [v5 w5 ex5 u5].
-    pose proof big_preservation He2 ex5.
+    decide_eval (close ρ He2) as [v5 w5 ex5 u5].
+    pose proof big_preservation (close ρ He2) ex5.
     destruct v5 using Val_rect; inversion X0; subst.
 
     contradict not_ex.
@@ -960,7 +633,9 @@ Proof.
       reflexivity.
     } {
       simpl.
-      replace (e1.[ren S].[e_real r0/]) with e1 in * by autosubst.
+      replace (e1.[ren S].[up (subst_of_WT_Env ρ)].[e_real r0 : Expr/])
+      with e1.[subst_of_WT_Env ρ] in *
+        by autosubst.
       apply EPlus with (is_v0 := I) (is_v1 := I); eauto.
       apply EPure'.
       reflexivity.
@@ -969,7 +644,6 @@ Proof.
 Qed.
 
 (* map (π 0 (π 2 σ)) over to (π 0 σ) *)
-
 Definition kajigger σ := join (π 0 (π 2 σ)) (join (π 1 σ) (π 0 σ)).
 Definition kajigger_n := (join' (π_n 2 ∘ π_n 0) (join' (π_n 1) (π_n 0))).
 
@@ -979,13 +653,11 @@ Proof.
 Qed.
 Lemma kajigger_1 σ : (π 1 (kajigger σ) = π 1 σ).
 Proof.
-  Transparent π.
   unfold kajigger.
-  simpl.
+  unfold π.
   rewrite πR_join.
   rewrite πL_join.
   auto.
-  Opaque π.
 Qed.
 
 Lemma kajigger_equiv :
@@ -1040,41 +712,23 @@ Proof.
   apply lebesgue_measure_interval.
 Qed.
 
-Lemma beta_addition e1 e2 :
-  (TC · ⊢ e1 : ℝ) ->
-  (TC · ⊢ e2 : ℝ) ->
-  (EXP · ⊢ ex_left e1 e2 ≈ ex_right e1 e2 : ℝ).
+Lemma beta_addition {Γ e1 e2} :
+  (TC Γ ⊢ e1 : ℝ) ->
+  (TC Γ ⊢ e2 : ℝ) ->
+  (EXP Γ ⊢ ex_left e1 e2 ≈ ex_right e1 e2 : ℝ).
 Proof.
   intros He1 He2.
 
   refine (mk_related_exprs (tc_left He1 He2) (tc_right He1 He2) _).
-  simpl.
   intros.
 
-  destruct ρ0 as [ρ0 Hρ0].
-  destruct ρ1 as [ρ1 Hρ1].
-  dependent destruction Hρ0.
-  dependent destruction Hρ1.
-  clear Hρ.
-  unfold subst_of_WT_Env, downgrade_env.
-  simpl.
+  (* destruct ρ0 as [ρ0 Hρ0]. *)
+  (* destruct ρ1 as [ρ1 Hρ1]. *)
 
-  hnf.
-  rewrite subst_comp, 2 subst_id.
-  do 2 eexists.
-  shelve.
-  Unshelve. {
-    repeat econstructor; eauto.
-    apply (ty_ren He1).
-    auto.
-  } {
-    constructor; auto.
-  }
+  exists (close ρ0 (tc_left He1 He2)).
+  exists (close ρ1 (tc_right He1 He2)).
+  intros A0 A1 HA.
 
-  intros.
-
-  replace (TCPlus He1 He2) with (tc_right He1 He2) by apply tc_unique.
-  replace (TCApp _ _) with (tc_left He1 He2) by apply tc_unique.
   unfold μ.
 
   symmetry.
@@ -1083,23 +737,143 @@ Proof.
   rewrite kajigger_equiv.
 
   setoid_rewrite break_left.
-  setoid_rewrite break_right.
 
-  f_equal.
-  extensionality σ.
+  assert (forall σ, σ = join (π 0 σ) (join (π 1 σ) (πR (πR σ)))). {
+    intros.
+    unfold π.
+    rewrite 2 join_πL_πR.
+    auto.
+  }
+  pose proof fun σ => break_right ρ1 (π 0 σ) (π 1 σ) (πR (πR σ)) He1 He2.
+  setoid_rewrite <- H in H0.
+  setoid_rewrite H0.
+  clear H H0.
+
   unfold compose.
+  setoid_rewrite kajigger_1.
+  setoid_rewrite kajigger_02.
 
-  rewrite kajigger_1.
-  rewrite kajigger_02.
-  do 3 f_equal.
-  unfold plus_in.
-  destruct (ev _ _); simpl; auto.
-  destruct (ev _ _); simpl; auto.
-  destruct (Val_e _); auto.
-  destruct (Val_e _); auto.
-  f_equal.
-  unfold Indicator.
-  f_equal.
-  apply H.
-  reflexivity.
+  setoid_rewrite <- (break_right ρ0 _ _ (π 0 σ)).
+  setoid_rewrite <- (break_right ρ1 _ _ (π 0 x)).
+
+  change (Integration (eval_in (close ρ0 (tc_right He1 He2)) A0 ∘ kajigger) μEntropy =
+          Integration (eval_in (close ρ1 (tc_right He1 He2)) A1 ∘ kajigger) μEntropy).
+
+  rewrite <- kajigger_equiv.
+  rewrite <- 2 (int_inj_entropy _ kajigger_n_inj).
+
+  apply related_close1; auto.
 Qed.
+
+Lemma the_whole_enchilada {Γ e1 e2} {He1 : TC Γ ⊢ e1 : ℝ} {He2 : TC Γ ⊢ e2 : ℝ} :
+  ctx_equiv (tc_left He1 He2) (tc_right He1 He2).
+Proof.
+  pose proof related_is_contextually_equivalent (beta_addition He1 He2).
+  destruct beta_addition.
+  replace (tc_left _ _) with rel_expr_He0 by apply tc_unique.
+  replace (tc_right _ _) with rel_expr_He1 by apply tc_unique.
+  auto.
+Qed.
+
+Print Assumptions the_whole_enchilada.
+
+Lemma pure_subst {Γ} (ρ : WT_Env Γ) x :
+  is_pure (`x).[subst_of_WT_Env ρ].
+Proof.
+  unfold subst_of_WT_Env, downgrade_env.
+  simpl.
+  revert x.
+  destruct ρ as [ρ Hρ].
+  induction Hρ; intros; simpl; auto.
+  destruct x; simpl; auto.
+  destruct v as [a Ha].
+  destruct a; try contradiction Ha; auto.
+Qed.
+
+Lemma beta_value {Γ e τ v τv} :
+  is_pure v ->
+  (TC Γ ⊢ (λ τv, e) @ v : τ) ->
+  (EXP Γ ⊢ (λ τv, e) @ v ≈ e.[v/] : τ).
+Proof.
+  intros v_val Happ.
+  inversion Happ; subst.
+  inversion X; subst.
+  rename X into Hlam, X0 into Hv, X1 into He.
+
+  assert (Hsubst : TC Γ ⊢ e.[v/] : τ). {
+    apply (ty_subst He).
+    intros.
+    destruct x; simpl in *. {
+      inversion H; subst.
+      auto.
+    } {
+      constructor; auto.
+    }
+  }
+
+  split; auto.
+  intros ρ0 ρ1 Hρ.
+  eexists (close ρ0 Happ).
+  eexists (close ρ1 Hsubst).
+
+  intros A0 A1 HA.
+  unfold μ.
+
+  replace (close ρ0 Happ) with (TCApp (close ρ0 Hlam) (close ρ0 Hv)) by apply tc_unique.
+  setoid_rewrite by_theorem_15_app.
+
+  setoid_rewrite (pure_is_dirac (close ρ0 Hlam) I).
+  rewrite int_by_dirac.
+
+  assert (is_pure v.[subst_of_WT_Env ρ0]). {
+    destruct v; try contradiction v_val; auto.
+    apply pure_subst.
+  }
+  setoid_rewrite (pure_is_dirac (close ρ0 Hv) H).
+  rewrite int_by_dirac.
+
+  unfold compose.
+  do_elim_apply_in.
+  subst.
+
+  enough (Integration (eval_in (close ρ0 Hsubst) A0) μEntropy =
+          Integration (eval_in (close ρ1 Hsubst) A1) μEntropy). {
+
+    replace (fun σ => eval_in (close ρ1 Hsubst) _ _) with (eval_in (close ρ1 Hsubst) A1)
+      by (extensionality σ; auto).
+
+    rewrite <- H0.
+
+    f_equal.
+    extensionality σ.
+
+    assert (e.[v/].[subst_of_WT_Env ρ0] =
+            e.[up (subst_of_WT_Env ρ0)].[WT_Val_of_pure (close ρ0 Hv) H : Expr/])
+      by autosubst.
+
+    unfold eval_in, ev, ew.
+    decide_eval (ty_subst1 _ _) as [v0 w0 ex0 u0]. {
+      decide_eval _ as [v1 w1 ex1 u1]. {
+        rewrite <- H1 in *.
+        specialize (u0 (_, _) ex1).
+        inversion u0; subst.
+        unfold Indicator.
+        simpl.
+        auto.
+      } {
+        contradict not_ex.
+        rewrite <- H1 in *.
+        eexists (_, _); eauto.
+      }
+    } {
+      decide_eval _ as [v1 w1 ex1 u1].
+      contradict not_ex.
+      rewrite <- H1 in *.
+      eexists (_, _); eauto.
+    }
+  }
+
+  apply related_close1; auto.
+Qed.
+
+Print Assumptions beta_value.

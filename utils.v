@@ -1,6 +1,7 @@
-Require Export Basics.
 Require Export nnr.
 Require Export Coq.Logic.FunctionalExtensionality.
+Require Export Coq.Program.Basics.
+Require Export Coq.Program.Equality.
 Require Import Coq.Classes.Morphisms.
 
 Export EqNotations.

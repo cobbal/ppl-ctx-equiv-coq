@@ -6,3 +6,4 @@ determinism.v
 syntax.v
 utils.v
 Entropy.v
+ctxequiv.v
