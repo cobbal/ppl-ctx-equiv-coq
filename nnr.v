@@ -71,12 +71,12 @@ Proof.
   nnr.
 Qed.
 
-Lemma nnr_mult_one_l (r : R+) : nnr_1 [*] r = r.
+Lemma nnr_mult_1_l (r : R+) : nnr_1 [*] r = r.
 Proof.
   nnr.
 Qed.
 
-Lemma nnr_mult_one_r (r : R+) : r [*] nnr_1 = r.
+Lemma nnr_mult_1_r (r : R+) : r [*] nnr_1 = r.
 Proof.
   nnr.
 Qed.

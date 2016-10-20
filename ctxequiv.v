@@ -3,7 +3,6 @@ Require Import syntax.
 Require Import relations.
 Require Import micromega.Lia.
 Require Import List.
-Opaque π.
 
 Inductive Ctx :=
 | c_hole : Ctx

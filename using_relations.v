@@ -18,7 +18,6 @@ Require Import micromega.Lia.
 (* Local Open Scope R. *)
 
 Transparent π.
-Arguments π _ _ _ : simpl never.
 
 Notation "x ~> y" := (Arrow x y) (at level 69, right associativity, y at level 70).
 Notation "` x" := (e_var x) (at level 72).
@@ -33,45 +32,35 @@ Proof.
   repeat constructor; auto.
 Qed.
 
-Lemma ext_len {X n} {Γ : Env X} τ :
-  n <= length Γ ->
-  S n <= length (extend Γ τ).
-Proof.
-  simpl; lia.
-Qed.
-
 Lemma simplish {e}
       (He : (TC · ⊢ e : ℝ))
       σ A :
   eval_in (left_tc He) A σ = eval_in He A (π 1 σ).
 Proof.
   unfold eval_in.
-  unfold ev, ew.
-  decide_eval _ as [v0 w0 ex0 u0]. {
+  decide_eval as [v0 w0 ex0 u0]. {
+    destruct_WT_Val v0.
     inversion ex0; subst; try absurd_Val.
     inversion X; subst.
     inversion H0; subst.
     simpl in *.
-    decide_eval _ as [v3 w3 ex3 u3].
+    decide_eval as [v3 w3 ex3 u3].
     simpl.
     pose proof big_preservation He ex3.
-    destruct v3 using Val_rect; try solve [inversion X1].
+    destruct_WT_Val v3.
     simpl in *.
     pose proof EPlus σ X ex3.
-    rewrite nnr_mult_one_l in *.
+    rewrite nnr_mult_1_l in *.
     repeat rewrite Rplus_0_l in *.
     specialize (u0 (v_real r : Val, _) X2).
+    simpl in u0.
     inversion u0; subst.
-    repeat f_equal; try nnr.
-    apply WT_Val_eq.
-    simpl.
-    f_equal.
-    ring.
+    auto.
   } {
-    decide_eval _ as [v0 w0 ex0 u0]. {
+    decide_eval as [v0 w0 ex0 u0]. {
       contradict not_ex.
       pose proof big_preservation He ex0.
-      destruct v0 using Val_rect; try solve [inversion X].
+      destruct_WT_Val v0.
 
       exists (v_real (0 + r) : Val, nnr_1 [*] w0).
       pose proof EPure' (π 0 σ) (v_real 0) _ eq_refl.
@@ -84,7 +73,7 @@ Lemma πL_same_integral f :
   Integration (f ∘ πL) μEntropy = Integration f μEntropy.
 Proof.
   replace (f ∘ πL) with (fun σ => block (fun σL σR => f σL) (πL σ) (πR σ)) by auto.
-  rewrite lemma_9.
+  rewrite integration_πL_πR.
   unfold block.
   simpl.
   f_equal.
@@ -96,7 +85,7 @@ Lemma πR_same_integral f :
   Integration (f ∘ πR) μEntropy = Integration f μEntropy.
 Proof.
   replace (f ∘ πR) with (fun σ => block (fun σL σR => f σR) (πL σ) (πR σ)) by auto.
-  rewrite lemma_9.
+  rewrite integration_πL_πR.
   unfold block.
   simpl.
   erewrite int_const_entropy; eauto.
@@ -154,9 +143,9 @@ Lemma swap_same_integral f :
   Integration (fun σ => f (πL σ) (πR σ)) μEntropy =
   Integration (fun σ => f (πR σ) (πL σ)) μEntropy.
 Proof.
-  rewrite lemma_9.
+  rewrite integration_πL_πR.
   replace (fun σ => f (πR σ) (πL σ)) with (fun σ => flip f (πL σ) (πR σ)) by auto.
-  rewrite lemma_9.
+  rewrite integration_πL_πR.
   apply tonelli_3; repeat constructor.
 Qed.
 
@@ -277,8 +266,8 @@ Proof.
   }
 Qed.
 
-Definition swap_01 σ := join (π 1 σ) (join (π 0 σ) (πR (πR σ))).
-Definition swap_01_n := join' (π_n 1) (join' (π_n 0) (πR_n ∘ πR_n)).
+Definition swap_01 σ := join (π 1 σ) (join (π 0 σ) (π_leftover 2 σ)).
+Definition swap_01_n := join' (π_n 1) (join' (π_n 0) (π_n_leftover 2)).
 
 Lemma swap_01_equiv :
   shuf swap_01_n = swap_01.
@@ -418,25 +407,26 @@ Proof.
   extensionality σ.
   unfold compose.
 
-  unfold eval_in, ev, ew.
-  decide_eval _ as [v0 w0 ex0 u0]. {
+  unfold eval_in.
+  decide_eval as [v0 w0 ex0 u0]. {
+    destruct_WT_Val v0; simpl in *.
     inversion ex0; subst; try absurd_Val.
 
     rewrite swap_01_0 in X.
     rewrite swap_01_1 in X0.
     pose proof EPlus σ X0 X as erev.
 
-    decide_eval _ as [v3 w3 ex3 u3].
+    decide_eval as [v3 w3 ex3 u3].
+    destruct_WT_Val v3; simpl in *.
     inversion ex3; try absurd_Val.
     subst.
     simpl.
     specialize (u3 (_, _) erev).
     inversion u3.
+    unfold Indicator.
     f_equal. {
-      unfold Indicator.
       f_equal.
       apply HA.
-      simpl.
       rewrite H0.
       unfold V_rel_real.
       simpl.
@@ -451,7 +441,7 @@ Proof.
       ring.
     }
   } {
-    decide_eval _ as [v3 w3 ex3 u3].
+    decide_eval as [v3 w3 ex3 u3].
     contradict not_ex.
     inversion ex3; subst; try absurd_Val.
     rewrite <- swap_01_0 in X0.
@@ -499,22 +489,18 @@ Lemma break_right {Γ e1 e2}
 Proof.
   intros.
   unfold eval_in.
-  unfold ev at 1, ew at 1.
-  decide_eval _ as [v0 w0 ex0 u0]. {
+  decide_eval as [v0 w0 ex0 u0]. {
+    destruct_WT_Val v0.
     inversion ex0; subst; try absurd_Val.
     unfold π in *.
     repeat rewrite πR_join in *.
     rewrite πL_join in *.
-    unfold ev, ew.
     simpl.
 
-    decide_eval (close ρ He1) as [v3 w3 ex3 u3].
-    pose proof big_preservation (close ρ He1) ex3.
-    destruct v3 using Val_rect; inversion X1; subst.
-
-    decide_eval (close ρ He2) as [v5 w5 ex5 u5].
-    pose proof big_preservation (close ρ He2) ex5.
-    destruct v5 using Val_rect; inversion X2; subst.
+    decide_eval as [v3 w3 ex3 u3].
+    destruct_WT_Val v3.
+    decide_eval as [v5 w5 ex5 u5].
+    destruct_WT_Val v5.
 
     rewrite <- nnr_mult_assoc.
 
@@ -528,27 +514,19 @@ Proof.
     inversion u3.
     inversion u5.
     subst.
-
-    repeat f_equal.
-    apply WT_Val_eq.
     auto.
   } {
     simpl.
-    unfold ev, ew.
-    decide_eval _ as [v3 w3 ex3 u3].
-    decide_eval _ as [v4 w4 ex4 u4].
+    decide_eval as [v3 w3 ex3 u3].
+    destruct_WT_Val v3.
+    decide_eval as [v4 w4 ex4 u4].
+    destruct_WT_Val v4.
     contradict not_ex.
-
-    pose proof big_preservation (close ρ He1) ex3.
-    destruct v3 using Val_rect; inversion X; subst.
-
-    pose proof big_preservation (close ρ He2) ex4.
-    destruct v4 using Val_rect; inversion X0; subst.
 
     eexists (v_real (r + r0) : Val, w3 [*] w4).
 
     econstructor; eauto. {
-      simpl.
+      unfold π.
       rewrite πL_join.
       eauto.
     } {
@@ -575,14 +553,12 @@ Proof.
   intros.
 
   unfold eval_in.
-  unfold ev at 1, ew at 1.
-  decide_eval _ as [v0 w0 ex0 u0]. {
-    pose proof big_preservation (close ρ (tc_left He1 He2)) ex0.
-    destruct v0 using Val_rect; inversion X; subst.
+  decide_eval (close ρ (tc_left He1 He2)) σ as [v0 w0 ex0 u0]. {
+    destruct_WT_Val v0; simpl in *.
     inversion ex0; subst; try absurd_Val.
-    inversion X0; subst.
+    inversion X; subst.
     inversion H0; subst.
-    dependent destruction X2.
+    dependent destruction X1.
     simpl in *.
     destruct is_v0, is_v1.
 
@@ -590,41 +566,33 @@ Proof.
     with e1.[subst_of_WT_Env ρ] in *
       by autosubst.
 
-    unfold ev, ew.
+    decide_eval as [v4 w4 ex4 u4].
+    destruct_WT_Val v4.
+    decide_eval  as [v5 w5 ex5 u5].
+    destruct_WT_Val v5.
+    simpl in *.
 
-    decide_eval (close ρ He1) as [v4 w4 ex4 u4].
-    pose proof big_preservation (close ρ He1) ex4.
-    destruct v4 using Val_rect; inversion X2; subst.
-
-    decide_eval (close ρ He2) as [v5 w5 ex5 u5].
-    pose proof big_preservation (close ρ He2) ex5.
-    destruct v5 using Val_rect; inversion X3; subst.
-
-    simpl.
     unfold plus_in, Indicator.
     simpl.
     replace (mk_WT_Val _ _) with (v_real (r0 + r1))
       by (apply WT_Val_eq; auto).
 
-    specialize (u4 (_, _) X2_1).
-    specialize (u5 (_, _) X1).
+    specialize (u4 (_, _) X1_1).
+    specialize (u5 (_, _) X0).
     inversion u4.
     inversion u5.
     subst.
 
-    inversion X2_2; subst.
+    inversion X1_2; subst.
     inversion H1; subst.
     nnr.
   } {
     simpl.
-    unfold ev, ew.
-    decide_eval (close ρ He1) as [v4 w4 ex4 u4].
-    pose proof big_preservation (close ρ He1) ex4.
-    destruct v4 using Val_rect; inversion X; subst.
-
-    decide_eval (close ρ He2) as [v5 w5 ex5 u5].
-    pose proof big_preservation (close ρ He2) ex5.
-    destruct v5 using Val_rect; inversion X0; subst.
+    decide_eval as [v4 w4 ex4 u4].
+    destruct_WT_Val v4.
+    decide_eval as [v5 w5 ex5 u5].
+    destruct_WT_Val v5.
+    simpl in *.
 
     contradict not_ex.
     eexists (v_real (r + r0) : Val, _).
@@ -738,13 +706,13 @@ Proof.
 
   setoid_rewrite break_left.
 
-  assert (forall σ, σ = join (π 0 σ) (join (π 1 σ) (πR (πR σ)))). {
+  assert (forall σ, σ = join (π 0 σ) (join (π 1 σ) (π_leftover 2 σ))). {
     intros.
     unfold π.
     rewrite 2 join_πL_πR.
     auto.
   }
-  pose proof fun σ => break_right ρ1 (π 0 σ) (π 1 σ) (πR (πR σ)) He1 He2.
+  pose proof fun σ => break_right ρ1 (π 0 σ) (π 1 σ) (π_leftover 2 σ) He1 He2.
   setoid_rewrite <- H in H0.
   setoid_rewrite H0.
   clear H H0.
@@ -820,7 +788,7 @@ Proof.
   unfold μ.
 
   replace (close ρ0 Happ) with (TCApp (close ρ0 Hlam) (close ρ0 Hv)) by apply tc_unique.
-  setoid_rewrite by_theorem_15_app.
+  setoid_rewrite by_μe_eq_μEntropy_app.
 
   setoid_rewrite (pure_is_dirac (close ρ0 Hlam) I).
   rewrite int_by_dirac.
@@ -836,44 +804,44 @@ Proof.
   do_elim_apply_in.
   subst.
 
-  enough (Integration (eval_in (close ρ0 Hsubst) A0) μEntropy =
-          Integration (eval_in (close ρ1 Hsubst) A1) μEntropy). {
+  assert (Integration (eval_in (close ρ0 Hsubst) A0) μEntropy =
+          Integration (eval_in (close ρ1 Hsubst) A1) μEntropy)
+    by (apply related_close1; auto).
 
-    replace (fun σ => eval_in (close ρ1 Hsubst) _ _) with (eval_in (close ρ1 Hsubst) A1)
-      by (extensionality σ; auto).
+  replace (fun σ => eval_in (close ρ1 Hsubst) _ _) with (eval_in (close ρ1 Hsubst) A1)
+    by (extensionality σ; auto).
 
-    rewrite <- H0.
+  rewrite <- H0.
 
-    f_equal.
-    extensionality σ.
+  f_equal.
+  extensionality σ.
 
-    assert (e.[v/].[subst_of_WT_Env ρ0] =
-            e.[up (subst_of_WT_Env ρ0)].[WT_Val_of_pure (close ρ0 Hv) H : Expr/])
-      by autosubst.
+  assert (e.[v/].[subst_of_WT_Env ρ0] =
+          e.[up (subst_of_WT_Env ρ0)].[WT_Val_of_pure (close ρ0 Hv) H : Expr/])
+    by autosubst.
 
-    unfold eval_in, ev, ew.
-    decide_eval (ty_subst1 _ _) as [v0 w0 ex0 u0]. {
-      decide_eval _ as [v1 w1 ex1 u1]. {
-        rewrite <- H1 in *.
-        specialize (u0 (_, _) ex1).
-        inversion u0; subst.
-        unfold Indicator.
-        simpl.
-        auto.
-      } {
-        contradict not_ex.
-        rewrite <- H1 in *.
-        eexists (_, _); eauto.
-      }
+  unfold eval_in.
+  decide_eval as [v0 w0 ex0 u0]. {
+    decide_eval as [v1 w1 ex1 u1]. {
+      rewrite <- H1 in *.
+      specialize (u0 (_, _) ex1).
+      inversion u0; subst.
+      unfold Indicator.
+      simpl.
+      do 2 f_equal.
+      rewrite <- H3.
+      auto.
     } {
-      decide_eval _ as [v1 w1 ex1 u1].
       contradict not_ex.
       rewrite <- H1 in *.
       eexists (_, _); eauto.
     }
+  } {
+    decide_eval as [v1 w1 ex1 u1].
+    contradict not_ex.
+    rewrite <- H1 in *.
+    eexists (_, _); eauto.
   }
-
-  apply related_close1; auto.
 Qed.
 
 Print Assumptions beta_value.

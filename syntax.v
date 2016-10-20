@@ -265,6 +265,25 @@ Proof.
   }
 Defined.
 
+Ltac destruct_WT_Val wt_v :=
+  let τeq := fresh "τeq" in
+  match (type of wt_v) with
+  | WT_Val ℝ =>
+    destruct wt_v as [? τeq | ? ? τeq ] using WT_Val_rect;
+    [ assert (τeq = eq_refl) by apply Eqdep_dec.UIP_dec, ty_eq_dec ;
+      subst τeq
+    | discriminate τeq]
+  | WT_Val (?τa ~> ?τr) =>
+    let τa' := fresh "τa" in
+    let τr' := fresh "τr" in
+    destruct wt_v as [? τeq | τa' τr' τeq] using WT_Val_rect;
+    [ discriminate τeq
+    | inversion τeq;
+      subst τa' τr';
+      assert (τeq = eq_refl) by apply Eqdep_dec.UIP_dec, ty_eq_dec;
+      subst τeq]
+  end.
+
 Inductive TCEnv : Env Val -> Env Ty -> Type :=
 | TCENil : TCEnv · ·
 | TCECons {v : Val} {τ ρ' Γ'} : (TC · ⊢ v : τ) -> TCEnv ρ' Γ' -> TCEnv (v :: ρ') (τ :: Γ')
