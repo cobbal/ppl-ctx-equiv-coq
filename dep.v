@@ -8,6 +8,16 @@ Require syntax.
 Require utils.
 Require Entropy.
 Require ctxequiv.
+Require properties_of_relations.
 
 Set DependGraph File "dep-graph/graph.dpd".
-Print FileDependGraph nnr relations using_relations determinism syntax utils Entropy ctxequiv.
+Print FileDependGraph
+      nnr
+      relations
+      using_relations
+      determinism
+      syntax
+      utils
+      Entropy
+      ctxequiv
+      properties_of_relations.

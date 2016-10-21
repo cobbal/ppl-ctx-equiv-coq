@@ -7,3 +7,4 @@ syntax.v
 utils.v
 Entropy.v
 ctxequiv.v
+properties_of_relations.v

@@ -1,6 +1,7 @@
 Require Import utils.
 Require Import syntax.
 Require Import relations.
+Require Import properties_of_relations.
 Require Import micromega.Lia.
 Require Import List.
 
