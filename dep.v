@@ -1,0 +1,13 @@
+Require dpdgraph.dpdgraph.
+
+Require nnr.
+Require relations.
+Require using_relations.
+Require determinism.
+Require syntax.
+Require utils.
+Require Entropy.
+Require ctxequiv.
+
+Set DependGraph File "dep-graph/graph.dpd".
+Print FileDependGraph nnr relations using_relations determinism syntax utils Entropy ctxequiv.

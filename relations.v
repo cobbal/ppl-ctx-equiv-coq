@@ -134,12 +134,13 @@ Definition A_rel' (τ : Ty) (V_rel_τ : Val -> Val -> Type)
   forall v0 v1 (Hv : V_rel_τ v0 v1),
     (A0 v0 = (* iff *) A1 v1).
 
-Definition E_rel' (τ : Ty) (V_rel_τ : Val -> Val -> Prop) (e0 e1 : Expr) : Prop :=
-  exists (He0 : (TC · ⊢ e0 : τ))
-         (He1 : (TC · ⊢ e1 : τ)),
-  forall A0 A1,
-    A_rel' τ V_rel_τ A0 A1 ->
-    μ He0 A0 = μ He1 A1.
+Inductive E_rel' (τ : Ty) (V_rel_τ : Val -> Val -> Prop) (e0 e1 : Expr) : Prop :=
+  mk_E_rel'
+    (He0 : (TC · ⊢ e0 : τ))
+    (He1 : (TC · ⊢ e1 : τ))
+    (He : forall A0 A1,
+        A_rel' τ V_rel_τ A0 A1 ->
+        μ He0 A0 = μ He1 A1).
 
 Definition V_rel_real (v0 v1 : Val) : Prop :=
   match (v0 : Expr), (v1 : Expr) with
@@ -172,7 +173,7 @@ Fixpoint V_rel τ : Val -> Val -> Prop :=
 Definition A_rel τ := A_rel' τ (V_rel τ).
 Definition E_rel τ := E_rel' τ (V_rel τ).
 
-Definition G_rel {Γ : Env Ty} {ρ0 ρ1 : WT_Env Γ} : Type :=
+Definition G_rel {Γ : Env Ty} {ρ0 ρ1 : WT_Env Γ} : Prop :=
   forall {x v0 v1 τ},
     lookup Γ x = Some τ ->
     lookup ρ0 x = Some v0 ->
@@ -187,13 +188,12 @@ Proof.
   discriminate.
 Qed.
 
-Record related_exprs (Γ : Env Ty) (τ : Ty) (e0 e1 : Expr) : Type :=
-  mk_related_exprs
-  { rel_expr_He0 : (TC Γ ⊢ e0 : τ);
-    rel_expr_He1 : (TC Γ ⊢ e1 : τ);
-    rel_expr_erel {ρ0 ρ1} (Hρ : G_rel Γ ρ0 ρ1) :
-      (E_rel τ e0.[subst_of_WT_Env ρ0] e1.[subst_of_WT_Env ρ1])
-  }.
+Inductive related_exprs (Γ : Env Ty) (τ : Ty) (e0 e1 : Expr) : Prop :=
+| mk_related_exprs
+    (He0 : TC Γ ⊢ e0 : τ)
+    (He1 : TC Γ ⊢ e1 : τ)
+    (He : forall {ρ0 ρ1} (Hρ : G_rel Γ ρ0 ρ1),
+        E_rel τ e0.[subst_of_WT_Env ρ0] e1.[subst_of_WT_Env ρ1]).
 
 Arguments mk_related_exprs {_ _ _ _} _ _ _.
 
@@ -301,8 +301,7 @@ Proof.
   intros ρ0 ρ1 Hρ.
   simpl.
 
-  exists (TCReal r).
-  exists (TCReal r).
+  exists (TCReal r) (TCReal r).
   intros A0 A1 HA.
 
   rewrite (pure_is_dirac (TCReal r) I).
@@ -327,8 +326,7 @@ Proof.
   destruct (env_search (WT_Env_tc ρ1) Γx) as [v1 ρ1x].
   rewrite (subst_of_WT_Env_lookup ρ0x).
   rewrite (subst_of_WT_Env_lookup ρ1x).
-  exists (WT_Val_tc v0).
-  exists (WT_Val_tc v1).
+  exists (WT_Val_tc v0) (WT_Val_tc v1).
 
   intros A0 A1 HA.
 
@@ -381,8 +379,7 @@ Proof.
   pose proof body_subst ρ0 Hbody0 as Hbody0'.
   pose proof body_subst ρ1 Hbody1 as Hbody1'.
 
-  exists (TCLam Hbody0').
-  exists (TCLam Hbody1').
+  exists (TCLam Hbody0') (TCLam Hbody1').
   intros A0 A1 HA.
 
   (* can't rewrite these directly, who knows why? *)
@@ -839,11 +836,10 @@ Proof.
   specialize (Hl _ _ Hρ).
   specialize (Hr _ _ Hρ).
 
-  destruct Hl as [tc_l0' [tc_l1' Hl]].
-  destruct Hr as [tc_r0' [tc_r1' Hr]].
+  destruct Hl as [tc_l0' tc_l1' Hl].
+  destruct Hr as [tc_r0' tc_r1' Hr].
 
-  exists (TCPlus tc_l0' tc_r0').
-  exists (TCPlus tc_l1' tc_r1').
+  exists (TCPlus tc_l0' tc_r0') (TCPlus tc_l1' tc_r1').
 
   intros A0 A1 HA.
 
@@ -1046,7 +1042,7 @@ try solve [apply use_equiv_A_rel; auto].
   hnf in Hvf.
   destruct Hvf as [_ [_ [_ Hvf]]].
   specialize (Hvf va0 va1 Hva).
-  destruct Hvf as [tc_body0 [tc_body1 Hvf]].
+  destruct Hvf as [tc_body0 tc_body1 Hvf].
   specialize (Hvf A0 A1 HA).
 
   do_elim_apply_in.
@@ -1073,11 +1069,10 @@ Proof.
 
   specialize (Hf _ _ Hρ).
   specialize (Ha _ _ Hρ).
-  destruct Hf as [tc_f0' [tc_f1' Hf]].
-  destruct Ha as [tc_a0' [tc_a1' Ha]].
+  destruct Hf as [tc_f0' tc_f1' Hf].
+  destruct Ha as [tc_a0' tc_a1' Ha].
 
-  eexists (TCApp tc_f0' tc_a0').
-  eexists (TCApp tc_f1' tc_a1').
+  eexists (TCApp tc_f0' tc_a0') (TCApp tc_f1' tc_a1').
   intros A0 A1 HA.
 
   apply work_of_app; auto.
@@ -1089,8 +1084,7 @@ Proof.
   refine (mk_related_exprs TCSample TCSample _).
   simpl.
   intros ρ0 ρ1 Hρ.
-  exists TCSample.
-  exists TCSample.
+  exists TCSample TCSample.
   intros A0 A1 HA.
 
   unfold μ.
@@ -1207,10 +1201,9 @@ Proof.
   intros ρ0 ρ1 Hρ.
 
   specialize (He _ _ Hρ).
-  destruct He as [TC0' [TC1' He]].
+  destruct He as [TC0' TC1' He].
 
-  exists (TCFactor TC0').
-  exists (TCFactor TC1').
+  exists (TCFactor TC0') (TCFactor TC1').
   intros A0 A1 HA.
 
   apply work_of_factor; auto.
@@ -1233,7 +1226,7 @@ Qed.
 
 Print Assumptions fundamental_property.
 
-Lemma fundamental_property_of_values (v : Val) τ :
+Lemma fundamental_property_of_values {τ} (v : Val) :
   (TC · ⊢ v : τ) ->
   (V_rel τ v v).
 Proof.
@@ -1248,10 +1241,10 @@ Proof.
     exists X0.
     intros.
     pose proof fundamental_property X0.
-    destruct X1 as [_ _ X1].
+    destruct H0.
     pose (ρ0 := extend_WT_Env WT_nil va0).
     pose (ρ1 := extend_WT_Env WT_nil va1).
-    specialize (X1 ρ0 ρ1).
+    specialize (He ρ0 ρ1).
     assert (G_rel (extend · τa) ρ0 ρ1). {
       hnf.
       intros.
@@ -1262,11 +1255,227 @@ Proof.
       subst.
       auto.
     }
-    specialize (X1 X2).
-    clear X2.
+    specialize (He H0).
+    clear H0.
 
     destruct WT_nil as [? Hnil].
     inversion Hnil; subst.
     auto.
+  }
+Qed.
+
+Lemma A_rel_symmetric' {τ} :
+  Symmetric (V_rel τ) ->
+  Symmetric (A_rel τ).
+Proof.
+  repeat intro.
+  apply eq_sym.
+  apply H0, H, Hv.
+Qed.
+
+Lemma E_rel_symmetric' {τ} :
+  Symmetric (V_rel τ) ->
+  Symmetric (E_rel τ).
+Proof.
+  repeat intro.
+  destruct H0.
+  exists He1 He0.
+  intros.
+  apply eq_sym.
+  apply He.
+  apply A_rel_symmetric'; auto.
+Qed.
+
+Instance V_rel_symmetric {τ} : Symmetric (V_rel τ).
+Proof.
+  induction τ; repeat intro. {
+    destruct x using Val_rect; try contradiction H.
+    destruct y using Val_rect; try contradiction H.
+    apply eq_sym.
+    exact H.
+  } {
+    destruct x using Val_rect; try contradiction H.
+    destruct y using Val_rect; try contradiction H.
+    destruct H as [[? ?] [? [? ?]]].
+    subst.
+    split; auto.
+    eexists; eauto.
+    eexists; eauto.
+    intros.
+    apply E_rel_symmetric'; auto.
+    apply H.
+    apply IHτ1.
+    apply H0.
+  }
+Qed.
+
+Instance E_rel_symmetric {τ} : Symmetric (E_rel τ)
+  := E_rel_symmetric' V_rel_symmetric.
+Instance A_rel_symmetric {τ} : Symmetric (A_rel τ)
+  := A_rel_symmetric' V_rel_symmetric.
+
+Instance V_rel_reflexive {τ} :
+  @Reflexive (WT_Val τ) (V_rel τ).
+Proof.
+  intros [v Hv].
+  apply fundamental_property_of_values; auto.
+Qed.
+
+Lemma A_rel_subidentity {τ} {A0 A1 : Event Val}
+  : A_rel τ A0 A1 ->
+    forall v : WT_Val τ,
+      A0 v = A1 v.
+Proof.
+  intros.
+  apply A_rels_equiv; auto.
+  apply fundamental_property_of_values.
+  apply v.
+Qed.
+
+Lemma A_rel_subidentity' τ {A0 A1 : Event (WT_Val τ)}
+  : A_rel τ (narrow_event A0) (narrow_event A1) ->
+    A0 = A1.
+Proof.
+  intros.
+  extensionality v.
+  rewrite <- (narrow_cast_inverse τ A0).
+  rewrite <- (narrow_cast_inverse τ A1).
+  apply A_rel_subidentity.
+  auto.
+Qed.
+
+Lemma E_rel_reflexive {τ e} :
+  (TC · ⊢ e : τ) ->
+  E_rel τ e e.
+Proof.
+  intros.
+  destruct (fundamental_property X).
+  specialize (He _ _ G_rel_nil).
+  unfold subst_of_WT_Env in He.
+  simpl in He.
+  rewrite subst_id in He.
+  exact He.
+Qed.
+
+Instance E_rel_transitive' {τ} :
+  Transitive (V_rel τ) ->
+  Transitive (E_rel τ).
+Proof.
+  intros ? x y z.
+  intros [Hx Hy Hxy].
+  intros [Hy' Hz Hyz].
+  exists Hx Hz.
+  pose proof tc_unique Hy' Hy.
+  subst.
+
+  intros.
+  transitivity (μ Hy A1); auto.
+  apply Hyz.
+
+  (* there has got to be an easier way... *)
+  apply A_rels_equiv.
+  rewrite <- (A_rel_subidentity') at 1; auto. {
+    apply A_rels_equiv.
+    apply H0.
+  } {
+    apply A_rels_equiv in H0.
+    apply A_rels_equiv.
+    rewrite 2 narrow_cast_inverse.
+    exact H0.
+  }
+Qed.
+
+Instance V_rel_transitive {τ} :
+  Transitive (V_rel τ).
+Proof.
+  induction τ; repeat intro. {
+    destruct x using Val_rect; try contradiction H.
+    destruct y using Val_rect; try contradiction H.
+    destruct z using Val_rect; try contradiction H0.
+    transitivity (v_real r0); auto.
+  } {
+    destruct x using Val_rect; try contradiction H.
+    destruct y using Val_rect; try contradiction H.
+    destruct z using Val_rect; try contradiction H0.
+    destruct H as [[? ?] [? [? ?]]].
+    destruct H0 as [[? ?] [? [? ?]]].
+    repeat subst.
+    split; auto.
+    do 2 (eexists; eauto).
+    intros va0 va1 Hva.
+    transitivity (body0.[va0 : Expr/]); auto.
+    apply H.
+    apply V_rel_reflexive.
+  }
+Qed.
+
+Instance G_rel_reflexive {Γ} : Reflexive (G_rel Γ).
+Proof.
+  intros ρ x v0 v1 τ Γx ρx ρx'.
+  repeat intro.
+  rewrite ρx in ρx'.
+  inversion ρx'.
+  destruct (env_search (WT_Env_tc ρ) Γx).
+  pose proof V_rel_reflexive x0.
+  simpl in H.
+  rewrite e in ρx.
+  inversion ρx.
+  subst v0 v1.
+  exact H.
+Qed.
+
+Instance G_rel_symmetric {Γ} : Symmetric (G_rel Γ).
+Proof.
+  repeat intro.
+  apply V_rel_symmetric.
+  eapply H; eassumption.
+Qed.
+
+Instance G_rel_transitive {Γ} : Transitive (G_rel Γ).
+Proof.
+  intros ρ0 ρ1 ρ2 Hρ0ρ1 Hρ1ρ2 x v0 v2 τ Γx ρ0x ρ2x.
+  destruct (env_search (WT_Env_tc ρ0) Γx) as [v0' ρ0x'].
+  destruct (env_search (WT_Env_tc ρ1) Γx) as [v1 ρ1x].
+  destruct (env_search (WT_Env_tc ρ2) Γx) as [v2' ρ2x'].
+  rewrite ρ0x' in ρ0x.
+  rewrite ρ2x' in ρ2x.
+  inversion ρ0x.
+  inversion ρ2x.
+  subst.
+
+  transitivity v1. {
+    eapply Hρ0ρ1; eauto.
+  } {
+    eapply Hρ1ρ2; eauto.
+  }
+Qed.
+
+Instance rel_expr_symmetric {Γ τ} : Symmetric (related_exprs Γ τ).
+Proof.
+  intros e0 e1 He.
+  destruct He.
+  refine (mk_related_exprs He1 He0 _).
+  intros ρ1 ρ0 Hρ.
+  symmetry.
+  apply He.
+  symmetry.
+  exact Hρ.
+Qed.
+
+Instance rel_expr_transitive {Γ τ} : Transitive (related_exprs Γ τ).
+Proof.
+  intros e0 e1 e2 He0e1 He1e2.
+  destruct He0e1 as [He0 He1 He0e1].
+  destruct He1e2 as [He1' He2 He1e2].
+  pose proof (tc_unique He1' He1); subst.
+
+  split; auto.
+  intros ρ0 ρ2.
+  transitivity (e1.[subst_of_WT_Env ρ0]). {
+    apply He0e1.
+    reflexivity.
+  } {
+    apply He1e2.
+    exact Hρ.
   }
 Qed.

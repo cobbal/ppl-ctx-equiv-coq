@@ -1,5 +1,3 @@
-.PHONY: all
-
 all: coq
 
 auto-subst:
@@ -16,3 +14,18 @@ Makefile.coq: auto-subst Makefile _CoqProject *.v
 clean:: Makefile.coq
 	$(MAKE) -f Makefile.coq clean
 	rm -f Makefile.coq
+	rm -rf dep-graph
+
+graph: dep-graph/graph.pdf
+
+dep-graph/graph.pdf: dep-graph/graph.dot
+	dot -Tpdf -o $@ $^
+
+dep-graph/graph.dot: dep-graph/graph.dpd
+	dpd2dot -o $@ $^
+
+dep-graph/graph.dpd: dep.v coq
+	mkdir -p dep-graph
+	coqc -R ./auto-subst/theories Autosubst -R . OpSemProofs dep.v
+
+.PHONY: all coq graph

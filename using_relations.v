@@ -118,8 +118,7 @@ Proof.
 
   unfold subst_of_WT_Env; simpl.
   rewrite subst_id.
-  exists (left_tc He).
-  exists He.
+  exists (left_tc He) He.
   intros A0 A1 HA.
 
   unfold μ.
@@ -394,8 +393,7 @@ Proof.
 
   unfold subst_of_WT_Env; simpl.
   rewrite 2 subst_id.
-  exists (TCPlus He1 He2).
-  exists (TCPlus He2 He1).
+  exists (TCPlus He1 He2) (TCPlus He2 He1).
   intros A0 A1 HA.
 
   unfold μ.
@@ -693,8 +691,7 @@ Proof.
   (* destruct ρ0 as [ρ0 Hρ0]. *)
   (* destruct ρ1 as [ρ1 Hρ1]. *)
 
-  exists (close ρ0 (tc_left He1 He2)).
-  exists (close ρ1 (tc_right He1 He2)).
+  exists (close ρ0 (tc_left He1 He2)) (close ρ1 (tc_right He1 He2)).
   intros A0 A1 HA.
 
   unfold μ.
@@ -736,11 +733,8 @@ Qed.
 Lemma the_whole_enchilada {Γ e1 e2} {He1 : TC Γ ⊢ e1 : ℝ} {He2 : TC Γ ⊢ e2 : ℝ} :
   ctx_equiv (tc_left He1 He2) (tc_right He1 He2).
 Proof.
-  pose proof related_is_contextually_equivalent (beta_addition He1 He2).
-  destruct beta_addition.
-  replace (tc_left _ _) with rel_expr_He0 by apply tc_unique.
-  replace (tc_right _ _) with rel_expr_He1 by apply tc_unique.
-  auto.
+  apply relation_sound.
+  apply beta_addition; auto.
 Qed.
 
 Print Assumptions the_whole_enchilada.
@@ -766,7 +760,7 @@ Proof.
   intros v_val Happ.
   inversion Happ; subst.
   inversion X; subst.
-  rename X into Hlam, X0 into Hv, X1 into He.
+  rename X into Hlam, X0 into Hv, X1 into He, τa into τv.
 
   assert (Hsubst : TC Γ ⊢ e.[v/] : τ). {
     apply (ty_subst He).
@@ -781,8 +775,7 @@ Proof.
 
   split; auto.
   intros ρ0 ρ1 Hρ.
-  eexists (close ρ0 Happ).
-  eexists (close ρ1 Hsubst).
+  eexists (close ρ0 Happ) (close ρ1 Hsubst).
 
   intros A0 A1 HA.
   unfold μ.
