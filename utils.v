@@ -47,13 +47,13 @@ Definition option_bind {A B} (t : option A) (f : A -> option B) : option B :=
   | Some a => f a
   | None => None
   end.
-Notation "f =<< x" := (option_bind x f) (at level 20).
-Notation "x >>= f" := (option_bind x f) (at level 20).
+(* Notation "f =<< x" := (option_bind x f) (at level 20). *)
+(* Notation "x >>= f" := (option_bind x f) (at level 20). *)
 
 Definition id {A} := @Datatypes.id A.
 
-Definition option_join {A} : option (option A) -> option A :=
-  fun x => id =<< x.
+(* Definition option_join {A} : option (option A) -> option A := *)
+(*   fun x => id =<< x. *)
 
 Instance functional_ext_rewriting {A B C} (f : (A -> B) -> C) :
   Proper (pointwise_relation A eq ==> eq) f.

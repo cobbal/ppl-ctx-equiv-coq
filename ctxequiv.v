@@ -13,7 +13,7 @@ Inductive Ctx :=
 | c_factor : Ctx -> Ctx
 | c_plus_l : Ctx -> Expr -> Ctx
 | c_plus_r : Expr -> Ctx -> Ctx
-| c_lam : Ty -> Ctx -> Ctx
+| c_lam : Ty -> {bind Ctx} -> Ctx
 .
 
 Definition ctx_ty := Env Ty ⨉ Ty.
@@ -42,10 +42,87 @@ Inductive tc_ctx (Γh : Env Ty) (τh : Ty) : Ctx -> Env Ty -> Ty -> Type :=
     (TC Γ ⊢ el : ℝ) ->
     (TCX Γ ⊢ c[Γh => τh] : ℝ) ->
     (TCX Γ ⊢ (c_plus_r el c)[Γh => τh] : ℝ)
-| TCXPlus_lam {Γ τa τr c} :
+| TCXLam {Γ τa τr c} :
     (TCX (extend Γ τa) ⊢ c[Γh => τh] : τr) ->
     (TCX Γ ⊢ (c_lam τa c)[Γh => τh] : (τa ~> τr))
 where "'TCX' Γo ⊢ C [ Γh => τh ] : τo" := (tc_ctx Γh τh C Γo τo).
+
+Instance Rename_Ctx : Rename Ctx :=
+  fix Rename_Ctx σ C :=
+    match C with
+    | c_hole => c_hole
+    | c_app_l c0 e1 => c_app_l (Rename_Ctx σ c0) (rename σ e1)
+    | c_app_r e0 c1 => c_app_r (rename σ e0) (Rename_Ctx σ c1)
+    | c_factor c0 => c_factor (Rename_Ctx σ c0)
+    | c_plus_l c0 e1 => c_plus_l (Rename_Ctx σ c0) (rename σ e1)
+    | c_plus_r e0 c1 => c_plus_r (rename σ e0) (Rename_Ctx σ c1)
+    | c_lam τa cbody => c_lam τa (Rename_Ctx (upren σ) cbody)
+    end.
+(* Instance Subst_Ctx : Subst Ctx := *)
+
+
+(* Lemma ctx_ty_ren {Γo Γh C τh τo} : *)
+(*   (TCX Γo ⊢ C[Γh => τh] : τo) -> *)
+(*   forall Γo' ξ, *)
+(*     lookup Γo = ξ >>> lookup Γo' -> *)
+(*     (TCX Γo' ⊢ (rename ξ C)[Γh => τh] : τo). *)
+(* Proof. *)
+(*   induction 1; try solve [econstructor; eauto]; intros. { *)
+(*     simpl. *)
+(*     intros. *)
+(*     rewrite H in e. *)
+(*     simpl in e. *)
+(*     constructor. *)
+(*     auto. *)
+(*   } { *)
+(*     intros. *)
+(*     constructor. *)
+(*     set (ξ' x := match x with | O => O | S x => S (ξ x) end). *)
+(*     assert (ren ξ' = up (ren ξ)). { *)
+(*       subst ξ'. *)
+(*       extensionality x. *)
+(*       destruct x; auto. *)
+(*     } *)
+(*     rewrite <- H0. *)
+(*     apply IHX. *)
+(*     subst ξ'. *)
+(*     extensionality x. *)
+(*     simpl. *)
+(*     rewrite H. *)
+(*     simpl. *)
+(*     destruct x; auto. *)
+(*   } *)
+(* Qed. *)
+
+Lemma ty_subst {Γ e τ} :
+  (TC Γ ⊢ e : τ) -> forall σ Δ,
+    (forall x τ',
+        lookup Γ x = Some τ' ->
+        (TC Δ ⊢ σ x : τ')) ->
+  (TC Δ ⊢ e.[σ] : τ).
+Proof.
+  induction 1; try solve [econstructor; eauto]; intros. {
+    apply X.
+    auto.
+  } {
+    constructor.
+    apply IHX.
+    intros [|]. {
+      intros.
+      simpl in *.
+      constructor.
+      auto.
+    } {
+      intros.
+      simpl in H.
+      specialize (X0 _ _ H).
+
+      pose proof (ty_ren X0).
+      specialize (X1 (extend Δ τa) S eq_refl).
+      autosubst.
+    }
+  }
+Qed.
 
 Fixpoint plug (C : Ctx) (e : Expr) : Expr :=
   match C with
@@ -57,6 +134,14 @@ Fixpoint plug (C : Ctx) (e : Expr) : Expr :=
   | c_plus_r e0 c1 => e_plus e0 (plug c1 e)
   | c_lam τa cbody => e_lam τa (plug cbody e)
   end.
+
+Notation "C ⟨ e ⟩" := (plug C e)
+  (at level 2, e at level 200, left associativity,
+   format "C ⟨ e ⟩" ).
+
+(* Notation "C [[ e ]]" := (plug C e) *)
+(*   (at level 2, e at level 200, left associativity, *)
+(*    format "C [[ e ]]" ). *)
 
 Fixpoint plug_ctx (Co Ci : Ctx) : Ctx :=
   match Co with
@@ -72,7 +157,7 @@ Fixpoint plug_ctx (Co Ci : Ctx) : Ctx :=
 Lemma tc_plug {ΓC Γe τe τC C e} :
   (TC Γe ⊢ e : τe) ->
   (TCX ΓC ⊢ C[Γe => τe] : τC) ->
-  (TC ΓC ⊢ plug C e : τC).
+  (TC ΓC ⊢ C⟨e⟩ : τC).
 Proof.
   intros He HC.
   induction HC; simpl; try econstructor; eauto.
@@ -107,45 +192,12 @@ Proof.
     } {
       exists (mk_Val (e_lam a1 IHa2) I).
       constructor.
-      replace (extend · a1) with (· ++ (extend · a1)) by auto.
-      apply weakening.
+      apply weaken.
       apply IHa2.
     }
   }
 Qed.
 
-Program Fixpoint close {Γ e τ} (ρ : WT_Env Γ) (He : (TC Γ ⊢ e : τ)) :
-  (TC · ⊢ e.[subst_of_WT_Env ρ] : τ) :=
-  match He with
-  | TCReal r => TCReal r
-  | @TCVar _ x _ Γx => _
-  | TCLam Hbody => TCLam (body_subst _ _)
-  | TCApp Hef Hea => TCApp (close ρ Hef) (close ρ Hea)
-  | TCFactor He' => TCFactor (close ρ He')
-  | TCSample => TCSample
-  | TCPlus Hel Her => TCPlus (close ρ Hel) (close ρ Her)
-  end.
-Next Obligation.
-  subst.
-  unfold subst_of_WT_Env, downgrade_env.
-  simpl.
-  destruct ρ as [ρ Hρ].
-  revert Γ ρ Hρ Γx.
-  induction x; intros. {
-    destruct Γ; try discriminate.
-    inversion Γx; subst.
-    simpl in *.
-    inversion Hρ; subst.
-    simpl.
-    auto.
-  } {
-    simpl in *.
-    destruct Γ; try discriminate.
-    destruct Hρ; try discriminate.
-    specialize (IHx _ _ Hρ Γx).
-    auto.
-  }
-Qed.
 
 Lemma related_close {Γ ρ0 ρ1}
       (Hρ : G_rel Γ ρ0 ρ1)
@@ -192,6 +244,24 @@ Proof.
   subst.
   f_equal.
   apply tc_unique.
+Qed.
+
+Lemma μ_apply {e0 e1 τ A He0 He1}
+  (μeq : @μ e0 τ He0 A = @μ e1 τ He1 A)
+  {e0' e1'}
+  (Heq0 : e0 = e0')
+  (Heq1 : e1 = e1')
+  He0' He1' :
+  @μ e0' τ He0' A = @μ e1' τ He1' A.
+Proof.
+  intros.
+  subst.
+  pose proof (expr_type_unique He0 He0').
+  subst.
+  pose proof (tc_unique He0 He0').
+  pose proof (tc_unique He1 He1').
+  subst.
+  auto.
 Qed.
 
 Lemma close_nil {e τ} (He : TC · ⊢ e : τ)
@@ -306,8 +376,8 @@ Proof.
     specialize (IHHC _ _ HAr re').
 
     (* ick *)
-    set (plug c e0).[up (subst_of_WT_Env ρC0)].[va0 : Expr/].
-    set (plug c e0).[subst_of_WT_Env (extend_WT_Env ρC0 va0)].
+    set c⟨e0⟩.[up (subst_of_WT_Env ρC0)].[va0 : Expr/].
+    set c⟨e0⟩.[subst_of_WT_Env (extend_WT_Env ρC0 va0)].
     assert (y = y0) by (subst y y0; autosubst).
     rewrite (μ_rewrite
                H0 τr
@@ -316,8 +386,8 @@ Proof.
     repeat subst.
     clear H0.
 
-    set (plug c e1).[up (subst_of_WT_Env ρC1)].[va1 : Expr/].
-    set (plug c e1).[subst_of_WT_Env (extend_WT_Env ρC1 va1)].
+    set c⟨e1⟩.[up (subst_of_WT_Env ρC1)].[va1 : Expr/].
+    set c⟨e1⟩.[subst_of_WT_Env (extend_WT_Env ρC1 va1)].
     assert (y = y0) by (subst y y0; autosubst).
     rewrite (μ_rewrite
                H0 τr
@@ -329,117 +399,41 @@ Proof.
   }
 Qed.
 
-Lemma same_substitution_suffices {Γ τ e0 e1} :
-  (TC Γ ⊢ e0 : τ) ->
-  (TC Γ ⊢ e1 : τ) ->
-  (forall {ρ : WT_Env Γ},
-      E_rel τ e0.[subst_of_WT_Env ρ] e1.[subst_of_WT_Env ρ]) ->
-  (EXP Γ ⊢ e0 ≈ e1 : τ).
-Proof.
-  intros He0 He1 H.
-  refine (mk_related_exprs He0 He1 _).
-  intros ρ0 ρ1 Hρ.
 
-
-  transitivity (e1.[subst_of_WT_Env ρ0]). {
-    apply H.
-  } {
-    destruct (fundamental_property He1).
-    apply He; auto.
-  }
-Qed.
-
-(* Fixpoint ctx_of_env {Γ ρ} (Hρ : TCEnv ρ Γ) : Ctx := *)
-(*   match Hρ with *)
-(*   | TCENil => c_hole *)
-(*   | @TCECons v τ _ _ _ Hρ' => *)
-(*     plug_ctx *)
-(*       (ctx_of_env Hρ') *)
-(*       (c_app_l (c_lam τ c_hole) v) *)
-(*   end. *)
-
-Fixpoint ctx_of_rev_env {Γ ρ} (Hρ : TCEnv ρ Γ) : Ctx :=
+Fixpoint ctx_of_env {Γ ρ} (Hρ : TCEnv ρ Γ) : Ctx :=
   match Hρ with
   | TCENil => c_hole
   | @TCECons v τ _ _ _ Hρ' =>
-    (c_app_l (c_lam τ (ctx_of_rev_env Hρ')) v)
+    plug_ctx (ctx_of_env Hρ') (c_app_l (c_lam τ c_hole) v)
   end.
-
-Lemma TCEnv_app {Γ0 ρ0 Γ1 ρ1} :
-  TCEnv ρ0 Γ0 ->
-  TCEnv ρ1 Γ1 ->
-  TCEnv (ρ0 ++ ρ1) (Γ0 ++ Γ1).
-Proof.
-  revert ρ0.
-  induction Γ0; intros. {
-    inversion X.
-    auto.
-  } {
-    inversion X; subst.
-    constructor; auto.
-  }
-Defined.
-
-Lemma TCEnv_rev {Γ ρ} :
-  (TCEnv ρ Γ) -> (TCEnv (rev ρ) (rev Γ)).
-Proof.
-  revert ρ.
-  induction Γ; inversion 1; subst. {
-    constructor.
-  } {
-    inversion X; subst.
-    simpl in *.
-    apply TCEnv_app; auto.
-    repeat constructor; auto.
-  }
-Defined.
-
-Definition ctx_of_env {Γ ρ} (Hρ : TCEnv ρ Γ) : Ctx :=
-  ctx_of_rev_env (TCEnv_rev Hρ).
 
 Lemma ctx_of_env_tc :
   forall {Γ ρ τ} (Hρ : TCEnv ρ Γ),
     (TCX · ⊢ (ctx_of_env Hρ)[Γ => τ] : τ).
 Proof.
-  enough (forall Γo Γ ρ τ (Hρ : TCEnv ρ Γ),
-             (TCX Γo ⊢ (ctx_of_rev_env Hρ)[rev Γ ++ Γo => τ] : τ)). {
+  enough (forall {Γo Γi ρ τ} (Hρ : TCEnv ρ Γi),
+             (TCX Γo ⊢ (ctx_of_env Hρ)[Γi ++ Γo => τ] : τ)). {
     intros.
-    specialize (X · _ _ τ (TCEnv_rev Hρ)).
-    simpl in X.
-    rewrite rev_involutive in X.
+    specialize (X · Γ ρ τ Hρ).
     rewrite app_nil_r in X.
     exact X.
   }
+
   intros.
 
-  revert Γo.
-  dependent induction Hρ; intros. {
+  induction Hρ; intros. {
     constructor.
   } {
     simpl.
-    econstructor. {
-      econstructor.
-      rewrite <- app_assoc.
-      simpl.
-      apply IHHρ.
-    } {
-      replace Γo with (· ++ Γo) by auto.
-      apply weakening.
-      auto.
-    }
+    apply (tc_plug_ctx IHHρ).
+    repeat econstructor.
+    exact (weaken t).
   }
 Qed.
 
-Lemma rev_nil {A} (l : list A) :
-  nil = rev l ->
-  nil = l.
+Lemma plug_plug_ctx C0 C1 e : (plug_ctx C0 C1)⟨e⟩ = plug C0 (C1⟨e⟩).
 Proof.
-  intros.
-  destruct l; auto.
-  simpl in *.
-  symmetry in H.
-  destruct (app_eq_nil _ _ H).
-  discriminate.
+  induction C0; simpl; auto; try rewrite IHC0; auto.
 Qed.
 
 Lemma relation_complete {Γ τ e0 e1}
@@ -466,43 +460,45 @@ Proof.
     clearbody A.
     clear A1.
 
-    specialize (H A).
     destruct ρ as [ρ Hρ].
     simpl in *.
+
     revert e0 e1 He0 He1 H.
 
-    remember (TCEnv_rev Hρ).
-    SearchAbout rev.
-    dependent induction t; intros; subst. {
-      set (mk_WT_Env _).
-      set (close w He0).
-      set (close w He1).
-      set (tc_plug He0 _) in *.
-      set (tc_plug He1 _) in *.
-      clearbody t t0 t1 t2.
-      subst w.
-      apply rev_nil in x0.
-      apply rev_nil in x1.
-      unfold subst_of_WT_Env in *.
-      subst.
-      simpl in t, t0.
-      simpl.
+    induction Hρ; intros. {
+      rewrite 2 close_nil.
+      do 2 set (tc_plug _ _) in H.
+      clearbody t t0.
+      simpl in *.
+      rewrite (tc_unique He0 t).
+      rewrite (tc_unique He1 t0).
+      apply H.
+    } {
+      do 2 set (tc_plug _ _) in H.
+      clearbody t0 t1.
+      simpl in *.
+      specialize (IHHρ _ _
+                       (TCApp (TCLam He0) (weaken t))
+                       (TCApp (TCLam He1) (weaken t))).
 
-      remember (e0.[ids]).
-      remember (e1.[ids]).
-      rewrite subst_id in Heqy, Heqy0.
-      subst.
+      assert (forall A : Event (WT_Val ℝ),
+                 μ (tc_plug (TCApp (TCLam He0) (weaken t)) (ctx_of_env_tc Hρ)) A =
+                 μ (tc_plug (TCApp (TCLam He1) (weaken t)) (ctx_of_env_tc Hρ)) A). {
+        clear IHHρ.
+        intros.
 
+        assert (forall e,
+                   (plug_ctx (ctx_of_env Hρ) (c_app_l (c_lam τ c_hole) v))⟨e⟩ =
+                   (ctx_of_env Hρ)⟨e_app (e_lam τ e) v⟩). {
+          intros.
+          clear.
+          apply plug_plug_ctx.
+        }
+        erewrite <- (μ_rewrite (H0 e0)).
+        erewrite <- (μ_rewrite (H0 e1)).
+        apply H.
+      }
 
-  (*     pose proof (tc_unique t1 t); subst. *)
-  (*     pose proof (tc_unique t2 t0); subst. *)
-  (*     auto. *)
-  (*   } { *)
-  (*     specialize (IHHρ A). *)
-
-  (*   } { *)
-  (*   } *)
-
-  (* hnf in H. *)
-
+      specialize (IHHρ H0).
+      apply (μ_apply IHHρ). {
 Abort.

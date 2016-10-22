@@ -236,3 +236,74 @@ Proof.
   subst v0 v1.
   exact H.
 Qed.
+
+Program Fixpoint close {Γ e τ} (ρ : WT_Env Γ) (He : (TC Γ ⊢ e : τ)) :
+  (TC · ⊢ e.[subst_of_WT_Env ρ] : τ) :=
+  match He with
+  | TCReal r => TCReal r
+  | @TCVar _ x _ Γx => _
+  | TCLam Hbody => TCLam (body_subst _ _)
+  | TCApp Hef Hea => TCApp (close ρ Hef) (close ρ Hea)
+  | TCFactor He' => TCFactor (close ρ He')
+  | TCSample => TCSample
+  | TCPlus Hel Her => TCPlus (close ρ Hel) (close ρ Her)
+  end.
+Next Obligation.
+  subst.
+  unfold subst_of_WT_Env, downgrade_env.
+  simpl.
+  destruct ρ as [ρ Hρ].
+  revert Γ ρ Hρ Γx.
+  induction x; intros. {
+    destruct Γ; try discriminate.
+    inversion Γx; subst.
+    simpl in *.
+    inversion Hρ; subst.
+    simpl.
+    auto.
+  } {
+    simpl in *.
+    destruct Γ; try discriminate.
+    destruct Hρ; try discriminate.
+    specialize (IHx _ _ Hρ Γx).
+    auto.
+  }
+Qed.
+
+Lemma same_substitution_suffices {Γ τ e0 e1} :
+  (TC Γ ⊢ e0 : τ) ->
+  (TC Γ ⊢ e1 : τ) ->
+  (forall {ρ : WT_Env Γ},
+      E_rel τ e0.[subst_of_WT_Env ρ] e1.[subst_of_WT_Env ρ]) ->
+  (EXP Γ ⊢ e0 ≈ e1 : τ).
+Proof.
+  intros He0 He1 H.
+  refine (mk_related_exprs He0 He1 _).
+  intros ρ0 ρ1 Hρ.
+
+  transitivity (e1.[subst_of_WT_Env ρ0]). {
+    apply H.
+  } {
+    destruct (fundamental_property He1).
+    apply He; auto.
+  }
+Qed.
+
+Lemma relate_exprs {Γ e0 e1 τ}
+      (He0 : (TC Γ ⊢ e0 : τ))
+      (He1 : (TC Γ ⊢ e1 : τ)) :
+  (forall ρ A, μ (close ρ He0) A = μ (close ρ He1) A) ->
+  (EXP Γ ⊢ e0 ≈ e1 : τ).
+Proof.
+  intros.
+
+  apply same_substitution_suffices; auto.
+
+  intro ρ.
+  exists (close ρ He0) (close ρ He1).
+
+  intros A0 A1 HA.
+  setoid_rewrite (A_rel_subidentity HA).
+  set (fun x : WT_Val τ => A1 x) as A.
+  apply H; auto.
+Qed.

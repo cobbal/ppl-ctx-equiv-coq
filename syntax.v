@@ -231,6 +231,47 @@ Definition v_real r : WT_Val ℝ :=
 Definition v_lam τa body : Val :=
   mk_Val (e_lam τa body) I.
 
+Lemma WT_Val_arrow_rect {τa τr}
+      (P : WT_Val (τa ~> τr) -> Type)
+      (case_lam :
+         (forall body (Hbody : (TC (extend · τa) ⊢ body : τr)),
+             P (mk_WT_Val
+                  (mk_Val (e_lam τa body) I)
+                  (TCLam Hbody)))) :
+  forall v, P v.
+Proof.
+  intros.
+
+  destruct v as [v Hv].
+  destruct v using Val_rect. {
+    inversion Hv.
+  } {
+    inversion Hv; subst.
+    replace Hv with (TCLam X) by apply tc_unique.
+    apply case_lam.
+  }
+Defined.
+
+Lemma WT_Val_real_rect
+      (P : WT_Val ℝ -> Type)
+      (case_real :
+         (forall r,
+             P (mk_WT_Val
+                  (mk_Val (e_real r) I)
+                  (TCReal r)))) :
+  forall v, P v.
+Proof.
+  intros.
+
+  destruct v as [v Hv].
+  destruct v using Val_rect. {
+    replace Hv with (@TCReal · r) by apply tc_unique.
+    apply case_real.
+  } {
+    inversion Hv.
+  }
+Defined.
+
 Lemma WT_Val_rect {τ}
       (P : WT_Val τ -> Type)
       (case_real :
@@ -249,39 +290,23 @@ Lemma WT_Val_rect {τ}
   forall v, P v.
 Proof.
   intros.
-  destruct v.
-  destruct WT_Val_v0 using Val_rect. {
-    inversion WT_Val_tc0; subst.
-    specialize (case_real r eq_refl).
-    simpl in *.
-    replace (TCReal r) with WT_Val_tc0 in case_real by apply tc_unique.
-    exact case_real.
+  destruct τ. {
+    apply WT_Val_real_rect.
+    intros.
+    exact (case_real r eq_refl).
   } {
-    inversion WT_Val_tc0; subst.
-    specialize (case_lam _ _ eq_refl body X).
-    simpl in *.
-    replace (TCLam X) with WT_Val_tc0 in case_lam by apply tc_unique.
-    exact case_lam.
+    apply WT_Val_arrow_rect.
+    intros.
+    exact (case_lam _ _ eq_refl body Hbody).
   }
 Defined.
 
 Ltac destruct_WT_Val wt_v :=
-  let τeq := fresh "τeq" in
   match (type of wt_v) with
   | WT_Val ℝ =>
-    destruct wt_v as [? τeq | ? ? τeq ] using WT_Val_rect;
-    [ assert (τeq = eq_refl) by apply Eqdep_dec.UIP_dec, ty_eq_dec ;
-      subst τeq
-    | discriminate τeq]
+    destruct wt_v using WT_Val_real_rect
   | WT_Val (?τa ~> ?τr) =>
-    let τa' := fresh "τa" in
-    let τr' := fresh "τr" in
-    destruct wt_v as [? τeq | τa' τr' τeq] using WT_Val_rect;
-    [ discriminate τeq
-    | inversion τeq;
-      subst τa' τr';
-      assert (τeq = eq_refl) by apply Eqdep_dec.UIP_dec, ty_eq_dec;
-      subst τeq]
+    destruct wt_v using WT_Val_arrow_rect
   end.
 
 Inductive TCEnv : Env Val -> Env Ty -> Type :=
@@ -300,11 +325,23 @@ Arguments WT_Env_tc {_} _.
 
 Definition WT_nil : WT_Env · := mk_WT_Env TCENil.
 
-Lemma wt_nil_unique ρ : ρ = WT_nil.
+Lemma tc_env_unique {Γ ρ} (Hρ0 Hρ1 : TCEnv Γ ρ) : Hρ0 = Hρ1.
 Proof.
-  destruct ρ.
-  dependent destruction WT_Env_tc0.
-  auto.
+  dependent induction Hρ0
+  ; dependent destruction Hρ1
+  ; auto.
+
+  f_equal; auto.
+  apply tc_unique.
+Qed.
+
+Lemma wt_nil_unique : forall ρ, ρ = WT_nil.
+Proof.
+  intros [ρ Hρ].
+  unfold WT_nil.
+  f_equal.
+  dependent destruction Hρ.
+  reflexivity.
 Qed.
 
 (* borrowed from a comment in autosubst, hope it's right *)
@@ -520,7 +557,7 @@ Proof.
 Qed.
 
 
-Lemma weakening Γ1 {Γ0 e τ} :
+Lemma general_weakening Γ1 {Γ0 e τ} :
   (TC Γ0 ⊢ e : τ) ->
   (TC Γ0 ++ Γ1 ⊢ e : τ).
 Proof.
@@ -537,6 +574,16 @@ Proof.
       auto.
     }
   }
+Qed.
+
+Lemma weaken {Γ e τ} :
+  (TC · ⊢ e : τ) ->
+  (TC Γ ⊢ e : τ).
+Proof.
+  intros.
+  replace Γ with (· ++ Γ) by auto.
+  apply general_weakening.
+  auto.
 Qed.
 
 Lemma ty_ren {Γ e τ} :
