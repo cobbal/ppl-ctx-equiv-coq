@@ -96,6 +96,12 @@ Definition is_val (e : Expr) : Prop :=
   | _ => False
   end.
 
+Lemma is_val_unique {e : Expr} (iv0 iv1 : is_val e) :
+  iv0 = iv1.
+Proof.
+  destruct e; try contradiction; destruct iv0, iv1; auto.
+Qed.
+
 Record Val :=
   mk_Val {
       Val_e :> Expr;
@@ -110,10 +116,7 @@ Lemma Val_rect
 Proof.
   intros.
   destruct v.
-  destruct Val_e0;
-try contradiction Val_v0;
-replace Val_v0 with I by apply proof_irrelevance;
-auto.
+  destruct Val_e0, Val_v0; auto.
 Defined.
 
 Ltac absurd_Val :=
@@ -164,12 +167,13 @@ Lemma expr_type_unique :
 Proof.
   intro e.
   induction e;
-intros;
-try solve [eapply IHe0; eauto];
-inversion tc_a;
-inversion tc_b;
-subst;
-auto. {
+    intros;
+    try solve [eapply IHe0; eauto];
+    inversion tc_a;
+    inversion tc_b;
+    subst;
+    auto.
+  {
     specialize (IHe1 _ _ _ X1 X).
     inversion IHe1; auto.
   } {
@@ -189,11 +193,12 @@ Proof.
   intro e.
 
   induction e;
-intros;
-auto;
-dependent destruction tc_a;
-dependent destruction tc_b;
-auto. {
+    intros;
+    auto;
+    dependent destruction tc_a;
+    dependent destruction tc_b;
+    auto.
+  {
     pose proof expr_type_unique tc_a1 tc_b1.
     inversion H.
     subst.
@@ -212,7 +217,9 @@ auto. {
     auto.
   } {
     f_equal.
-    apply proof_irrelevance.
+    apply UIP_dec.
+    decide equality.
+    decide equality.
   }
 Qed.
 
@@ -386,7 +393,6 @@ Qed.
 Definition extend_WT_Env {Γ τ} (ρ : WT_Env Γ) (v : WT_Val τ) : WT_Env (extend Γ τ) :=
   mk_WT_Env (extend_TCE (WT_Env_tc ρ) v).
 
-
 Lemma Val_eq {v v' : Val} :
   @eq Expr v v' -> @eq Val v v'.
 Proof.
@@ -395,7 +401,8 @@ Proof.
   simpl in *.
   subst.
   f_equal.
-  apply proof_irrelevance.
+
+  apply is_val_unique.
 Qed.
 
 Lemma WT_Val_eq {τ} {v v' : WT_Val τ} :
@@ -405,7 +412,7 @@ Proof.
   destruct v as [[]], v' as [[]].
   simpl in *.
   subst.
-  replace Val_v1 with Val_v0 by apply proof_irrelevance.
+  replace Val_v1 with Val_v0 by apply is_val_unique.
   f_equal.
   apply tc_unique.
 Qed.

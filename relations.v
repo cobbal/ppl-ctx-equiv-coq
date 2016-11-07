@@ -922,13 +922,12 @@ Proof.
   extensionality σ.
   simpl.
   unfold eq_rect_r.
-  repeat
-    (match goal with
-     | [ |- context[ rew ?H in _ ] ] =>
-       let z := type of H in
-       replace H with (eq_refl : z) by apply proof_irrelevance
-     end; simpl).
-  reflexivity.
+  simpl.
+
+  replace (tc_unique _ _) with (@eq_refl _ (TCLam Hbody)); auto.
+  apply UIP_dec.
+  left.
+  apply tc_unique.
 Qed.
 
 (* ok, let's never look inside apply_in ever again. It's too ugly *)
