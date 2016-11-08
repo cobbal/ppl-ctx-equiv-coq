@@ -16,232 +16,246 @@ Import EqNotations.
 
 Local Open Scope R.
 
-Definition dE_rel' (τ : Ty) (dV_rel_τ : Val -> Type) (e : Expr) : Type :=
+Definition dE_rel' τ (dV_rel_τ : val τ -> Type) (e : expr · τ) : Type :=
   forall σ,
-    (existsT (vw : Val * R+),
+    (existsT (vw : val τ * R+),
      let (v, w) := vw in
      (dV_rel_τ v)
        ⨉ (EVAL σ ⊢ e ⇓ v, w)
        ⨉ (forall v' w', (EVAL σ ⊢ e ⇓ v', w') -> (v, w) = (v', w'))
     ) +
-    ((existsT vw : (Val * R+), let (v, w) := vw in EVAL σ ⊢ e ⇓ v, w) -> False).
+    ((existsT vw : (val τ * R+), let (v, w) := vw in EVAL σ ⊢ e ⇓ v, w) -> False).
 
-Definition dV_rel_real (v : Val) : Type :=
-  match v : Expr with
-  | e_real _ => True
-  | _ => False
-  end.
+Definition dV_rel_real (v : val ℝ) : Type := True.
 
-Definition dV_rel_arrow
-       (τa τr : Ty) (dV_rel_a dV_rel_r : Val -> Type)
-       (v : Val)
-  : Type
-  := match v : Expr with
-     | e_lam τa' body =>
-       (τa = τa') ⨉
-       { tc_body : (TC (extend · τa) ⊢ body : τr) &
-         forall {va : WT_Val τa} (Hva : dV_rel_a va),
-          (dE_rel' τr dV_rel_r (body.[va : Expr/]))
-       }
-     | _ => False
-     end.
+Inductive dV_rel_arrow {τa τr}
+          (dV_rel_a : val τa -> Type)
+          (dV_rel_r : val τr -> Type)
+  : val (τa ~> τr) -> Type :=
+| mk_dV_rel_arrow
+    (body : expr (τa :: ·) τr) :
+    (forall va,
+        dV_rel_a va ->
+        dE_rel' τr dV_rel_r (proj1_sig (ty_subst1 body va))) ->
+    dV_rel_arrow dV_rel_a dV_rel_r (v_lam body).
 
-Reserved Notation "'dVREL' v ∈ V[ τ ]"
-         (at level 69, v at level 99, τ at level 99).
-Fixpoint dV_rel τ : Val -> Type :=
+Fixpoint dV_rel τ : val τ -> Type :=
   match τ with
   | ℝ => dV_rel_real
-  | (τa ~> τr) => dV_rel_arrow τa τr (dV_rel τa) (dV_rel τr)
+  | (τa ~> τr) => @dV_rel_arrow _ _ (dV_rel τa) (dV_rel τr)
   end.
 
-Hint Unfold dV_rel dV_rel_real dV_rel_arrow.
+Hint Unfold dV_rel dV_rel_real.
+Hint Constructors dV_rel_arrow.
 
 Definition dE_rel τ := dE_rel' τ (dV_rel τ).
 
-Definition dG_rel {Γ} {ρ : WT_Env Γ} : Type :=
-  forall {x v τ},
-    lookup Γ x = Some τ ->
-    lookup ρ x = Some v ->
-    dV_rel τ v.
-Arguments dG_rel _ _ : clear implicits.
+Definition dG_rel Γ (ρ : wt_env Γ) : Type :=
+  dep_env_allT dV_rel ρ.
 
-(* Notation "'dGREL' ρ ∈ G[ Γ ]" := *)
-(*   (dG_rel Γ ρ) *)
-(*     (at level 69, ρ at level 99, Γ at level 99). *)
-
-Lemma tc_of_dV_rel {τ v} :
-  dV_rel τ v ->
-  (TC · ⊢ v : τ).
-Proof.
-  intros.
-  destruct τ, v as [[]]; simpl in *; try tauto. {
-    constructor.
-  } {
-    destruct X.
-  } {
-    destruct X.
-  } {
-    destruct X.
-    destruct s.
-    subst.
-    econstructor; eauto.
-  }
-Qed.
-
-Lemma extend_dgrel {Γ ρ τ} {v : WT_Val τ} :
+Lemma apply_dG_rel {Γ ρ} :
   (dG_rel Γ ρ) ->
-  (dV_rel τ v) ->
-  (dG_rel (extend Γ τ) (extend_WT_Env ρ v)).
+  forall x τ v,
+    lookup Γ x = Some τ ->
+    dep_lookup ρ x = Some (existT _ τ v) ->
+    dV_rel τ v.
 Proof.
   intros.
-  intros x ? ? Γx ρx.
-  destruct x; intros. {
+  simpl in *.
+  revert Γ ρ H H0 X.
+  induction x; intros. {
+    destruct ρ; inversion H; subst.
     simpl in *.
-    inversion Γx.
-    inversion ρx.
-    subst.
+    dependent destruction H0.
+    destruct X.
     auto.
   } {
-    apply (X x); auto.
+    destruct ρ; inversion H; subst.
+    simpl in *.
+    eapply IHx; eauto.
+    destruct X.
+    auto.
   }
 Qed.
 
+Lemma extend_dgrel {Γ τ ρ v} :
+  (dV_rel τ v) ->
+  (dG_rel Γ ρ) ->
+  (dG_rel (τ :: Γ) (dep_cons v ρ)).
+Proof.
+  constructor; auto.
+Qed.
 
-Definition related_expr (Γ : Env Ty) (e : Expr) (τ : Ty) : Type :=
-  (TC Γ ⊢ e : τ)
-    ⨉ (forall {ρ} (Hρ : dG_rel Γ ρ),
-          (dE_rel τ (e.[subst_of_WT_Env ρ]))).
+Definition related_expr Γ τ (e : expr Γ τ) : Type :=
+  forall ρ (Hρ : dG_rel Γ ρ),
+    dE_rel τ (proj1_sig (close ρ e)).
 
 Lemma compat_real Γ r :
-  related_expr Γ (e_real r) ℝ.
+  related_expr Γ ℝ (e_real r).
 Proof.
-  split; [exact (TCReal _) |].
-  intros ρ Hρ σ.
   left.
-  exists (mk_Val (e_real r) I, nnr_1).
+  exists (v_real r, nnr_1).
   repeat constructor. {
     apply EPure'.
-    reflexivity.
+    destruct close; simpl in *.
+    apply erase_injective.
+    auto.
   } {
     intros.
-    inversion X; subst.
-    f_equal.
-    apply Val_eq.
+    destruct close; simpl in *.
+    dependent destruction H.
+    destruct_val v'.
+    inversion e.
     auto.
   }
 Qed.
 
-Lemma compat_var Γ x τ :
-  lookup Γ x = Some τ ->
-  related_expr Γ (e_var x) τ.
+Lemma lookup_subst {Γ x τ v} (ρ : wt_env Γ) :
+  dep_lookup ρ x = Some (existT val τ v) ->
+  erase_wt_env ρ x = erase v.
 Proof.
-  intros Γτ.
-  split; [exact (TCVar Γτ) |].
-  intros ρ Hρ σ.
-  left.
-
-  destruct (env_search (WT_Env_tc ρ) Γτ) as [v ρv].
-  exists (v : Val, nnr_1).
-  repeat constructor; auto. {
-    eapply Hρ; eauto.
+  revert Γ ρ.
+  induction x; intros. {
+    destruct ρ; inversion H; subst.
+    dependent destruction H2.
+    auto.
   } {
+    destruct ρ; inversion H; subst.
     simpl.
-    pose proof subst_of_WT_Env_lookup ρv.
-    rewrite H.
-    apply EPure.
-  } {
-    intros.
-    simpl in X.
-    rewrite (subst_of_WT_Env_lookup ρv) in X.
-    destruct v as [[]].
-    simpl in *.
-    destruct Val_e; try tauto. {
-      inversion X; subst.
-      f_equal.
-      apply Val_eq.
-      auto.
-    } {
-      inversion X; subst.
-      f_equal.
-      apply Val_eq.
-      auto.
-    }
+    apply IHx.
+    auto.
   }
 Qed.
 
-Lemma compat_lam Γ body τa τr :
-  related_expr (extend Γ τa) body τr ->
-  related_expr Γ (e_lam τa body) (τa ~> τr).
+Lemma compat_var Γ x τ Hx :
+  related_expr Γ τ (e_var x Hx).
 Proof.
-  intros Hbody.
-  destruct Hbody as [tc_body Hbody].
-  split; [exact (TCLam tc_body) |].
-  intros ρ Hρ σ.
   left.
 
-  pose (mk_Val (e_lam τa body.[up (subst_of_WT_Env ρ)]) I).
-
-  eexists (v, nnr_1).
-  constructor; [constructor |]. {
-    simpl.
-    split; auto.
-    exists (body_subst ρ tc_body).
-    intros.
-    rewrite subst_comp.
-    replace (up (subst_of_WT_Env ρ) >> (va : Expr) .: ids)
-    with (subst_of_WT_Env (extend_WT_Env ρ va))
-      by autosubst.
-    apply (Hbody _ (extend_dgrel Hρ Hva)).
+  destruct (env_search ρ Hx) as [v ρv].
+  exists (v, nnr_1).
+  repeat constructor; auto. {
+    eapply apply_dG_rel; eauto.
   } {
     apply EPure'.
+    destruct close; simpl in *.
+    apply erase_injective.
+    rewrite e.
+    apply lookup_subst.
     auto.
   } {
     intros.
-    inversion X; subst.
-    f_equal.
-    apply Val_eq.
-    simpl.
+    destruct close; simpl in *.
+    rewrite (lookup_subst ρ ρv) in e.
+    apply erase_injective in e.
+    subst.
+
+    destruct (invert_eval_val H); subst.
     auto.
   }
 Qed.
 
-Lemma compat_app Γ ef ea τa τr :
-  related_expr Γ ef (τa ~> τr) ->
-  related_expr Γ ea τa ->
-  related_expr Γ (e_app ef ea) τr.
+Lemma compat_lam Γ τa τr body :
+  related_expr (τa :: Γ) τr body ->
+  related_expr Γ (τa ~> τr) (e_lam body).
 Proof.
-  intros Hef Hea.
-  destruct Hef as [tc_ef Hef].
-  destruct Hea as [tc_ea Hea].
-  split; [exact (TCApp tc_ef tc_ea) |].
-  intros ρ Hρ σ.
+  intros Hbody.
+  left.
+
+  exists (v_lam (proj1_sig (body_subst ρ body)), nnr_1).
+  constructor; [constructor |]. {
+    constructor.
+    intros.
+    destruct ty_subst1; simpl in *.
+
+    specialize (Hbody _ (extend_dgrel X Hρ)).
+    replace (proj1_sig _) with x in Hbody; auto.
+
+    apply erase_injective.
+    rewrite e; clear e.
+
+    destruct close, body_subst; simpl in *.
+    rewrite e0, e.
+    autosubst.
+  } {
+    apply EPure'.
+
+    apply erase_injective.
+    destruct close, body_subst; simpl in *.
+    rewrite e, e0.
+    auto.
+  } {
+    intros.
+    destruct close, body_subst; simpl in *.
+    assert (is_val x). {
+      simpl.
+      rewrite e.
+      exact I.
+    }
+    change (EVAL σ ⊢ mk_val x H0 ⇓ v', w') in H.
+    destruct (invert_eval_val H); subst.
+    f_equal.
+
+    dependent destruction x; inversion e.
+    rewrite <- e0 in H2.
+    apply erase_injective in H2.
+    subst.
+    destruct H0.
+    auto.
+  }
+Qed.
+
+Lemma compat_app Γ τa τr ef ea :
+  related_expr Γ (τa ~> τr) ef ->
+  related_expr Γ τa ea ->
+  related_expr Γ τr (e_app ef ea).
+Proof.
+  intros Hef Hea ? ? ?.
 
   specialize (Hef ρ Hρ (π 0 σ)).
   specialize (Hea ρ Hρ (π 1 σ)).
 
   destruct Hef as [[[vf wf] [[Hvf EVAL_f] uf]] | not_ex]. {
     destruct Hea as [[[va wa] [[Hva EVAL_a] ua]] | not_ex]. {
-      destruct vf using Val_rect; try contradiction.
-      destruct Hvf as [? [tc_body Hvf]].
-      subst τa0.
-      pose (wt_va := mk_WT_Val _ (tc_of_dV_rel Hva)).
-      destruct (Hvf wt_va Hva (π 2 σ)) as [[[vr wr] [[Hvr EVAL_r] ur]] | not_ex]. {
+      destruct_val vf.
+      destruct Hvf as [body0 Hvf].
+      clear body.
+
+      destruct (Hvf va Hva (π 2 σ)) as [[[vr wr] [[Hvr EVAL_r] ur]] | not_ex]. {
         left.
         exists (vr, wf [*] wa [*] wr).
+
+        repeat destruct close; simpl in *.
+        rewrite <- e, <- e0 in e1.
+        destruct x1; inversion e1.
+        assert (τa0 = τa). {
+          pose proof expr_type_unique _ _ H0.
+          inversion H.
+          auto.
+        }
+        subst.
+        apply erase_injective in H0.
+        apply erase_injective in H1.
+        subst.
+
         repeat econstructor; eauto.
+
         intros.
-        simpl in X.
-        inversion X; subst; try absurd_Val.
+        dependent destruction H; subst. {
+          exfalso.
+          destruct v.
+          simpl in *.
+          subst.
+          contradiction H.
+        }
 
-        specialize (uf _ _ X0).
-        specialize (ua _ _ X1).
-        inversion uf.
-        inversion ua.
-        subst.
+        specialize (uf _ _ H).
+        specialize (ua _ _ H0).
+        dependent destruction uf.
+        dependent destruction ua.
 
-        specialize (ur _ _ X2).
-        inversion ur.
-        subst.
+        specialize (ur _ _ H1).
+        dependent destruction ur.
 
         reflexivity.
       } {
@@ -249,7 +263,22 @@ Proof.
         intros.
         apply not_ex.
         destruct X as [[? ?] ?].
-        inversion y; subst; try absurd_Val.
+
+        repeat destruct close; simpl in *.
+        rewrite <- e, <- e0 in e1.
+        destruct x1; inversion e1.
+        assert (τa0 = τa). {
+          pose proof expr_type_unique _ _ H0.
+          inversion H.
+          auto.
+        }
+        subst.
+        apply erase_injective in H0.
+        apply erase_injective in H1.
+        subst.
+
+        dependent destruction y. {
+        }
 
         specialize (uf _ _ X).
         specialize (ua _ _ X0).
