@@ -157,6 +157,25 @@ Proof.
     erewrite IHx2; eauto.
   }
 Qed.
+Arguments erase_injective {_ _ _ _} _.
+
+Ltac elim_erase_eqs :=
+  progress repeat
+    let H := fresh "H" in
+    let H' := fresh "H" in
+    match goal with
+    | [H0 : erase ?x = ?s, H1 : erase ?y = ?s |- _ ] =>
+      pose proof (eq_trans H0 (eq_sym H1)) as H;
+        let z := type of y in
+        match type of x with
+        | z => idtac
+        | expr · ?τ =>
+          pose proof (expr_type_unique _ _ H) as H';
+            subst τ
+        end;
+          apply erase_injective in H;
+          subst x
+    end.
 
 Definition is_val (e : u_expr) : Prop :=
   match e with
@@ -237,7 +256,23 @@ Ltac destruct_val wt_v :=
   | val (?τa ~> ?τr) =>
     destruct wt_v using val_arrow_rect
   | val ?τ =>
-    destruct wt_v using val_rect
+    destruct wt_v using wt_val_rect
+  end.
+
+Lemma for_absurd_val {τ} {v : val τ} {e : expr · τ} :
+  (expr_of_val v) = e ->
+  is_val e.
+Proof.
+  intros.
+  destruct v.
+  subst.
+  auto.
+Qed.
+
+Ltac absurd_val :=
+  match goal with
+  | [ H : (expr_of_val _) = _ |- _ ] =>
+    contradiction (for_absurd_val H)
   end.
 
 Inductive dep_env {A} (v : A -> Type) : Env A -> Type :=
@@ -355,6 +390,23 @@ Proof.
     dependent destruction ρ.
     simpl in *.
     exact (IHx _ _ H).
+  }
+Qed.
+
+Lemma lookup_subst {Γ x τ v} (ρ : wt_env Γ) :
+  dep_lookup ρ x = Some (existT val τ v) ->
+  erase v = erase_wt_env ρ x.
+Proof.
+  revert Γ ρ.
+  induction x; intros. {
+    destruct ρ; inversion H; subst.
+    dependent destruction H2.
+    auto.
+  } {
+    destruct ρ; inversion H; subst.
+    simpl.
+    apply IHx.
+    auto.
   }
 Qed.
 
@@ -665,4 +717,31 @@ Proof.
     destruct_val v';
     dependent destruction H;
     auto.
+Qed.
+
+Lemma u_expr_eq_dec (u0 u1 : u_expr) :
+  {u0 = u1} + {u0 <> u1}.
+Proof.
+  decide equality. {
+    apply Req_EM_T.
+  } {
+    decide equality.
+  } {
+    decide equality.
+  }
+Qed.
+
+Lemma expr_eq_dec {Γ τ} (e0 e1 : expr Γ τ) :
+  {e0 = e1} + {e0 <> e1}.
+Proof.
+  destruct (u_expr_eq_dec (erase e0) (erase e1)). {
+    left.
+    apply erase_injective.
+    auto.
+  } {
+    right.
+    intro.
+    subst.
+    auto.
+  }
 Qed.

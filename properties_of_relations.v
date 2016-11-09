@@ -19,34 +19,26 @@ Lemma E_rel_symmetric' {τ} :
   Symmetric (E_rel τ).
 Proof.
   repeat intro.
-  destruct H0.
-  exists He1 He0.
-  intros.
   apply eq_sym.
-  apply He.
+  apply H0.
   apply A_rel_symmetric'; auto.
 Qed.
 
 Instance V_rel_symmetric {τ} : Symmetric (V_rel τ).
 Proof.
-  induction τ; repeat intro. {
-    destruct x using Val_rect; try contradiction H.
-    destruct y using Val_rect; try contradiction H.
+  repeat intro.
+  induction τ; destruct_val x; destruct_val y. {
     apply eq_sym.
     exact H.
   } {
-    destruct x using Val_rect; try contradiction H.
-    destruct y using Val_rect; try contradiction H.
-    destruct H as [[? ?] [? [? ?]]].
-    subst.
-    split; auto.
-    eexists; eauto.
-    eexists; eauto.
+    destruct H.
+
+    constructor.
     intros.
+
     apply E_rel_symmetric'; auto.
     apply H.
-    apply IHτ1.
-    apply H0.
+    auto.
   }
 Qed.
 
@@ -58,20 +50,27 @@ Instance A_rel_symmetric {τ} : Symmetric (A_rel τ)
 Instance G_rel_symmetric {Γ} : Symmetric (G_rel Γ).
 Proof.
   repeat intro.
-  apply V_rel_symmetric.
-  eapply H; eassumption.
+  induction Γ; d_destruct (x, y). {
+    constructor.
+  } {
+    d_destruct H.
+    constructor. {
+      apply V_rel_symmetric.
+      auto.
+    } {
+      apply IHΓ.
+      auto.
+    }
+  }
 Qed.
 
 Instance rel_expr_symmetric {Γ τ} : Symmetric (related_exprs Γ τ).
 Proof.
-  intros e0 e1 He.
-  destruct He.
-  refine (mk_related_exprs He1 He0 _).
-  intros ρ1 ρ0 Hρ.
+  intros e0 e1 He ? ? ?.
   symmetry.
   apply He.
   symmetry.
-  exact Hρ.
+  auto.
 Qed.
 
 (* Transitivity *)
@@ -91,40 +90,42 @@ Instance E_rel_transitive' {τ} :
   Transitive (V_rel τ) ->
   Transitive (E_rel τ).
 Proof.
-  intros ? x y z.
-  intros [Hx Hy Hxy].
-  intros [Hy' Hz Hyz].
-  exists Hx Hz.
-  pose proof tc_unique Hy' Hy.
-  subst.
+  intros ? x y z Hxy Hyz.
+  repeat intro.
 
-  intros.
-  transitivity (μ Hy A0); auto.
+  transitivity (μ y A0); auto.
   apply Hxy.
-  transitivity A1; [| symmetry]; exact H0.
+  transitivity A1; [| symmetry]; exact HA.
 Qed.
 
 Instance V_rel_transitive {τ} :
   Transitive (V_rel τ).
 Proof.
-  induction τ; repeat intro. {
-    destruct x using Val_rect; try contradiction H.
-    destruct y using Val_rect; try contradiction H.
-    destruct z using Val_rect; try contradiction H0.
+  repeat intro.
+  induction τ;
+    destruct_val x;
+    destruct_val y;
+    destruct_val z.
+  {
     transitivity (v_real r0); auto.
   } {
-    destruct x using Val_rect; try contradiction H.
-    destruct y using Val_rect; try contradiction H.
-    destruct z using Val_rect; try contradiction H0.
-    destruct H as [[? ?] [? [? ?]]].
-    destruct H0 as [[? ?] [? [? ?]]].
-    repeat subst.
-    split; auto.
-    do 2 (eexists; eauto).
-    intros va0 va1 Hva.
-    transitivity (body0.[va0 : Expr/]); auto.
+    constructor.
+    intros.
+
+    remember (v_lam body).
+    destruct H.
+    remember (v_lam body3).
+    remember (v_lam body1).
+    destruct H0.
+    d_destruct (Heqv, Heqv0, Heqv1).
+    clear body0.
+
+    eapply (E_rel_transitive' IHτ2 _ (proj1_sig (ty_subst1 body3 va0))); [| apply H0; auto].
     apply H.
-    transitivity va1; [| symmetry]; assumption.
+
+    eapply IHτ1; eauto.
+    symmetry.
+    auto.
   }
 Qed.
 
@@ -135,37 +136,29 @@ Instance A_rel_transitive {τ} : Transitive (A_rel τ)
 
 Instance G_rel_transitive {Γ} : Transitive (G_rel Γ).
 Proof.
-  intros ρ0 ρ1 ρ2 Hρ0ρ1 Hρ1ρ2 x v0 v2 τ Γx ρ0x ρ2x.
-  destruct (env_search (WT_Env_tc ρ0) Γx) as [v0' ρ0x'].
-  destruct (env_search (WT_Env_tc ρ1) Γx) as [v1 ρ1x].
-  destruct (env_search (WT_Env_tc ρ2) Γx) as [v2' ρ2x'].
-  rewrite ρ0x' in ρ0x.
-  rewrite ρ2x' in ρ2x.
-  inversion ρ0x.
-  inversion ρ2x.
-  subst.
-
-  transitivity v1. {
-    eapply Hρ0ρ1; eauto.
+  repeat intro.
+  induction Γ; d_destruct (x, y, z). {
+    constructor.
   } {
-    eapply Hρ1ρ2; eauto.
+    d_destruct H.
+    d_destruct H1.
+    constructor. {
+      etransitivity; eauto.
+    } {
+      eapply IHΓ; eauto.
+    }
   }
 Qed.
 
 Instance rel_expr_transitive {Γ τ} : Transitive (related_exprs Γ τ).
 Proof.
-  intros e0 e1 e2 He0e1 He1e2.
-  destruct He0e1 as [He0 He1 He0e1].
-  destruct He1e2 as [He1' He2 He1e2].
-  pose proof (tc_unique He1' He1); subst.
+  intros x y z Hxy Hyz ? ? ?.
 
-  split; auto.
-  intros ρ0 ρ2.
-  transitivity (e1.[subst_of_WT_Env ρ0]). {
-    apply He0e1.
-    transitivity ρ2; [| symmetry]; exact Hρ.
+  transitivity (proj1_sig (close ρ0 y)). {
+    apply Hxy.
+    transitivity ρ1; [| symmetry]; exact Hρ.
   } {
-    apply He1e2.
+    apply Hyz.
     exact Hρ.
   }
 Qed.
@@ -173,137 +166,69 @@ Qed.
 
 (* Reflexivity *)
 
-(* the reflexivity depends on the fundamental property. Also, reflexivity is
-   mostly only on well-typed values, so we can't always build a `Reflexive`
-   class instance. *)
+(* reflexivity depends on the fundamental property. *)
 
-(* Two versions of sub-identity for A_rel. They're essentially the same, but one
-   is sometimes easier to apply than the other. *)
-Lemma A_rel_subidentity {τ} {A0 A1 : Event Val}
-  : A_rel τ A0 A1 ->
-    forall v : WT_Val τ,
-      A0 v = A1 v.
-Proof.
-  intros.
-  apply A_rels_equiv; auto.
-  apply fundamental_property_of_values.
-  apply v.
-Qed.
-
-Lemma A_rel_subidentity' τ {A0 A1 : Event (WT_Val τ)}
-  : A_rel τ (narrow_event A0) (narrow_event A1) ->
-    A0 = A1.
+Lemma A_rel_subidentity {τ} {A0 A1 : Event (val τ)}
+  : A_rel τ A0 A1 -> A0 = A1.
 Proof.
   intros.
   extensionality v.
-  rewrite <- (narrow_cast_inverse τ A0).
-  rewrite <- (narrow_cast_inverse τ A1).
-  apply A_rel_subidentity.
+  apply H.
+  apply fundamental_property_of_values.
+Qed.
+
+Lemma E_rel_reflexive {τ} (e : expr · τ) :
+  E_rel τ e e.
+Proof.
+  pose proof (fundamental_property e _ _ G_rel_nil).
+  destruct close; simpl in *.
+  rewrite subst_id in e0.
+  apply erase_injective in e0.
+  subst.
   auto.
 Qed.
 
-Lemma E_rel_reflexive {τ e} :
-  (TC · ⊢ e : τ) ->
-  E_rel τ e e.
+Instance V_rel_reflexive {τ} : Reflexive (V_rel τ).
 Proof.
-  intros.
-  destruct (fundamental_property X).
-  specialize (He _ _ G_rel_nil).
-  unfold subst_of_WT_Env in He.
-  simpl in He.
-  rewrite subst_id in He.
-  exact He.
-Qed.
-
-Instance V_rel_reflexive {τ} :
-  @Reflexive (WT_Val τ) (V_rel τ).
-Proof.
-  intros [v Hv].
-  apply fundamental_property_of_values; auto.
+  intros v.
+  apply fundamental_property_of_values.
 Qed.
 
 Instance G_rel_reflexive {Γ} : Reflexive (G_rel Γ).
 Proof.
-  intros ρ x v0 v1 τ Γx ρx ρx'.
   repeat intro.
-  rewrite ρx in ρx'.
-  inversion ρx'.
-  destruct (env_search (WT_Env_tc ρ) Γx).
-  pose proof V_rel_reflexive x0.
-  simpl in H.
-  rewrite e in ρx.
-  inversion ρx.
-  subst v0 v1.
-  exact H.
-Qed.
-
-Program Fixpoint close {Γ e τ} (ρ : WT_Env Γ) (He : (TC Γ ⊢ e : τ)) :
-  (TC · ⊢ e.[subst_of_WT_Env ρ] : τ) :=
-  match He with
-  | TCReal r => TCReal r
-  | @TCVar _ x _ Γx => _
-  | TCLam Hbody => TCLam (body_subst _ _)
-  | TCApp Hef Hea => TCApp (close ρ Hef) (close ρ Hea)
-  | TCFactor He' => TCFactor (close ρ He')
-  | TCSample => TCSample
-  | TCPlus Hel Her => TCPlus (close ρ Hel) (close ρ Her)
-  end.
-Next Obligation.
-  subst.
-  unfold subst_of_WT_Env, downgrade_env.
-  simpl.
-  destruct ρ as [ρ Hρ].
-  revert Γ ρ Hρ Γx.
-  induction x; intros. {
-    destruct Γ; try discriminate.
-    inversion Γx; subst.
-    simpl in *.
-    inversion Hρ; subst.
-    simpl.
-    auto.
+  induction Γ; d_destruct x. {
+    constructor.
   } {
-    simpl in *.
-    destruct Γ; try discriminate.
-    destruct Hρ; try discriminate.
-    specialize (IHx _ _ Hρ Γx).
-    auto.
+    constructor; auto.
+    apply V_rel_reflexive.
   }
 Qed.
 
-Lemma same_substitution_suffices {Γ τ e0 e1} :
-  (TC Γ ⊢ e0 : τ) ->
-  (TC Γ ⊢ e1 : τ) ->
-  (forall {ρ : WT_Env Γ},
-      E_rel τ e0.[subst_of_WT_Env ρ] e1.[subst_of_WT_Env ρ]) ->
+Lemma same_substitution_suffices {Γ τ} (e0 e1 : expr Γ τ) :
+  (forall (ρ : wt_env Γ),
+      E_rel τ (proj1_sig (close ρ e0)) (proj1_sig (close ρ e1))) ->
   (EXP Γ ⊢ e0 ≈ e1 : τ).
 Proof.
-  intros He0 He1 H.
-  refine (mk_related_exprs He0 He1 _).
-  intros ρ0 ρ1 Hρ.
+  intros ? ρ0 ρ1 Hρ.
 
-  transitivity (e1.[subst_of_WT_Env ρ0]). {
+  transitivity (proj1_sig (close ρ0 e1)). {
     apply H.
   } {
-    destruct (fundamental_property He1).
-    apply He; auto.
+    apply fundamental_property; auto.
   }
 Qed.
 
-Lemma relate_exprs {Γ e0 e1 τ}
-      (He0 : (TC Γ ⊢ e0 : τ))
-      (He1 : (TC Γ ⊢ e1 : τ)) :
-  (forall ρ A, μ (close ρ He0) A = μ (close ρ He1) A) ->
+Lemma relate_exprs {Γ τ} (e0 e1 : expr Γ τ) :
+  (forall ρ A, μ (proj1_sig (close ρ e0)) A = μ (proj1_sig (close ρ e1)) A) ->
   (EXP Γ ⊢ e0 ≈ e1 : τ).
 Proof.
   intros.
 
   apply same_substitution_suffices; auto.
 
-  intro ρ.
-  exists (close ρ He0) (close ρ He1).
+  repeat intro.
 
-  intros A0 A1 HA.
-  setoid_rewrite (A_rel_subidentity HA).
-  set (fun x : WT_Val τ => A1 x) as A.
-  apply H; auto.
+  rewrite (A_rel_subidentity HA).
+  apply H.
 Qed.

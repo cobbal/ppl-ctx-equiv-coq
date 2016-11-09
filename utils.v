@@ -120,3 +120,16 @@ Proof.
   subst.
   reflexivity.
 Qed.
+
+Ltac d_destruct xs :=
+  let m x := dependent destruction x in
+  match xs with
+  (* I hate ltac *)
+  | ?a => m a
+  | (?a, ?b) => m a; m b
+  | (?a, ?b, ?c) => m a; m b; m c
+  | (?a, ?b, ?c, ?d) => m a; m b; m c; m d
+  | (?a, ?b, ?c, ?d, ?e) => m a; m b; m c; m d; m e
+  | (?a, ?b, ?c, ?d, ?e, ?f) => m a; m b; m c; m d; m e; m f
+  | (?a, ?b, ?c, ?d, ?e, ?f, ?g) => m a; m b; m c; m d; m e; m f; m g
+  end.
