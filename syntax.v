@@ -140,7 +140,8 @@ Proof.
   {
     f_equal.
     apply UIP_dec.
-    repeat decide equality.
+    decide equality.
+    apply ty_eq_dec.
   } {
     f_equal.
     apply IHx; auto.
@@ -159,24 +160,82 @@ Proof.
 Qed.
 Arguments erase_injective {_ _ _ _} _.
 
-Ltac elim_erase_eqs :=
-  progress repeat
-    let H := fresh "H" in
-    let H' := fresh "H" in
-    match goal with
-    | [H0 : erase ?x = ?s, H1 : erase ?y = ?s |- _ ] =>
-      pose proof (eq_trans H0 (eq_sym H1)) as H;
-        let z := type of y in
-        match type of x with
-        | z => idtac
-        | expr · ?τ =>
-          pose proof (expr_type_unique _ _ H) as H';
-            subst τ
-        end;
-          apply erase_injective in H;
-          subst x
-    end.
+Ltac inject_erase_directly :=
+  match goal with
+  | [ H : erase ?x = erase ?y |- _ ] =>
+    apply erase_injective in H;
+    try subst x
+  end.
 
+Ltac match_erase_eqs :=
+  let H := fresh "H" in
+  let H' := fresh "H" in
+  match goal with
+  | [H0 : erase ?x = ?s, H1 : erase ?y = ?s |- _ ] =>
+    pose proof (eq_trans H0 (eq_sym H1)) as H;
+    let z := type of y in
+    match type of x with
+    | z => idtac
+    | expr · ?τ =>
+      pose proof (expr_type_unique _ _ H) as H';
+      (subst τ || d_destruct H')
+    end;
+    apply erase_injective in H;
+    subst x
+  end;
+  clear_dups.
+
+Ltac subst_erase_eq :=
+  match goal with
+  | [ H : erase ?e = _, H' : context [ erase ?e ] |- _ ] =>
+    rewrite H in H';
+      try clear H e
+  end.
+
+(* d_destruct is often slow, do don't use unless we need *)
+(* TODO: speed up even more for exprs *)
+Ltac expr_destruct e :=
+  match type of e with
+  | expr _ (_ ~> _) => d_destruct e
+  | expr _ ℝ => d_destruct e
+  | expr _ _ => destruct e
+  end.
+
+Ltac inject_erased :=
+  let go e H :=
+      expr_destruct e; inject H
+  in match goal with
+     | [ H : erase ?e = u_app _ _ |- _ ] => go e H
+     | [ H : erase ?e = u_factor _ |- _ ] => go e H
+     | [ H : erase ?e = u_sample |- _ ] => go e H
+     | [ H : erase ?e = u_plus _ _ |- _ ] => go e H
+     | [ H : erase ?e = u_real _ |- _ ] => go e H
+     | [ H : erase ?e = u_lam _ _ |- _ ] => go e H
+     | [ H : erase ?e = u_var _ |- _ ] => go e H
+     end.
+
+
+Ltac elim_erase_eqs :=
+  progress repeat (subst_erase_eq
+                   || inject_erase_directly
+                   || match_erase_eqs
+                   || inject_erased);
+  clear_dups.
+
+Ltac elim_sig_exprs :=
+  let doit Γ τ pair stac :=
+      (let e := fresh "e" in
+       let He := fresh "H" e in
+       destruct pair as [e He];
+       stac;
+       asimpl in He) in
+  progress repeat
+           match goal with
+           | [ H : context [ @proj1_sig (expr ?Γ ?τ) _ ?pair ] |- _ ] =>
+             doit Γ τ pair ltac:(simpl in H)
+           | [ |- context [ @proj1_sig (expr ?Γ ?τ) _ ?pair ] ] =>
+             doit Γ τ pair ltac:simpl
+           end.
 Definition is_val (e : u_expr) : Prop :=
   match e with
   | u_real _ | u_lam _ _ => True
@@ -736,7 +795,7 @@ Lemma expr_eq_dec {Γ τ} (e0 e1 : expr Γ τ) :
 Proof.
   destruct (u_expr_eq_dec (erase e0) (erase e1)). {
     left.
-    apply erase_injective.
+    elim_erase_eqs.
     auto.
   } {
     right.

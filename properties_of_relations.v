@@ -177,14 +177,12 @@ Proof.
   apply fundamental_property_of_values.
 Qed.
 
-Lemma E_rel_reflexive {τ} (e : expr · τ) :
-  E_rel τ e e.
+Instance E_rel_reflexive {τ} : Reflexive (E_rel τ).
 Proof.
+  intro e.
   pose proof (fundamental_property e _ _ G_rel_nil).
-  destruct close; simpl in *.
-  rewrite subst_id in e0.
-  apply erase_injective in e0.
-  subst.
+  elim_sig_exprs.
+  elim_erase_eqs.
   auto.
 Qed.
 
@@ -204,6 +202,9 @@ Proof.
     apply V_rel_reflexive.
   }
 Qed.
+
+Instance rel_expr_reflexive {Γ τ} : Reflexive (related_exprs Γ τ)
+  := fundamental_property.
 
 Lemma same_substitution_suffices {Γ τ} (e0 e1 : expr Γ τ) :
   (forall (ρ : wt_env Γ),

@@ -152,6 +152,12 @@ Admitted.
 Definition μ {τ} (e : expr · τ) : Meas (val τ) :=
   μEntropy >>= eval_in e.
 
+Ltac fold_μ :=
+  match goal with
+  | [ |- context [ μEntropy >>= eval_in ?e ] ] => fold (μ e)
+  | [ H : context [ μEntropy >>= eval_in ?e ] |- _ ] => fold (μ e)
+  end.
+
 Definition A_rel' (τ : Ty) (V_rel_τ : relation (val τ)) : relation (Event (val τ)) :=
   fun A0 A1 =>
     forall v0 v1 (Hv : V_rel_τ v0 v1),
@@ -293,13 +299,20 @@ Proof.
   reflexivity.
 Qed.
 
+Lemma lam_is_dirac {τa τ} (e : expr (τa :: ·) τ) :
+  μ (e_lam e) = dirac (v_lam e).
+Proof.
+  rewrite <- val_is_dirac.
+  auto.
+Qed.
+
 Lemma compat_real Γ r :
   (EXP Γ ⊢ e_real r ≈ e_real r : ℝ).
 Proof.
   repeat intro.
-  repeat destruct close; simpl in *.
-  d_destruct (x, e).
-  d_destruct (x0, e0).
+  elim_sig_exprs.
+  d_destruct (e, He).
+  d_destruct (e0, He0).
 
   change (μ (v_real r) A0 = μ (v_real r) A1).
   rewrite val_is_dirac.
@@ -314,7 +327,7 @@ Lemma compat_var Γ x τ
   EXP Γ ⊢ e_var x Hx ≈ e_var x Hx : τ.
 Proof.
   repeat intro.
-  repeat destruct close; simpl in *.
+  elim_sig_exprs.
 
   destruct (env_search ρ0 Hx) as [v0 ρ0x].
   destruct (env_search ρ1 Hx) as [v1 ρ1x].
@@ -337,12 +350,11 @@ Lemma compat_lam Γ τa τr body0 body1 :
   (EXP Γ ⊢ e_lam body0 ≈ e_lam body1 : (τa ~> τr)).
 Proof.
   repeat intro.
-  repeat destruct close; simpl in *.
-  d_destruct (x, e).
-  d_destruct (x1, e0).
+  elim_sig_exprs.
+  d_destruct (e, He).
+  d_destruct (e0, He0).
 
-  change (μ (v_lam x0) A0 = μ (v_lam x1) A1).
-  rewrite 2 val_is_dirac.
+  rewrite 2 lam_is_dirac.
 
   unfold dirac, indicator; simpl.
   f_equal.
@@ -353,20 +365,13 @@ Proof.
 
   specialize (H (dep_cons va0 ρ0) (dep_cons va1 ρ1) (G_rel_cons H0 Hρ)).
 
-  repeat destruct ty_subst1; simpl in *.
-  repeat destruct close; simpl in *.
+  elim_sig_exprs.
+  rewrite x0 in He3.
+  rewrite x in He4.
+  asimpl in He3.
+  asimpl in He4.
 
-  assert (x5 = x3). {
-    apply erase_injective.
-    rewrite e, e1, x2.
-    autosubst.
-  }
-  assert (x6 = x4). {
-    apply erase_injective.
-    rewrite e2, e0, x.
-    autosubst.
-  }
-  subst.
+  elim_erase_eqs.
 
   apply H.
 Qed.
@@ -664,9 +669,9 @@ Proof.
   specialize (Hl _ _ Hρ).
   specialize (Hr _ _ Hρ).
 
-  repeat destruct close; simpl in *.
-  d_destruct (x3, e3).
-  d_destruct (x5, e4).
+  elim_sig_exprs.
+  d_destruct (e3, He3).
+  d_destruct (e4, He4).
   elim_erase_eqs.
 
   apply work_of_plus; auto.
@@ -832,9 +837,9 @@ Proof.
   specialize (Hf _ _ Hρ).
   specialize (Ha _ _ Hρ).
 
-  repeat destruct close; simpl in *.
-  d_destruct (x3, e3).
-  d_destruct (x5, e4).
+  elim_sig_exprs.
+  d_destruct (e3, He3).
+  d_destruct (e4, He4).
   elim_erase_eqs.
 
   apply work_of_app; auto.
@@ -845,10 +850,9 @@ Lemma compat_sample Γ :
 Proof.
   repeat intro.
 
-  repeat destruct close; simpl in *.
+  elim_sig_exprs.
   elim_erase_eqs.
 
-  unfold μ.
   f_equal.
   extensionality v.
 
@@ -940,9 +944,9 @@ Proof.
 
   specialize (H _ _ Hρ).
 
-  repeat destruct close; simpl in *.
-  d_destruct (x1, e3).
-  d_destruct (x3, e4).
+  elim_sig_exprs.
+  d_destruct (e3, He3).
+  d_destruct (e4, He4).
   elim_erase_eqs.
 
   apply work_of_factor; auto.
@@ -977,8 +981,7 @@ Proof.
     pose proof fundamental_property body as fp.
     specialize (fp _ _ (G_rel_cons H G_rel_nil)).
 
-    repeat destruct ty_subst1; simpl in *.
-    repeat destruct close; simpl in *.
+    elim_sig_exprs.
     elim_erase_eqs.
 
     apply fp; auto.

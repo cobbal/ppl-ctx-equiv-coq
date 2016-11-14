@@ -3,6 +3,7 @@ Require Export Coq.Logic.FunctionalExtensionality.
 Require Export Coq.Logic.Eqdep_dec.
 Require Export Coq.Program.Basics.
 Require Export Coq.Program.Equality.
+Require Export Coq.Program.Tactics.
 Require Import Coq.Classes.Morphisms.
 
 Export EqNotations.

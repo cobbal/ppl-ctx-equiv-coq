@@ -20,13 +20,16 @@ Require Import micromega.Lia.
 Transparent π.
 
 Notation "x ~> y" := (Arrow x y) (at level 69, right associativity, y at level 70).
-Notation "` x" := (e_var x) (at level 1).
-Notation "'λ' τ , e" := (e_lam τ e) (at level 69, right associativity).
+(* Notation "` x" := (e_var x) (at level 1). *)
+Notation "'λ,' e" := (e_lam e) (at level 69, right associativity).
 Notation "e0 @ e1" := (e_app e0 e1) (at level 68, left associativity).
 Notation "e0 +! e1" := (e_plus e0 e1) (at level 68, left associativity).
 
+Definition var_0 {τ Γ} : expr (τ :: Γ) τ :=
+  e_var O (eq_refl : lookup (τ :: Γ) O = Some τ).
+
 Lemma πL_same_integral f :
-  Integration (f ∘ πL) μEntropy = Integration f μEntropy.
+  integration (f ∘ πL) μEntropy = integration f μEntropy.
 Proof.
   replace (f ∘ πL) with (fun σ => block (fun σL σR => f σL) (πL σ) (πR σ)) by auto.
   rewrite integration_πL_πR.
@@ -38,7 +41,7 @@ Proof.
 Qed.
 
 Lemma πR_same_integral f :
-  Integration (f ∘ πR) μEntropy = Integration f μEntropy.
+  integration (f ∘ πR) μEntropy = integration f μEntropy.
 Proof.
   replace (f ∘ πR) with (fun σ => block (fun σL σR => f σR) (πL σ) (πR σ)) by auto.
   rewrite integration_πL_πR.
@@ -48,7 +51,7 @@ Proof.
 Qed.
 
 Lemma project_same_integral f n :
-  Integration (f ∘ π n) μEntropy = Integration f μEntropy.
+  integration (f ∘ π n) μEntropy = integration f μEntropy.
 Proof.
   induction n. {
     unfold π.
@@ -61,69 +64,57 @@ Proof.
   }
 Qed.
 
-Lemma add_zero_related {e}
-      (He : (TC · ⊢ e : ℝ)) :
+Lemma add_zero_related (e : expr · ℝ) :
   (EXP · ⊢ e_real 0 +! e ≈ e : ℝ).
 Proof.
-  set (left_tc := TCPlus (TCReal 0) He).
-  refine (mk_related_exprs _ _ _); auto.
+  apply relate_exprs.
+  intros.
 
-  simpl.
-  intros ρ0 ρ1 Hρ.
-  rewrite (wt_nil_unique ρ0) in *.
-  rewrite (wt_nil_unique ρ1) in *.
-  clear ρ0 ρ1 Hρ.
+  elim_sig_exprs.
+  elim_erase_eqs.
 
-  unfold subst_of_WT_Env; simpl.
-  rewrite subst_id.
-  exists left_tc He.
-  intros A0 A1 HA.
-
-  subst left_tc.
-  unfold μ.
   rewrite by_μe_eq_μEntropy_plus.
-  rewrite (pure_is_dirac (TCReal 0) I).
+  setoid_rewrite (val_is_dirac (v_real 0)).
   rewrite meas_id_left.
-  rewrite μe_eq_μEntropy.
-  integrand_extensionality σ.
-  simpl.
-  unfold eval_in.
-  repeat f_equal.
-  extensionality v.
-  destruct_WT_Val v.
-  unfold plus_in, Indicator.
-  simpl.
-  replace (0 + r)%R with r by ring.
-  f_equal.
-  apply HA.
+
+  assert (plus_in (v_real 0) = dirac). {
+    clear.
+    extensionality v.
+    destruct_val v.
+    unfold plus_in; simpl.
+    replace (0 + r)%R with r by ring.
+    auto.
+  }
+
+  rewrite H.
+  rewrite meas_id_right.
   reflexivity.
 Qed.
 
 (* A subset of things that can be tonellied *)
 (* TODO: figure out exactly what's needed to make this not a whitelist *)
 Inductive tonelliable : forall {A}, Meas A -> Type :=
-| tonelliable_μ {τ e} (He : (TC · ⊢ e : τ)) : tonelliable (μ He)
+| tonelliable_μ {τ} (e : expr · τ) : tonelliable (μ e)
 | tonelliable_sig_fi {A} (m : Meas A) : SigmaFinite m -> tonelliable m
 .
 Hint Constructors tonelliable.
 
-Lemma tonelli_μ {τ0 τ1 e0 e1 B}
-      (He0 : (TC · ⊢ e0 : τ0))
-      (He1 : (TC · ⊢ e1 : τ1))
-      (f : WT_Val τ0 -> WT_Val τ1 -> Meas B) :
-  μ He0 >>= (fun x => μ He1 >>= (fun y => f x y)) =
-  μ He1 >>= (fun y => μ He0 >>= (fun x => f x y)).
-Proof.
-Abort.
+(* Lemma tonelli_μ {τ0 τ1 B} *)
+(*       (e0 : expr · τ0) *)
+(*       (e1 : expr · τ1) *)
+(*       (f : val τ0 -> val τ1 -> Meas B) : *)
+(*   μ e0 >>= (fun x => μ e1 >>= (fun y => f x y)) = *)
+(*   μ e1 >>= (fun y => μ e0 >>= (fun x => f x y)). *)
+(* Proof. *)
+(* Abort. *)
 
 Lemma tonelli_μ_and_finite {τ B C}
       (μFin : Meas B)
-      (f : WT_Val τ -> B -> Meas C)
-      {e}
-      (He : (TC · ⊢ e : τ)) :
+      (f : val τ -> B -> Meas C)
+      (e : expr · τ) :
   SigmaFinite μFin ->
-  μ He >>= (fun x => μFin >>= (fun y => f x y)) =
-  μFin >>= (fun y => μ He >>= (fun x => f x y)).
+  μ e >>= (fun x => μFin >>= (fun y => f x y)) =
+  μFin >>= (fun y => μ e >>= (fun x => f x y)).
 Proof.
   intros.
 
@@ -131,14 +122,14 @@ Proof.
 
   rewrite μe_eq_μEntropy.
   setoid_rewrite μe_eq_μEntropy.
-  setoid_rewrite tonelli_3; auto.
+  setoid_rewrite tonelli_sigma_finite; auto.
   integrand_extensionality σ0.
   decide_eval as [v0 w0 ex0 u0]. {
     simpl.
-    apply Integration_linear_mult_r.
+    apply integration_linear_mult_r.
   } {
     simpl.
-    rewrite <- Integration_linear_mult_r.
+    rewrite <- integration_linear_mult_r.
     nnr.
   }
 Qed.
@@ -152,1011 +143,642 @@ Lemma tonelli
   μ1 >>= (fun x1 => μ0 >>= (fun x0 => f x0 x1)).
 Proof.
   intros.
-  dependent destruction X;
-    dependent destruction X0.
-  {
-    extensionality ev.
 
+  extensionality ev.
+  d_destruct (X, X0). {
     rewrite !μe_eq_μEntropy2.
-    setoid_rewrite tonelli_3 at 1; auto.
+    setoid_rewrite tonelli_sigma_finite at 1; auto.
     integrand_extensionality σ0.
     integrand_extensionality σ1.
 
     decide_eval as [v0 w0 ex0 u0].
     decide_eval as [v1 w1 ex1 u1].
+    simpl.
     nnr.
   } {
     rewrite tonelli_μ_and_finite; auto.
   } {
     rewrite tonelli_μ_and_finite; auto.
   } {
-    extensionality ev.
-    apply tonelli_3; auto.
+    apply tonelli_sigma_finite; auto.
   }
 Qed.
 
-Lemma add_comm_related Γ e1 e2 :
-  (TC Γ ⊢ e1 : ℝ) ->
-  (TC Γ ⊢ e2 : ℝ) ->
-  (EXP Γ ⊢ e1 +! e2 ≈ e2 +! e1 : ℝ).
+Lemma add_comm_related Γ (e0 e1 : expr Γ ℝ) :
+  (EXP Γ ⊢ e0 +! e1 ≈ e1 +! e0 : ℝ).
 Proof.
-  intros He1 He2.
-
-  simple refine (relate_exprs (TCPlus _ _) (TCPlus _ _) _); auto.
+  apply relate_exprs.
   intros.
 
-  unfold μ.
+  elim_sig_exprs.
+  elim_erase_eqs.
 
-  do 2 set (close ρ _).
-  clearbody t t0.
-  dependent destruction t.
-  replace t0 with (TCPlus t2 t1) by apply tc_unique.
-
-  simpl. (* implicits *)
-  rewrite !by_μe_eq_μEntropy_plus.
+  rewrite 2 by_μe_eq_μEntropy_plus.
   rewrite tonelli; auto.
-  integrand_extensionality v2.
   integrand_extensionality v1.
+  integrand_extensionality v0.
 
-  destruct_WT_Val v1.
-  destruct_WT_Val v2.
-  unfold plus_in, Indicator; simpl.
-  replace (r + r0)%R with (r0 + r)%R by ring.
+  destruct_val v0.
+  destruct_val v1.
+  unfold plus_in; simpl.
+  rewrite Rplus_comm.
   auto.
 Qed.
 
-(* Definition ex_left e1 e2 := (λ ℝ, e1.[ren S] +! `O) @ e2. *)
-(* Definition ex_right e1 e2 := e1 +! e2. *)
-
-(* Lemma tc_left {Γ e1 e2} *)
-(*       (He1 : TC Γ ⊢ e1 : ℝ) *)
-(*       (He2 : TC Γ ⊢ e2 : ℝ) : *)
-(*   (TC Γ ⊢ ex_left e1 e2 : ℝ). *)
-(* Proof. *)
-(*   assert (TC (extend Γ ℝ) ⊢ e1.[ren S] : ℝ). { *)
-(*     apply (ty_ren He1). *)
-(*     auto. *)
-(*   } *)
-(*   repeat econstructor; eauto. *)
-(* Qed. *)
-
-(* Lemma tc_right {Γ e1 e2} *)
-(*       (He1 : TC Γ ⊢ e1 : ℝ) *)
-(*       (He2 : TC Γ ⊢ e2 : ℝ) : *)
-(*   (TC Γ ⊢ ex_right e1 e2 : ℝ). *)
-(* Proof. *)
-(*   repeat constructor; auto. *)
-(* Qed. *)
-
-(* Lemma break_right {Γ e1 e2} *)
-(*       (ρ : WT_Env Γ) *)
-(*       (σ0 σ1 σr : Entropy) *)
-(*       (He1 : (TC Γ ⊢ e1 : ℝ)) *)
-(*       (He2 : (TC Γ ⊢ e2 : ℝ)) *)
-(*       A : *)
-(*   eval_in (close ρ (tc_right He1 He2)) A (join σ0 (join σ1 σr)) = *)
-(*   option0 (plus_in A <$> ev (close ρ He1) σ0 <*> ev (close ρ He2) σ1) *)
-(*           [*] ew (close ρ He1) σ0 *)
-(*           [*] ew (close ρ He2) σ1. *)
-(* Proof. *)
-(*   intros. *)
-(*   unfold eval_in. *)
-(*   decide_eval as [v0 w0 ex0 u0]. { *)
-(*     destruct_WT_Val v0. *)
-(*     inversion ex0; subst; try absurd_Val. *)
-(*     unfold π in *. *)
-(*     repeat rewrite πR_join in *. *)
-(*     rewrite πL_join in *. *)
-(*     simpl. *)
-
-(*     decide_eval as [v3 w3 ex3 u3]. *)
-(*     destruct_WT_Val v3. *)
-(*     decide_eval as [v5 w5 ex5 u5]. *)
-(*     destruct_WT_Val v5. *)
-
-(*     rewrite <- nnr_mult_assoc. *)
-
-(*     unfold plus_in. *)
-(*     simpl in *. *)
-
-(*     destruct is_v0, is_v1. *)
-
-(*     specialize (u3 (_, _) X). *)
-(*     specialize (u5 (_, _) X0). *)
-(*     inversion u3. *)
-(*     inversion u5. *)
-(*     subst. *)
-(*     auto. *)
-(*   } { *)
-(*     simpl. *)
-(*     decide_eval as [v3 w3 ex3 u3]. *)
-(*     destruct_WT_Val v3. *)
-(*     decide_eval as [v4 w4 ex4 u4]. *)
-(*     destruct_WT_Val v4. *)
-(*     contradict not_ex. *)
-
-(*     eexists (v_real (r + r0) : Val, w3 [*] w4). *)
-
-(*     econstructor; eauto. { *)
-(*       unfold π. *)
-(*       rewrite πL_join. *)
-(*       eauto. *)
-(*     } { *)
-(*       unfold π. *)
-(*       rewrite πR_join. *)
-(*       rewrite πL_join. *)
-(*       eauto. *)
-(*     } *)
-(*   } *)
-(* Qed. *)
-
-(* Lemma break_left {Γ e1 e2} *)
-(*       (ρ : WT_Env Γ) *)
-(*       (He1 : (TC Γ ⊢ e1 : ℝ)) *)
-(*       (He2 : (TC Γ ⊢ e2 : ℝ)) *)
-(*       σ A : *)
-(*   let σe1 := (π 0 (π 2 σ)) in *)
-(*   let σe2 := (π 1 σ) in *)
-(*   eval_in (close ρ (tc_left He1 He2)) A σ = *)
-(*   option0 (plus_in A <$> ev (close ρ He1) σe1 <*> ev (close ρ He2) σe2) *)
-(*           [*] ew (close ρ He1) σe1 *)
-(*           [*] ew (close ρ He2) σe2. *)
-(* Proof. *)
-(*   intros. *)
-
-(*   unfold eval_in. *)
-(*   decide_eval (close ρ (tc_left He1 He2)) σ as [v0 w0 ex0 u0]. { *)
-(*     destruct_WT_Val v0; simpl in *. *)
-(*     inversion ex0; subst; try absurd_Val. *)
-(*     inversion X; subst. *)
-(*     inversion H0; subst. *)
-(*     dependent destruction X1. *)
-(*     simpl in *. *)
-(*     destruct is_v0, is_v1. *)
-
-(*     replace (e1.[ren S].[up (subst_of_WT_Env ρ)].[v1 : Expr/]) *)
-(*     with e1.[subst_of_WT_Env ρ] in * *)
-(*       by autosubst. *)
-
-(*     decide_eval as [v4 w4 ex4 u4]. *)
-(*     destruct_WT_Val v4. *)
-(*     decide_eval  as [v5 w5 ex5 u5]. *)
-(*     destruct_WT_Val v5. *)
-(*     simpl in *. *)
-
-(*     unfold plus_in, Indicator. *)
-(*     simpl. *)
-(*     replace (mk_WT_Val _ _) with (v_real (r0 + r1)) *)
-(*       by (apply WT_Val_eq; auto). *)
-
-(*     specialize (u4 (_, _) X1_1). *)
-(*     specialize (u5 (_, _) X0). *)
-(*     inversion u4. *)
-(*     inversion u5. *)
-(*     subst. *)
-
-(*     inversion X1_2; subst. *)
-(*     inversion H1; subst. *)
-(*     nnr. *)
-(*   } { *)
-(*     simpl. *)
-(*     decide_eval as [v4 w4 ex4 u4]. *)
-(*     destruct_WT_Val v4. *)
-(*     decide_eval as [v5 w5 ex5 u5]. *)
-(*     destruct_WT_Val v5. *)
-(*     simpl in *. *)
-
-(*     contradict not_ex. *)
-(*     eexists (v_real (r + r0) : Val, _). *)
-(*     eapply EApp; eauto. { *)
-(*       eapply EPure'. *)
-(*       reflexivity. *)
-(*     } { *)
-(*       simpl. *)
-(*       replace (e1.[ren S].[up (subst_of_WT_Env ρ)].[e_real r0 : Expr/]) *)
-(*       with e1.[subst_of_WT_Env ρ] in * *)
-(*         by autosubst. *)
-(*       apply EPlus with (is_v0 := I) (is_v1 := I); eauto. *)
-(*       apply EPure'. *)
-(*       reflexivity. *)
-(*     } *)
-(*   } *)
-(* Qed. *)
-
-(* (* map (π 0 (π 2 σ)) over to (π 0 σ) *) *)
-(* Definition kajigger σ := join (π 0 (π 2 σ)) (join (π 1 σ) (π 0 σ)). *)
-(* Definition kajigger_n := (join' (π_n 2 ∘ π_n 0) (join' (π_n 1) (π_n 0))). *)
-
-(* Lemma kajigger_02 σ : (π 0 (kajigger σ)) = π 0 (π 2 σ). *)
-(* Proof. *)
-(*   apply πL_join. *)
-(* Qed. *)
-(* Lemma kajigger_1 σ : (π 1 (kajigger σ) = π 1 σ). *)
-(* Proof. *)
-(*   unfold kajigger. *)
-(*   unfold π. *)
-(*   rewrite πR_join. *)
-(*   rewrite πL_join. *)
-(*   auto. *)
-(* Qed. *)
-
-(* Lemma kajigger_equiv : *)
-(*   shuf kajigger_n = kajigger. *)
-(* Proof. *)
-(*   extensionality σ. *)
-(*   unfold shuf, kajigger, kajigger_n, compose, join. *)
-(*   repeat rewrite <- π_π_n_correspond. *)
-(*   extensionality n. *)
-(*   unfold compose, join'. *)
-(*   destruct Nat.even; auto. *)
-(*   destruct Nat.even; auto. *)
-(* Qed. *)
-
-(* Lemma kajigger_n_inj : Injective kajigger_n. *)
-(* Proof. *)
-(*   intros ? ? ?. *)
-(*   unfold kajigger_n, join' in H. *)
-(*   simpl in H. *)
-
-(*   unfold compose, πL_n, πR_n in H. *)
-
-(*   repeat remember (Nat.even _) in H. *)
-(*   apply even_div_2_inj; *)
-(* destruct b, b0, b1, b2; *)
-(* try pose proof (eq_trans (eq_sym Heqb) Heqb1); *)
-(* try pose proof (eq_trans (eq_sym Heqb0) Heqb2); *)
-(* auto; try lia. { *)
-(*     make_even_and_odd. *)
-(*     fold_doubles. *)
-(*     rewrite <- Div2.even_double in H; auto. *)
-(*     rewrite <- Div2.odd_double in H; auto. *)
-(*     rewrite <- Div2.even_double in H; auto. *)
-(*     rewrite <- Div2.odd_double in H; auto. *)
-(*   } { *)
-(*     make_even_and_odd. *)
-(*     fold_doubles. *)
-(*     repeat (apply double_inj in H || apply S_inj in H). *)
-(*     apply even_div_2_inj; auto. *)
-(*   } *)
-(* Qed. *)
-
-(* Lemma beta_addition {Γ e1 e2} : *)
-(*   (TC Γ ⊢ e1 : ℝ) -> *)
-(*   (TC Γ ⊢ e2 : ℝ) -> *)
-(*   (EXP Γ ⊢ ex_left e1 e2 ≈ ex_right e1 e2 : ℝ). *)
-(* Proof. *)
-(*   intros He1 He2. *)
-
-(*   refine (mk_related_exprs (tc_left He1 He2) (tc_right He1 He2) _). *)
-(*   intros. *)
-
-(*   (* destruct ρ0 as [ρ0 Hρ0]. *) *)
-(*   (* destruct ρ1 as [ρ1 Hρ1]. *) *)
-
-(*   exists (close ρ0 (tc_left He1 He2)) (close ρ1 (tc_right He1 He2)). *)
-(*   intros A0 A1 HA. *)
-
-(*   unfold μ. *)
-
-(*   symmetry. *)
-(*   rewrite (int_inj_entropy _ kajigger_n_inj). *)
-(*   symmetry. *)
-(*   rewrite kajigger_equiv. *)
-
-(*   setoid_rewrite break_left. *)
-
-(*   assert (forall σ, σ = join (π 0 σ) (join (π 1 σ) (π_leftover 2 σ))). { *)
-(*     intros. *)
-(*     unfold π. *)
-(*     rewrite 2 join_πL_πR. *)
-(*     auto. *)
-(*   } *)
-(*   pose proof fun σ => break_right ρ1 (π 0 σ) (π 1 σ) (π_leftover 2 σ) He1 He2. *)
-(*   setoid_rewrite <- H in H0. *)
-(*   setoid_rewrite H0. *)
-(*   clear H H0. *)
-
-(*   unfold compose. *)
-(*   setoid_rewrite kajigger_1. *)
-(*   setoid_rewrite kajigger_02. *)
-
-(*   setoid_rewrite <- (break_right ρ0 _ _ (π 0 σ)). *)
-(*   setoid_rewrite <- (break_right ρ1 _ _ (π 0 x)). *)
-
-(*   change (Integration (eval_in (close ρ0 (tc_right He1 He2)) A0 ∘ kajigger) μEntropy = *)
-(*           Integration (eval_in (close ρ1 (tc_right He1 He2)) A1 ∘ kajigger) μEntropy). *)
-
-(*   rewrite <- kajigger_equiv. *)
-(*   rewrite <- 2 (int_inj_entropy _ kajigger_n_inj). *)
-
-(*   apply related_close1; auto. *)
-(* Qed. *)
-
-(* Lemma the_whole_enchilada {Γ e1 e2} {He1 : TC Γ ⊢ e1 : ℝ} {He2 : TC Γ ⊢ e2 : ℝ} : *)
-(*   ctx_equiv (tc_left He1 He2) (tc_right He1 He2). *)
-(* Proof. *)
-(*   apply relation_sound. *)
-(*   apply beta_addition; auto. *)
-(* Qed. *)
-
-(* Print Assumptions the_whole_enchilada. *)
-
-Lemma pure_subst {Γ} (ρ : WT_Env Γ) x :
-  is_pure `x.[subst_of_WT_Env ρ].
-Proof.
-  unfold subst_of_WT_Env, downgrade_env.
-  simpl.
-  revert x.
-  destruct ρ as [ρ Hρ].
-  induction Hρ; intros; simpl; auto.
-  destruct x; simpl; auto.
-  destruct v as [a Ha].
-  destruct a; try contradiction Ha; auto.
+Program Fixpoint dep_ids' (Γ0 Γ1 : Env Ty) : dep_env (expr (Γ0 ++ Γ1)) Γ1 :=
+  match Γ1 return dep_env (expr (Γ0 ++ Γ1)) Γ1 with
+  | nil => dep_nil
+  | τ :: Γ1' =>
+    dep_cons
+      (e_var (length Γ0) _)
+      (rew <- [fun z => dep_env (expr z) _] (app_assoc Γ0 (τ :: nil) Γ1') in
+          dep_ids' (Γ0 ++ τ :: nil) Γ1')
+  end.
+Next Obligation.
+  induction Γ0; auto.
 Qed.
 
-Lemma beta_value {Γ e τ τv} v :
-  is_pure v ->
-  (TC Γ ⊢ (λ τv, e) @ v : τ) ->
-  (EXP Γ ⊢ (λ τv, e) @ v ≈ e.[v/] : τ).
+Definition dep_ids := dep_ids' ·.
+
+Lemma erase_eq (Γ Γ0 Γ1 : Env Ty)
+      (d0 : dep_env (expr Γ0) Γ)
+      (d1 : dep_env (expr Γ1) Γ)
+      (HΓ : Γ0 = Γ1)
+  :
+    (d0 ~= d1) ->
+    @erase_wt_expr_env Γ Γ0 d0 =
+    @erase_wt_expr_env Γ Γ1 d1.
 Proof.
-  intros v_val Happ.
+  intros.
+  subst.
+  subst.
+  auto.
+Qed.
 
-  inversion Happ; subst.
-  inversion X; subst.
-  rename X into Hlam, X0 into Hv, X1 into He, τa into τv.
-
-  assert (Hsubst : TC Γ ⊢ e.[v/] : τ). {
-    apply (ty_subst He).
-    intros.
-    destruct x; simpl in *. {
-      inversion H; subst.
-      auto.
-    } {
-      constructor; auto.
-    }
-  }
-
-  simple refine (relate_exprs _ _ _); auto.
+Lemma dep_ids_ids Γ x τ :
+  lookup Γ x = Some τ ->
+  erase_wt_expr_env (dep_ids Γ) x = ids x.
+Proof.
   intros.
 
-  replace (close ρ Happ) with (TCApp (close ρ Hlam) (close ρ Hv))
-    by apply tc_unique.
-
-  unfold μ.
-
-  pose proof (by_μe_eq_μEntropy_app (close ρ Hlam) (close ρ Hv)).
-  (* this simpl rewrites some implicits! remove with caution *)
-  simpl in *.
-  rewrite H.
-  clear H.
-
-  setoid_rewrite (pure_is_dirac (close ρ Hlam) I).
-  rewrite meas_id_left.
-
-  assert (is_pure v.[subst_of_WT_Env ρ]). {
-    destruct v; try contradiction v_val; auto.
-    apply pure_subst.
+  enough (forall Γ0, erase_wt_expr_env (dep_ids' Γ0 Γ) x = u_var (length Γ0 + x)). {
+    apply H0.
   }
-  setoid_rewrite (pure_is_dirac (close ρ Hv) H).
+
+  intros.
+  revert Γ Γ0 H.
+  induction x; intros. {
+    destruct Γ; inversion H; subst.
+    simpl.
+    auto.
+  } {
+    destruct Γ; inversion H; subst.
+    simpl in *.
+    specialize (IHx Γ (Γ0 ++ t :: nil) H).
+
+    set (dep_ids' _ _) in *.
+    clearbody d.
+    rewrite app_length, <- plus_assoc in IHx.
+    simpl in *.
+    rewrite <- IHx.
+    clear.
+
+    erewrite erase_eq; auto. {
+      rewrite <- app_assoc.
+      auto.
+    }
+
+    unfold eq_rect_r.
+    set (eq_sym _).
+    clearbody e.
+    d_destruct e.
+    auto.
+  }
+Qed.
+
+Program Definition open_subst1 {Γ τa τr}
+        (e : expr (τa :: Γ) τr)
+      (esub : expr Γ τa) :
+  { e' : expr Γ τr |
+    erase e' = (erase e).[erase esub /] }
+  :=
+    exist _ (proj1_sig (ty_subst e Γ (dep_cons esub (dep_ids _)))) _.
+Next Obligation.
+  elim_sig_exprs.
+  rewrite He0.
+  apply subst_only_matters_up_to_env.
+  intros.
+  destruct x; inversion H; subst; auto.
+  simpl.
+
+  revert H1.
+  clear.
+  revert Γ.
+  induction x; intros. {
+    destruct Γ; inversion H1; subst.
+    simpl.
+    reflexivity.
+  } {
+    erewrite dep_ids_ids; eauto.
+  }
+Qed.
+
+Lemma beta_value {Γ τ τv}
+      (e : expr (τv :: Γ) τ)
+      (v : expr Γ τv) :
+  is_pure v ->
+  (EXP Γ ⊢ (λ, e) @ v ≈ proj1_sig (open_subst1 e v) : τ).
+Proof.
+  intros v_val.
+
+  apply relate_exprs.
+  intros.
+
+  elim_sig_exprs.
+  elim_erase_eqs.
+
+  rewrite by_μe_eq_μEntropy_app.
+  rewrite lam_is_dirac.
   rewrite meas_id_left.
 
-  do_elim_apply_in; subst.
+  assert (is_val e0_2). {
+    revert H1 v_val; clear; intros.
+    destruct v;
+      try contradiction v_val;
+      try solve [destruct e0_2; try discriminate; auto].
 
-  set (ty_subst1 _ _).
-  set (close ρ Hsubst).
-  clearbody t t0.
-  fold (μ t) (μ t0).
+    destruct (env_search ρ H) as [v Hv].
+    pose proof lookup_subst ρ Hv.
 
-  assert (e.[v/].[subst_of_WT_Env ρ] =
-          e.[up (subst_of_WT_Env ρ)].[WT_Val_of_pure (close ρ Hv) H : Expr/])
-    by autosubst.
+    simpl in *.
+    elim_erase_eqs.
 
-  erewrite (μ_rewrite H0).
-  auto.
+    destruct v.
+    auto.
+  }
+
+  setoid_rewrite (val_is_dirac (mk_val _ H)).
+  rewrite meas_id_left.
+
+  rewrite elim_apply_in.
+  elim_sig_exprs.
+  elim_erase_eqs.
+
+  fold_μ.
+  f_equal.
+  apply erase_injective.
+
+  rewrite He1, He0.
+  asimpl.
+  apply subst_only_matters_up_to_env.
+  intros.
+
+  destruct x; auto; simpl in *.
+  erewrite dep_ids_ids; eauto.
 Qed.
 
 Print Assumptions beta_value.
 
-Lemma apply_id_equiv {Γ τ e} :
-  (TC Γ ⊢ e : τ) ->
-  (EXP Γ ⊢ (λ τ, `O) @ e ≈ e : τ).
+Lemma apply_id_equiv {Γ τ} (e : expr Γ τ) :
+  (EXP Γ ⊢ (λ, var_0) @ e ≈ e : τ).
 Proof.
   intro He.
 
-  simple refine (relate_exprs _ _ _)
-  ; try solve [repeat econstructor; eauto].
-
+  apply relate_exprs.
   intros.
 
-  unfold μ.
-  setoid_rewrite <- (project_same_integral _ 1) at 2.
-  integrand_extensionality σ.
-  unfold compose, eval_in.
+  elim_sig_exprs.
+  elim_erase_eqs.
 
-  decide_eval as [v0 w0 ex0 u0]. {
-    inversion ex0; subst; try absurd_Val.
-    inversion X; subst.
-    inversion H0; subst.
-    simpl in *.
-    inversion X1; subst; try absurd_Val.
-    clear ex0 X H0 X1.
+  rewrite by_μe_eq_μEntropy_app.
+  rewrite lam_is_dirac.
+  rewrite meas_id_left.
 
-    decide_eval as [v4 w4 ex4 u4]; simpl.
-    specialize (u4 (_, _) X0).
-    inversion u4.
-    subst.
-
-    enough (v0 = v4) by (subst; nnr).
-    exact (WT_Val_eq H1).
-  } {
-    decide_eval as [v1 w1 ex1 u1]; simpl.
-    contradict not_ex. {
-      eexists (_, _).
-      repeat econstructor; eauto. {
-        apply EPure'; simpl; auto.
-      } {
-        apply EPure'; simpl; auto.
-      }
-    }
+  set (fun _ => _ >>= _).
+  enough (m = dirac). {
+    rewrite H.
+    rewrite meas_id_right.
+    auto.
   }
+  subst m.
+
+  extensionality v.
+  rewrite elim_apply_in.
+  elim_sig_exprs.
+  fold (μ e0).
+
+  elim_erase_eqs.
+  asimpl in He0.
+  elim_erase_eqs.
+
+  apply val_is_dirac.
 Qed.
 
-Fixpoint is_simple (c : Ctx) : Prop :=
+Fixpoint is_simple {Γo Γi τi τo} (c : (CTX Γo ⊢ [Γi ⊢ τi] : τo)) : Prop :=
   match c with
   | c_hole => True
-  | c_app_l c' _ | c_app_r _ c' | c_factor c' | c_plus_l c' _ | c_plus_r _ c' => is_simple c'
-  | c_lam _ _ => False
+
+  | c_app_l c' _
+  | c_app_r _ c'
+  | c_factor c'
+  | c_plus_l c' _
+  | c_plus_r _ c' => is_simple c'
+
+  | c_lam _ => False
   end.
 
-Notation "e ^ n" := (rename (lift n) e).
-Notation "e ↑" := (e ^ 1) (at level 3).
+Class Liftable (A : Env Ty -> Type) :=
+  { lift1 {Γ} τ0 : A Γ -> A (τ0 :: Γ) }.
 
-Lemma raise_O e : e ^ O = e.
+Notation "e ^ τ" := (lift1 τ e).
+Notation "e ↑" := (rename (+1) e) (at level 3).
+
+Instance ren_lift {A} {r : Rename A} : Liftable (const A) :=
+  { lift1 Γ τ e := rename (+1) (e : A) }.
+
+(* Lemma ctx_rename_compose (S : Ctx) (f g : nat -> nat) : *)
+(*   rename f (rename g S) = rename (f ∘ g) S. *)
+(* Proof. *)
+(*   unfold rename. *)
+(*   revert f g. *)
+(*   induction S; intros; simpl; rewrite ?IHS, ?H; auto; try autosubst. *)
+(*   f_equal. *)
+(*   assert (upren f ∘ upren g = upren (f ∘ g)). { *)
+(*     compute. *)
+(*     extensionality x. *)
+(*     destruct x; auto. *)
+(*   } *)
+(*   rewrite <- H. *)
+(*   auto. *)
+(* Qed. *)
+
+Instance expr_lift1 {τ} : Liftable (fun Γ => expr Γ τ) :=
+  { lift1 Γ τ e :=
+      proj1_sig (expr_ren (+1) e (τ :: Γ) eq_refl) }.
+
+Lemma expr_lift1_erase {Γ τ} (e : expr Γ τ) τ0 :
+  erase (e ^ τ0) = (erase e)↑.
 Proof.
-  unfold lift, rename.
   simpl.
-  induction e; simpl; rewrite ?IHe; auto; f_equal; autosubst.
-Qed.
-
-Lemma ctx_rename_compose (S : Ctx) (f g : nat -> nat) :
-  rename f (rename g S) = rename (f ∘ g) S.
-Proof.
-  unfold rename.
-  revert f g.
-  induction S; intros; simpl; rewrite ?IHS, ?H; auto; try autosubst.
-  f_equal.
-  assert (upren f ∘ upren g = upren (f ∘ g)). {
-    compute.
-    extensionality x.
-    destruct x; auto.
-  }
-  rewrite <- H.
-  auto.
-Qed.
-
-Lemma raise_S_i n e :
-  e ^ (S n) = (e↑) ^ n.
-Proof.
-  rewrite ctx_rename_compose.
-  f_equal.
-  extensionality z.
-  unfold compose, lift.
-  rewrite plus_assoc.
-  f_equal.
-  rewrite plus_comm.
-  auto.
-Qed.
-
-Lemma raise_S_o n e :
-  e ^ (S n) = (e ^ n)↑.
-Proof.
-  rewrite ctx_rename_compose.
-  auto.
-Qed.
-
-Lemma up_tc {Γ τ e} τ0 :
-  (TC Γ ⊢ e : τ) ->
-  (TC (extend Γ τ0) ⊢ e↑ : τ).
-Proof.
-  intros.
-  rewrite rename_subst.
-  eapply ty_ren; eauto.
-Qed.
-
-Definition subst_into_simple_defn Γ τe τo S :=
-  forall e,
-    (TC Γ ⊢ e : τe) ->
-    (EXP Γ ⊢ (λ τe, S↑⟨`O⟩) @ e ≈ S⟨e⟩ : τo).
-
-Lemma up_tcx {Γ τh τo τe C} :
-  is_simple C ->
-  (TCX Γ ⊢ C [Γ => τh] : τo) ->
-  (TCX extend Γ τe ⊢ C↑ [τe :: Γ => τh] : τo).
-Proof.
-  intros simp HC.
-  dependent induction HC
-  ; try solve [econstructor
-               ; eauto
-               ; rewrite rename_subst
-               ; eapply ty_ren
-               ; eauto].
-  contradiction simp.
-Qed.
-
-Lemma rename_simple (S : Ctx) (f : nat -> nat) :
-  is_simple S -> is_simple (rename f S).
-Proof.
-  intros.
-  induction S; try contradiction H; auto.
-Qed.
-
-
-Lemma pure_of_val {τ} (v : WT_Val τ) : is_pure v.
-Proof.
-  destruct v using WT_Val_rect; simpl; trivial.
-Qed.
-
-Lemma single_frame_case_app_l {Γ τe τa τo f e ea}:
-  (TC Γ ⊢ ea : τa) ->
-  (TC Γ ⊢ f : τe ~> τa ~> τo) ->
-  (TC Γ ⊢ e : τe) ->
-  is_val f ->
-  let S1 := (c_app_l c_hole ea) in
-  (EXP Γ ⊢ (λ τe, S1↑⟨f↑ @ `O⟩) @ e ≈ S1⟨f @ e⟩ : τo).
-Proof.
-  intros Hea Hf He f_val ?.
-  subst S1.
-  simpl.
-
-  simple refine (relate_exprs _ _ _). {
-    repeat econstructor; eauto. {
-      rewrite rename_subst.
-      eapply ty_ren; eauto.
-    } {
-      rewrite rename_subst.
-      eapply ty_ren; eauto.
-    }
-  } {
-    repeat econstructor; eauto.
-  }
-
-  intros.
-  set (Hf' := rew <- _ in _).
-  set (Hea' := rew <- _ in _).
-  clearbody Hf' Hea'.
-  simpl in *.
-
-  unfold μ.
-  rewrite !by_μe_eq_μEntropy_app.
-
-  rewrite (pure_is_dirac (TCLam _) I).
-  rewrite meas_id_left.
-
-  inversion Hf; subst; try contradiction f_val.
-  rename body into f_body, X into Hf_body.
-  clear f_val.
-
-  transitivity
-    ((μ (close ρ He) >>=
-        (fun ve =>
-           μ (close ρ Hea) >>=
-             (fun vea =>
-                μ (ty_subst1 ve (body_subst ρ Hf_body)) >>=
-                  (fun vfe =>
-                     μEntropy >>= apply_in vfe vea
-     )))) A).
-  {
-    integrand_extensionality ve.
-    set (vlam := WT_Val_of_pure _ _).
-    do_elim_apply_in.
-    subst.
-    clear vlam.
-
-    set (ty_subst1 _ _).
-    clearbody t.
-    inversion t; subst.
-    replace t with (TCApp X X0) by apply tc_unique.
-    clear t.
-
-    pose proof (by_μe_eq_μEntropy_app X X0).
-    simpl in *. (* messes with implicits *)
-    rewrite H.
-    clear H.
-
-    rewrite tonelli; auto.
-
-    assert (τa0 = τa). {
-      revert X0 Hea; clear; intros.
-      eapply expr_type_unique; eauto.
-      apply ty_subst1.
-      apply body_subst.
-      rewrite rename_subst.
-      eapply ty_ren; eauto.
-    }
-    subst.
-
-    replace (μ X0) with (μ (close ρ Hea)); swap 1 2. {
-      unfold μ.
-      extensionality A'.
-      integrand_extensionality σ.
-      set (ea↑.[up (subst_of_WT_Env ρ)].[ve : Expr/]) in *.
-      assert (y = ea.[subst_of_WT_Env ρ]) by (subst y; autosubst).
-      clearbody y.
-      subst.
-      replace (close ρ Hea) with X0 by apply tc_unique.
-      reflexivity.
-    }
-
-    integrand_extensionality vea.
-
-    replace (μ (ty_subst1 _ _)) with (μ X); auto.
-
-    unfold μ.
-    extensionality A'.
-    dependent destruction X.
-
-    rewrite by_μe_eq_μEntropy_app.
-    rewrite (pure_is_dirac X1 I).
-    rewrite (pure_is_dirac X2 (pure_of_val _)).
-    rewrite 2 meas_id_left.
-
-    integrand_extensionality σ.
-
-    do_elim_apply_in; subst.
-    replace (WT_Val_of_pure _ _) with ve by (apply WT_Val_eq; auto).
-
-    set (body_subst _ _).
-    clearbody t.
-
-    generalize (ty_subst1 ve Hbody0).
-    generalize (ty_subst1 ve t).
-    clear.
-    intros.
-
-    match goal with
-    | [ |- @eval_in ?e0' _ _ _ _ = @eval_in ?e1' _ _ _ _ ] =>
-      set (e0 := e0') in *;
-        set (e1 := e1') in *
-    end.
-
-    assert (e0 = e1) by (subst e0 e1; autosubst).
-    clearbody e0 e1.
-    subst.
-    replace t with t0 by apply tc_unique.
-    auto.
-  } {
-    setoid_rewrite by_μe_eq_μEntropy_app.
-
-    rewrite meas_bind_assoc.
-    setoid_rewrite (meas_bind_assoc (μ (close ρ He))).
-    rewrite (tonelli (μ (close ρ Hf))); auto.
-    integrand_extensionality ve.
-
-    rewrite (pure_is_dirac (close ρ Hf) I).
-    rewrite meas_id_left.
-
-    do_elim_apply_in; subst.
-
-    replace (μEntropy >>= _) with (μ (ty_subst1 ve Hbody)) by auto.
-    rewrite tonelli; auto.
-
-    replace (body_subst ρ Hf_body) with Hbody by apply tc_unique.
-    auto.
-  }
-Qed.
-
-Lemma single_frame_case_app_r {Γ τe τa τo f e ef}:
-  (TC Γ ⊢ ef : τa ~> τo) ->
-  (TC Γ ⊢ f : τe ~> τa) ->
-  (TC Γ ⊢ e : τe) ->
-  is_val f ->
-  let S1 := (c_app_r ef c_hole) in
-  (EXP Γ ⊢ (λ τe, S1↑⟨f↑ @ `O⟩) @ e ≈ S1⟨f @ e⟩ : τo).
-Proof.
-  intros Hef Hf He f_val.
-  simpl.
-
-  simple refine (relate_exprs _ _ _). {
-    repeat econstructor; eauto. {
-      rewrite rename_subst.
-      eapply ty_ren; eauto.
-    } {
-      rewrite rename_subst.
-      eapply ty_ren; eauto.
-    }
-  } {
-    repeat econstructor; eauto.
-  }
-
-  intros.
-  set (Hef' := rew <- _ in _).
-  set (Hf' := rew <- _ in _).
-  clearbody Hf' Hef'.
-  simpl in *.
-
-  unfold μ.
-  rewrite !by_μe_eq_μEntropy_app.
-
-  rewrite (pure_is_dirac (TCLam _) I).
-  rewrite meas_id_left.
-
-  set (WT_Val_of_pure _ _).
-  destruct (elim_apply_in w) as [body' [Hbody' [Hvf_body H]]].
-  setoid_rewrite H.
-  subst w.
-  inversion Hvf_body.
-  subst body'.
-  clear H Hvf_body.
-
-  dependent destruction Hf; try contradiction f_val.
-  rename body into f_body, Hf into Hf_body.
-  clear f_val.
-  simpl.
-
-  transitivity
-    ((μ (close ρ He) >>=
-        (fun ve =>
-           μ (close ρ Hef) >>=
-             (fun vef =>
-                μ (ty_subst1 ve (body_subst ρ Hf_body)) >>=
-                  (fun vfe =>
-                     μEntropy
-                       >>= apply_in vef vfe)))) A).
-  {
-    integrand_extensionality ve.
-
-    set (ty_subst1 _ _).
-    clearbody t.
-    dependent destruction t.
-
-    rewrite by_μe_eq_μEntropy_app.
-
-    rewrite tonelli; auto.
-
-    assert (τa0 = τa). {
-      enough ((τa0 ~> τr) = (τa ~> τr)). {
-        inversion H; auto.
-      }
-      eapply expr_type_unique; eauto.
-      apply ty_subst1.
-      apply body_subst.
-      auto.
-    }
-    subst.
-    dependent destruction t2.
-    dependent destruction t2_1.
-
-    unfold μ at 1.
-    rewrite by_μe_eq_μEntropy_app.
-    rewrite meas_bind_assoc.
-
-    rewrite (pure_is_dirac (TCLam _) I).
-    rewrite (pure_is_dirac t2_2 (pure_of_val _)).
-    rewrite 2 meas_id_left.
-
-    do_elim_apply_in; subst.
-    set (ty_subst1 _ _).
-    clearbody t.
-    fold (μ t).
-
-    rewrite tonelli; auto.
-    replace (μ t1) with (μ (close ρ Hef)) by (apply μ_rewrite; autosubst).
-    integrand_extensionality vef.
-    replace (μ (ty_subst1 _ _)) with (μ t) by (apply μ_rewrite; autosubst).
-    auto.
-  } {
-    rewrite tonelli; auto.
-    integrand_extensionality vef.
-
-    unfold μ at 3.
-    rewrite by_μe_eq_μEntropy_app.
-
-    rewrite (pure_is_dirac (TCLam _) I).
-    rewrite meas_id_left.
-    rewrite meas_bind_assoc.
-    integrand_extensionality ve.
-
-    do_elim_apply_in; subst.
-    do 2 set (ty_subst1 _ _).
-    fold (μ t) (μ t0).
-    f_equal.
-
-    apply μ_rewrite.
-    autosubst.
-  }
-Qed.
-
-Lemma single_frame_case_factor {Γ τe f e}:
-  (TC Γ ⊢ f : τe ~> ℝ) ->
-  (TC Γ ⊢ e : τe) ->
-  is_val f ->
-  let S1 := c_factor c_hole in
-  (EXP Γ ⊢ (λ τe, S1↑⟨f↑ @ `O⟩) @ e ≈ S1⟨f @ e⟩ : ℝ).
-Proof.
-  intros Hf He f_val.
-  simpl.
-
-  simple refine (relate_exprs _ _ _). {
-    repeat econstructor; eauto.
-    rewrite rename_subst.
-    eapply ty_ren; eauto.
-  } {
-    repeat econstructor; eauto.
-  }
-
-  intros.
-
-  set (Hf' := rew <- _ in _).
-  clearbody Hf'.
-  simpl in *.
-
-  unfold μ.
-  rewrite by_μe_eq_μEntropy_factor.
-  setoid_rewrite by_μe_eq_μEntropy_app.
-  rewrite by_μe_eq_μEntropy_app.
-
-  dependent destruction Hf; try contradiction f_val.
-  rename body into f_body, Hf into Hf_body.
-  clear f_val.
-  simpl.
-
-  rewrite !(pure_is_dirac (TCLam _) I).
-  rewrite !meas_id_left.
-  rewrite meas_bind_assoc.
-
-  integrand_extensionality ve.
-  rewrite meas_bind_assoc.
-
-  do 2 do_elim_apply_in; subst.
-
-  do 2 set (ty_subst1 _ _).
-  clearbody t t0.
-  dependent destruction t.
-  dependent destruction t.
-
-  pose proof (by_μe_eq_μEntropy_factor (TCApp t1 t2)).
-  simpl in *. (* implicit rewriting *)
-  rewrite H.
-
-  rewrite <- meas_bind_assoc.
-  fold (μ t0).
-
-  repeat f_equal.
-
-  setoid_rewrite by_μe_eq_μEntropy_app.
-  rewrite (pure_is_dirac t1 I).
-  rewrite (pure_is_dirac t2 (pure_of_val _)).
-  rewrite !meas_id_left.
-
-  do_elim_apply_in; subst.
-  set (ty_subst1 _ _).
-  clearbody t.
-  fold (μ t).
-
-  apply μ_rewrite.
+  elim_sig_exprs.
+  rewrite He0.
   autosubst.
 Qed.
 
-Lemma single_frame_case_plus_l {Γ τe f e er}:
-  (TC Γ ⊢ er : ℝ) ->
-  (TC Γ ⊢ f : τe ~> ℝ) ->
-  (TC Γ ⊢ e : τe) ->
-  is_val f ->
-  let S1 := (c_plus_l c_hole er) in
-  (EXP Γ ⊢ (λ τe, S1↑⟨f↑ @ `O⟩) @ e ≈ S1⟨f @ e⟩ : ℝ).
+Lemma up_simple_ctx {Γ τe τo} (S : (CTX Γ ⊢ [Γ ⊢ τe] : τo)) τ0 :
+  is_simple S ->
+  {S' : (CTX (τ0 :: Γ) ⊢ [(τ0 :: Γ) ⊢ τe] : τo) |
+   is_simple S' /\
+   erase_ctx S' = (erase_ctx S)↑ }.
 Proof.
-  intros Her Hf He f_val.
+  intro S_simple.
+  induction S;
+    try contradiction S_simple;
+    try destruct (IHS S_simple) as [S' [? HS']];
+    try (pose (e ^ τ0) as e'';
+         simpl in e'';
+         destruct expr_ren as [e' He'] in e'';
+         clear e''
+        );
+    [ (exists (c_hole))
+    | (exists (c_app_l S' e'))
+    | (exists (c_app_r e' S'))
+    | (exists (c_factor S'))
+    | (exists (c_plus_l S' e'))
+    | (exists (c_plus_r e' S'))
+    ];
+    simpl;
+    rewrite ?HS', ?He';
+    auto.
+Qed.
 
-  simple refine (relate_exprs _ _ _). {
-    repeat econstructor; auto;
-      rewrite rename_subst;
-      eapply ty_ren; eauto.
-  } {
-    repeat econstructor; eauto.
-  }
-
+(* not to self: may want to make this say more than length later *)
+Lemma contexts_dont_hide_variables {Γo Γi τo τi} (C : (CTX Γo ⊢ [Γi ⊢ τi] : τo)) :
+  length Γo <= length Γi.
+Proof.
   intros.
-  set (Hf' := rew <- _ in _).
-  set (Her' := rew <- _ in _).
-  clearbody Hf' Her'.
-  simpl in *.
-
-  unfold μ.
-  rewrite by_μe_eq_μEntropy_plus.
-  rewrite !by_μe_eq_μEntropy_app.
-  setoid_rewrite by_μe_eq_μEntropy_app.
-
-  rewrite (pure_is_dirac (TCLam _) I).
-  rewrite meas_id_left.
-
-  rewrite meas_bind_assoc.
-  setoid_rewrite meas_bind_assoc.
-  rewrite (tonelli (μ (close ρ Hf))); auto.
-
-  integrand_extensionality ve.
-
-  do_elim_apply_in; subst.
-  set (ty_subst1 _ _).
-  clearbody t.
-  dependent destruction t.
-  dependent destruction t1.
-
-  pose proof (by_μe_eq_μEntropy_plus (TCApp t1_1 t1_2) t2).
-  simpl in *. (* implicits *)
-  rewrite H; clear H.
-
-  unfold μ at 1.
-  rewrite by_μe_eq_μEntropy_app.
-
-  assert (τa = τe). {
-    enough ((τa ~> ℝ) = (τe ~> ℝ)). {
-      inversion H; auto.
-    }
-    eapply expr_type_unique; eauto.
-    apply ty_subst1.
-    apply body_subst.
+  dependent induction C; simpl; auto. {
+    simpl in *.
+    etransitivity; [| apply IHC].
     auto.
   }
-  subst.
-
-  replace (μ (close ρ Hf)) with (μ t1_1)
-    by (apply μ_rewrite; autosubst).
-  rewrite meas_bind_assoc.
-  integrand_extensionality vf.
-
-  rewrite (pure_is_dirac t1_2 (pure_of_val _)).
-  rewrite meas_id_left.
-  replace (WT_Val_of_pure _ _) with ve by (apply WT_Val_eq; auto).
-  integrand_extensionality vl.
-  f_equal.
-
-  apply μ_rewrite; autosubst.
 Qed.
 
-Lemma single_frame_case_plus_r {Γ τe f e el}:
-  (TC Γ ⊢ el : ℝ) ->
-  (TC Γ ⊢ f : τe ~> ℝ) ->
-  (TC Γ ⊢ e : τe) ->
-  is_val f ->
-  let S1 := (c_plus_r el c_hole) in
-  (EXP Γ ⊢ (λ τe, S1↑⟨f↑ @ `O⟩) @ e ≈ S1⟨f @ e⟩ : ℝ).
+Lemma unchanged_env_means_simple {Γ τo τi} (S : (CTX Γ ⊢ [Γ ⊢ τi] : τo)) :
+  is_simple S.
 Proof.
-  intros Hel Hf He f_val.
+  dependent induction S; try apply IHS; simpl; auto.
+  pose proof contexts_dont_hide_variables S.
+
+  contradict H.
+  apply lt_not_le.
+  auto.
+Qed.
+
+Instance ctx_lift {τi τo} : Liftable (fun Γ => (CTX Γ ⊢ [Γ ⊢ τi] : τo)) :=
+  { lift1 Γ τ C :=
+      proj1_sig (up_simple_ctx C τ (unchanged_env_means_simple C)) }.
+
+(* TODO: figure out why type classes sometimes get stupidly confused if I don't
+   explicitly instantiate them. *)
+Notation "e ^^ τ" := (lift1 (Liftable := ctx_lift) τ e)
+                       (at level 30, right associativity).
+
+Lemma pure_of_val {τ} (v : val τ) : is_pure v.
+Proof.
+  destruct v using wt_val_rect; subst; simpl; trivial.
+Qed.
+
+Lemma single_frame_case_app_l {Γ τe τa τo}
+      (ea : expr Γ τa)
+      (f : expr Γ (τe ~> τa ~> τo))
+      (e : expr Γ τe) :
+  is_val f ->
+  let S1 := (c_app_l (τr := τo) c_hole ea) in
+  (EXP Γ ⊢ (λ, (S1^^τe)⟨(f^τe) @ var_0⟩) @ e ≈ S1⟨f @ e⟩ : τo).
+Proof.
+  intros f_val.
   simpl.
 
-  (* does this depend on commutativity of addition? no! I'm just lazy *)
-  transitivity ((λ τe, (f↑ @ `O) +! el↑) @ e). {
-    eapply compat_app; [| eapply fundamental_property]; eauto.
-    apply compat_lam.
-    apply add_comm_related. {
-      apply up_tc.
-      auto.
-    } {
-      repeat econstructor; eauto.
-      apply up_tc.
-      auto.
-    }
-  }
-
-  transitivity ((f @ e) +! el). {
-    apply single_frame_case_plus_l; auto.
-  }
-
-  apply add_comm_related; auto.
-  repeat econstructor; eauto.
-Qed.
-
-Lemma rename_plugged_simple S σ e :
-  is_simple S ->
-  rename σ (S⟨e⟩) = (rename σ S)⟨rename σ e⟩.
-Proof.
+  apply relate_exprs.
   intros.
-  induction S; simpl; auto; fold rename; rewrite ?IHS; auto.
-  contradiction H.
+  destruct up_simple_ctx as [? [? ?]]; simpl.
+  elim_sig_exprs.
+
+  destruct x; inject e0.
+  simpl in *.
+  destruct x; inject H0.
+  simpl in *.
+  elim_erase_eqs.
+
+  d_destruct f; inversion_clear f_val.
+  simpl in *.
+  elim_erase_eqs.
+
+  rewrite !by_μe_eq_μEntropy_app.
+  rewrite !lam_is_dirac.
+  rewrite !meas_id_left.
+
+  rewrite meas_bind_assoc.
+  integrand_extensionality va.
+
+  rewrite !elim_apply_in.
+  elim_sig_exprs.
+  elim_erase_eqs.
+
+  repeat fold_μ.
+  rewrite !by_μe_eq_μEntropy_app.
+  rewrite lam_is_dirac.
+  rewrite val_is_dirac.
+  rewrite !meas_id_left.
+
+  rewrite elim_apply_in.
+  elim_sig_exprs.
+  elim_erase_eqs.
+
+  fold_μ.
+
+  asimpl in He0.
+  asimpl in He1.
+  asimpl in H2.
+  elim_erase_eqs.
+
+  reflexivity.
 Qed.
 
-Definition is_simple_single (c : Ctx) : Prop :=
-  match c with
+Lemma single_frame_case_app_r {Γ τe τa τo}
+      (ef : expr Γ (τa ~> τo))
+      (f : expr Γ (τe ~> τa))
+      (e : expr Γ τe) :
+  is_val f ->
+  let S1 := (c_app_r ef c_hole) in
+  (EXP Γ ⊢ (λ, (S1^^τe)⟨(f^τe) @ var_0⟩) @ e ≈ S1⟨f @ e⟩ : τo).
+Proof.
+  intros f_val.
+  simpl.
+
+  apply relate_exprs.
+  intros.
+  destruct up_simple_ctx as [? [? ?]]; simpl.
+  elim_sig_exprs.
+
+  destruct x; inject e0.
+  destruct x; inversion_clear H1.
+
+  expr_destruct f; inversion_clear f_val.
+  simpl in *.
+  elim_erase_eqs.
+
+  rewrite !by_μe_eq_μEntropy_app.
+  rewrite !lam_is_dirac.
+  rewrite !meas_id_left.
+
+  setoid_rewrite meas_bind_assoc.
+  rewrite (tonelli (μ e3_1)); auto.
+  integrand_extensionality va.
+
+  rewrite !elim_apply_in.
+  elim_sig_exprs.
+  elim_erase_eqs.
+
+  repeat fold_μ.
+  rewrite !by_μe_eq_μEntropy_app.
+  rewrite lam_is_dirac.
+  rewrite val_is_dirac.
+  rewrite !meas_id_left.
+
+  rewrite elim_apply_in.
+  elim_sig_exprs.
+  elim_erase_eqs.
+
+  fold_μ.
+
+  asimpl in He0.
+  asimpl in He1.
+  asimpl in H1.
+  elim_erase_eqs.
+
+  reflexivity.
+Qed.
+
+Lemma single_frame_case_factor {Γ τe}
+      (f : expr Γ (τe ~> ℝ))
+      (e : expr Γ τe) :
+  is_val f ->
+  let S1 := c_factor c_hole in
+  (EXP Γ ⊢ (λ, (S1^^τe)⟨(f^τe) @ var_0⟩) @ e ≈ S1⟨f @ e⟩ : ℝ).
+Proof.
+  intros f_val.
+  simpl.
+
+  apply relate_exprs.
+  intros.
+  destruct up_simple_ctx as [? [? ?]]; simpl.
+  elim_sig_exprs.
+
+  destruct x; inject e0.
+  d_destruct x; inversion_clear H0.
+
+  expr_destruct f; inversion_clear f_val.
+  simpl in *.
+  elim_erase_eqs.
+
+  rewrite by_μe_eq_μEntropy_factor.
+  rewrite !by_μe_eq_μEntropy_app.
+  rewrite !lam_is_dirac.
+  rewrite !meas_id_left.
+
+  rewrite meas_bind_assoc.
+  integrand_extensionality va.
+
+  rewrite !elim_apply_in.
+  elim_sig_exprs.
+  elim_erase_eqs.
+
+  repeat fold_μ.
+  rewrite by_μe_eq_μEntropy_factor.
+  rewrite !by_μe_eq_μEntropy_app.
+  rewrite lam_is_dirac.
+  rewrite val_is_dirac.
+  rewrite !meas_id_left.
+
+  rewrite elim_apply_in.
+  elim_sig_exprs.
+  elim_erase_eqs.
+
+  fold_μ.
+
+  asimpl in He0.
+  asimpl in He1.
+  elim_erase_eqs.
+
+  reflexivity.
+Qed.
+
+Lemma single_frame_case_plus_l {Γ τe}
+      (er : expr Γ ℝ)
+      (f : expr Γ (τe ~> ℝ))
+      (e : expr Γ τe) :
+  is_val f ->
+  let S1 := (c_plus_l c_hole er) in
+  (EXP Γ ⊢ (λ, (S1^^τe)⟨(f^τe) @ var_0⟩) @ e ≈ S1⟨f @ e⟩ : ℝ).
+Proof.
+  intros f_val.
+  simpl.
+
+  apply relate_exprs.
+  intros.
+  destruct up_simple_ctx as [? [? ?]]; simpl.
+  elim_sig_exprs.
+
+  destruct x; inject e0.
+  d_destruct x; inversion_clear H0.
+
+  expr_destruct f; inversion_clear f_val.
+  simpl in *.
+  elim_erase_eqs.
+
+  rewrite by_μe_eq_μEntropy_plus.
+  rewrite !by_μe_eq_μEntropy_app.
+  rewrite !lam_is_dirac.
+  rewrite !meas_id_left.
+
+  rewrite meas_bind_assoc.
+  integrand_extensionality va.
+
+  rewrite !elim_apply_in.
+  elim_sig_exprs.
+  elim_erase_eqs.
+
+  repeat fold_μ.
+  rewrite by_μe_eq_μEntropy_plus.
+  rewrite !by_μe_eq_μEntropy_app.
+  rewrite lam_is_dirac.
+  rewrite val_is_dirac.
+  rewrite !meas_id_left.
+
+  rewrite elim_apply_in.
+  elim_sig_exprs.
+  elim_erase_eqs.
+
+  fold_μ.
+
+  asimpl in He0.
+  asimpl in He1.
+  asimpl in H1.
+  elim_erase_eqs.
+
+  reflexivity.
+Qed.
+
+Lemma single_frame_case_plus_r {Γ τe}
+      (el : expr Γ ℝ)
+      (f : expr Γ (τe ~> ℝ))
+      (e : expr Γ τe) :
+  is_val f ->
+  let S1 := (c_plus_r el c_hole) in
+  (EXP Γ ⊢ (λ, (S1^^τe)⟨(f^τe) @ var_0⟩) @ e ≈ S1⟨f @ e⟩ : ℝ).
+Proof.
+  intros f_val.
+  simpl.
+
+  apply relate_exprs.
+  intros.
+  destruct up_simple_ctx as [? [? ?]]; simpl.
+  elim_sig_exprs.
+
+  destruct x; inject e0.
+  d_destruct x; inversion_clear H1.
+
+  expr_destruct f; inversion_clear f_val.
+  simpl in *.
+  elim_erase_eqs.
+
+  rewrite by_μe_eq_μEntropy_plus.
+  rewrite !by_μe_eq_μEntropy_app.
+  rewrite !lam_is_dirac.
+  rewrite !meas_id_left.
+
+  setoid_rewrite meas_bind_assoc.
+  rewrite (tonelli (μ e3_1)); auto.
+  integrand_extensionality va.
+
+  rewrite !elim_apply_in.
+  elim_sig_exprs.
+  elim_erase_eqs.
+
+  repeat fold_μ.
+  rewrite by_μe_eq_μEntropy_plus.
+  rewrite !by_μe_eq_μEntropy_app.
+  rewrite lam_is_dirac.
+  rewrite val_is_dirac.
+  rewrite !meas_id_left.
+
+  rewrite elim_apply_in.
+  elim_sig_exprs.
+  elim_erase_eqs.
+
+  fold_μ.
+
+  asimpl in He0.
+  asimpl in He1.
+  asimpl in H0.
+  elim_erase_eqs.
+
+  reflexivity.
+Qed.
+
+(* Lemma rename_plugged_simple S σ e : *)
+(*   is_simple S -> *)
+(*   rename σ (S⟨e⟩) = (rename σ S)⟨rename σ e⟩. *)
+(* Proof. *)
+(*   intros. *)
+(*   induction S; simpl; auto; fold rename; rewrite ?IHS; auto. *)
+(*   contradiction H. *)
+(* Qed. *)
+
+Definition is_simple_single {Γ τi τo} (C : (CTX Γ ⊢ [Γ ⊢ τi] : τo)) : Prop :=
+  match C with
   | c_app_l c_hole _
   | c_app_r _ c_hole
   | c_factor c_hole
@@ -1166,250 +788,385 @@ Definition is_simple_single (c : Ctx) : Prop :=
   | _ => False
   end.
 
-Lemma single_is_simple {C} :
+Lemma single_is_simple {Γ τi τo} (C : (CTX Γ ⊢ [Γ ⊢ τi] : τo)) :
   is_simple_single C -> is_simple C.
 Proof.
   intros.
-  destruct C; try destruct C; tauto.
+  d_destruct C; simpl; auto; d_destruct C; tauto.
 Qed.
 
-Lemma simple_plug_simple {S S' : Ctx} :
-  is_simple S ->
-  is_simple S' ->
-  is_simple (plug_ctx S S').
+Lemma simple_plug_simple {Γo Γm Γi τi τm τo}
+      {So : (CTX Γo ⊢ [Γm ⊢ τm] : τo)}
+      {Si : (CTX Γm ⊢ [Γi ⊢ τi] : τm)} :
+  is_simple So ->
+  is_simple Si ->
+  is_simple (plug_ctx So Si).
 Proof.
   intros.
-  induction S; try contradiction H; auto.
+  induction So; try contradiction H; auto.
 Defined.
 
 Lemma tc_ctx_single_rect {Γ}
-      (P : forall S τh τ,
+      (P : forall τh τ (S : (CTX Γ ⊢ [Γ ⊢ τh] : τ)),
           is_simple S ->
-          (TCX Γ ⊢ S[Γ => τh] : τ) ->
           Type) :
-  (forall τh, P c_hole τh τh I (TCXHole Γ τh)) ->
-  (forall (τh τm τ : Ty) (S1 S : Ctx)
-          (HS1 : TCX Γ ⊢ S1[Γ => τm] : τ)
-          (HS : TCX Γ ⊢ S[Γ => τh] : τm)
+  (forall τh, P τh τh c_hole I) ->
+  (forall (τh τm τ : Ty)
+          (S1 : CTX Γ ⊢ [Γ ⊢ τm] : τ)
+          (S : CTX Γ ⊢ [Γ ⊢ τh] : τm)
           (S_simple : is_simple S)
           (S1_single : is_simple_single S1),
-      P S τh τm S_simple HS ->
-      P (plug_ctx S1 S) τh τ
-        (simple_plug_simple (single_is_simple S1_single) S_simple)
-        (tc_plug_ctx HS1 HS)) ->
-  forall τh τ S S_simple HS,
-    P S τh τ S_simple HS.
+      P τh τm S S_simple ->
+      P τh τ (plug_ctx S1 S)
+        (simple_plug_simple (single_is_simple _ S1_single) S_simple)) ->
+  forall τh τ S S_simple,
+    P τh τ S S_simple.
 Proof.
   intros case_hole case_composition.
   intros.
-  revert τ τh HS.
-  induction S;
+  dependent induction S;
     intros;
     try contradiction S_simple;
-    dependent destruction HS.
+    try specialize (IHS case_hole case_composition).
   {
     destruct S_simple.
     apply case_hole.
   } {
-    specialize (case_composition _ _ _ _ _ (TCXApp_l _ _ (TCXHole _ _) t) HS).
-    specialize (case_composition S_simple I).
-    apply case_composition.
+    specialize (case_composition _ _ _ (c_app_l c_hole e) S).
+    apply (case_composition S_simple I).
+    apply IHS; auto.
+  } {
+    specialize (case_composition _ _ _ (c_app_r e c_hole) S).
+    apply (case_composition S_simple I).
     apply IHS.
   } {
-    specialize (case_composition _ _ _ _ _ (TCXApp_r _ _ t (TCXHole _ _)) HS).
-    specialize (case_composition S_simple I).
-    apply case_composition.
+    specialize (case_composition _ _ _ (c_factor c_hole) S).
+    apply (case_composition S_simple I).
     apply IHS.
   } {
-    specialize (case_composition _ _ _ _ _ (TCXFactor _ _ (TCXHole _ _)) HS).
-    specialize (case_composition S_simple I).
-    apply case_composition.
+    specialize (case_composition _ _ _ (c_plus_l c_hole e) S).
+    apply (case_composition S_simple I).
     apply IHS.
   } {
-    specialize (case_composition _ _ _ _ _ (TCXPlus_l _ _ (TCXHole _ _) t) HS).
-    specialize (case_composition S_simple I).
-    apply case_composition.
-    apply IHS.
-  } {
-    specialize (case_composition _ _ _ _ _ (TCXPlus_r _ _ t (TCXHole _ _)) HS).
-    specialize (case_composition S_simple I).
-    apply case_composition.
+    specialize (case_composition _ _ _ (c_plus_r e c_hole) S).
+    apply (case_composition S_simple I).
     apply IHS.
   }
 Qed.
 
-Lemma rename_plug_ctx C C' σ :
-  is_simple C ->
-  rename σ (plug_ctx C C') = plug_ctx (rename σ C) (rename σ C').
+(* Lemma rename_plug_ctx C C' σ : *)
+(*   is_simple C -> *)
+(*   rename σ (plug_ctx C C') = plug_ctx (rename σ C) (rename σ C'). *)
+(* Proof. *)
+(*   intros. *)
+(*   induction C; intros; simpl; try setoid_rewrite IHC; auto. *)
+(*   contradiction H. *)
+(* Qed. *)
+
+Lemma up_plug_ctx {Γ τi τm τo}
+      (Co : (CTX Γ ⊢ [ Γ ⊢ τm ] : τo))
+      (Ci : (CTX Γ ⊢ [ Γ ⊢ τi ] : τm))
+      τ0 :
+  (plug_ctx Co Ci)^^τ0 = plug_ctx (Co^^τ0) (Ci^^τ0).
 Proof.
   intros.
-  induction C; intros; simpl; try setoid_rewrite IHC; auto.
-  contradiction H.
+
+  pose proof unchanged_env_means_simple Co as Co_simple.
+
+  dependent induction Co;
+    try specialize (IHCo Ci τ0 Co_simple);
+    simpl in *;
+    repeat destruct up_simple_ctx as [? [? ?]] in *;
+    simpl in *;
+    subst.
+  {
+    assert (x0 = c_hole) by (apply erase_ctx_injective; auto).
+    subst.
+    reflexivity.
+  } {
+    d_destruct x2; inject e3.
+    d_destruct x3; inject e4.
+
+    rewrite <- (expr_lift1_erase e τ0) in H1, H3.
+
+    pose proof expr_type_unique _ _ H1.
+    pose proof expr_type_unique _ _ H3.
+    subst.
+    elim_erase_eqs.
+    simpl.
+    f_equal.
+
+    setoid_rewrite <- e5 in H0.
+    setoid_rewrite <- e1 in H2.
+    apply erase_ctx_injective.
+    rewrite H0.
+
+    rewrite (erase_ctx_injective H2).
+    reflexivity.
+  } {
+    d_destruct x2; inject e3.
+    d_destruct x3; inject e4.
+
+    rewrite <- (expr_lift1_erase e τ0) in H0, H2.
+
+    pose proof expr_type_unique _ _ H0.
+    pose proof expr_type_unique _ _ H2.
+    autoinjections.
+    elim_erase_eqs.
+    simpl.
+    f_equal.
+
+    setoid_rewrite <- e5 in H1.
+    setoid_rewrite <- e1 in H3.
+    apply erase_ctx_injective.
+    rewrite H1.
+
+    rewrite (erase_ctx_injective H3).
+    reflexivity.
+  } {
+    d_destruct x2; inject e2.
+    d_destruct x3; inject e3.
+
+    simpl.
+    f_equal.
+
+    setoid_rewrite <- e in H0.
+    setoid_rewrite <- e0 in H1.
+    apply erase_ctx_injective.
+    rewrite H0.
+
+    rewrite (erase_ctx_injective H1).
+    reflexivity.
+  } {
+    d_destruct x2; inject e3.
+    d_destruct x3; inject e4.
+
+    elim_erase_eqs.
+
+    simpl.
+    f_equal.
+
+    setoid_rewrite <- e5 in H0.
+    setoid_rewrite <- e1 in H2.
+    apply erase_ctx_injective.
+    rewrite H0.
+
+    rewrite (erase_ctx_injective H2).
+    reflexivity.
+  } {
+    d_destruct x2; inject e3.
+    d_destruct x3; inject e4.
+
+    elim_erase_eqs.
+
+    simpl.
+    f_equal.
+
+    setoid_rewrite <- e5 in H1.
+    setoid_rewrite <- e1 in H3.
+    apply erase_ctx_injective.
+    rewrite H1.
+
+    rewrite (erase_ctx_injective H3).
+    reflexivity.
+  } {
+    destruct Co_simple.
+  }
 Qed.
 
-Lemma compat_plug {Γo τo Γh τh C e0 e1} :
-  (TCX Γo ⊢ C[Γh => τh] : τo) ->
+Lemma compat_plug {Γo τo Γh τh} e0 e1
+      (C : CTX Γo ⊢ [Γh ⊢ τh] : τo) :
   (EXP Γh ⊢ e0 ≈ e1 : τh) ->
   (EXP Γo ⊢ C⟨e0⟩ ≈ C⟨e1⟩ : τo).
 Proof.
-  intros HC Hes.
-  dependent induction HC. {
-    auto.
+  intros He.
+  dependent induction C. {
+    exact He.
   } {
     eapply compat_app; auto.
-    apply fundamental_property; auto.
+    reflexivity.
   } {
     eapply compat_app; auto.
-    apply fundamental_property; auto.
+    reflexivity.
   } {
     apply compat_factor; auto.
   } {
     apply compat_plus; auto.
-    apply fundamental_property; auto.
+    reflexivity.
   } {
     apply compat_plus; auto.
-    apply fundamental_property; auto.
+    reflexivity.
   } {
     apply compat_lam; auto.
   }
 Qed.
 
-(* theorem 24 *)
-Theorem subst_into_simple {Γo Γi τe τo S} :
-  is_simple S ->
-  (TCX Γo ⊢ S[Γi => τe] : τo) ->
-  subst_into_simple_defn Γo τe τo S.
+Lemma erase_plug {Γo Γi τi τo} (C : (CTX Γo ⊢ [Γi ⊢ τi] : τo)) e :
+  erase C⟨e⟩ = u_plug (erase_ctx C) (erase e).
 Proof.
-  intros S_simple HSC e He.
+  induction C; simpl; try rewrite <- IHC; auto.
+Qed.
 
-  assert (Γi = Γo). {
-    clear He.
-    revert τo HSC.
-    induction S
-    ; intros
-    ; inversion HSC
-    ; subst
-    ; try contradiction S_simple
-    ; try eapply IHSC
-    ; eauto.
-  }
-  subst.
-  rename Γo into Γ.
+Fixpoint is_u_simple (u : u_ctx) : Prop :=
+  match u with
+  | uc_hole => True
 
-  pose proof (tc_plug He HSC).
-  revert X.
+  | uc_app_l u' _
+  | uc_app_r _ u'
+  | uc_factor u'
+  | uc_plus_l u' _
+  | uc_plus_r _ u' => is_u_simple u'
 
-  (* revert e He. *)
+  | uc_lam _ _ => False
+  end.
 
-  generalize (@eq_refl _ τe).
-  revert τo S S_simple HSC.
+Lemma rename_simple_u_plug (U : u_ctx) (u : u_expr) σ :
+  is_u_simple U ->
+  rename σ (u_plug U u) = u_plug (rename σ U) (rename σ u).
+Proof.
+  intro U_simp.
+  induction U; simpl in *; try rewrite IHU; auto.
+  contradiction U_simp.
+Qed.
+
+(* theorem 24 *)
+Theorem subst_into_simple {Γ τe τo}
+  (S : CTX Γ ⊢ [Γ ⊢ τe] : τo) :
+  is_simple S ->
+  forall (e : expr Γ τe),
+    (EXP Γ ⊢ (λ, (S^τe)⟨var_0⟩) @ e ≈ S⟨e⟩ : τo).
+Proof.
+  intros S_simple e.
 
   refine (tc_ctx_single_rect
-            (fun S' τh τ S_simple HSC' =>
-               τh = τe ->
-               (* forall e, *)
-               (*   (TC Γ ⊢ e : τe) -> *)
-                 (TC Γ ⊢ S'⟨e⟩ : τ) ->
-                 (EXP Γ ⊢ (λ τe, S'↑⟨`O⟩) @ e ≈ S'⟨e⟩ : τ)
+            (fun τh τ S' S_simple =>
+               (* forall (τeq0 : τh = τe) *)
+               (*        (τeq : τ = τo), *)
+               forall (e : expr Γ τh),
+                 (EXP Γ ⊢ (λ, (S' ^^ τh)⟨var_0⟩) @ e ≈ S'⟨e⟩ : τ)
             )
-            _ _ _). {
+            _ _ _ _ _ S_simple _);
+    clear;
     intros.
-    simpl in *.
+  {
+    simpl.
+    destruct up_simple_ctx as [? [? ?]]; simpl.
+    assert (x = c_hole). {
+      apply erase_ctx_injective.
+      exact e0.
+    }
     subst.
-    exact (apply_id_equiv X).
+    apply apply_id_equiv.
   } {
-    intros.
-    subst.
-    specialize (H eq_refl (tc_plug He HS)).
+    specialize (H e).
 
-    transitivity ((λ τe, S1↑⟨(λ τe, S↑↑⟨`O⟩) @ `O⟩) @ e). {
+    transitivity ((λ, (S1^^τh)⟨(λ, ((S^^τh)^^τh)⟨var_0⟩) @ var_0⟩) @ e). {
       (* "by theorem 22" *)
-      eapply compat_app; [| solve [eapply fundamental_property; eauto]].
+      eapply compat_app; [| reflexivity].
       apply compat_lam.
 
-      pose proof @beta_value (extend Γ τe) (S↑↑⟨`O⟩).
-      specialize (H0 τm τe `O I).
-      assert (TC extend Γ τe ⊢ (λ τe, ((S ↑) ↑)⟨` 0⟩) @ ` 0 : τm). {
-        repeat econstructor.
-        eapply up_tcx in HS; auto.
-        eapply rename_simple in S_simple.
-        eapply up_tcx in HS; eauto.
-        refine (tc_plug (TCVar _) HS).
-        auto.
-      }
-      specialize (H0 X0).
-      clear X0.
+      pose proof beta_value (((S^τh)^τh)⟨var_0⟩) var_0 I.
+      pose proof single_is_simple _ S1_single as S1_simple.
 
-      pose proof single_is_simple S1_single as S1_simple.
-
-      rewrite rename_plug_ctx; auto.
+      rewrite up_plug_ctx.
       rewrite plug_plug_ctx.
 
       symmetry.
-      eapply up_tcx in HS1; auto.
       eapply compat_plug; eauto.
-      assert (S↑⟨`O⟩ = S↑↑⟨`O⟩.[`O/]). {
-        revert S_simple; clear; intros.
-        induction S; simpl; auto;
-          try solve [setoid_rewrite IHS; auto; f_equal; autosubst].
-        contradiction S_simple.
+
+      repeat destruct open_subst1; simpl in *.
+      repeat destruct up_simple_ctx as [? [? ?]]; simpl in *.
+
+      assert (x0⟨var_0⟩ = x). {
+        apply erase_injective.
+        rewrite e0.
+        rewrite !erase_plug.
+        rewrite e2.
+
+        simpl.
+
+        clear_except i.
+        replace (u_var 0 .: ids) with (ren pred); swap 1 2. {
+          extensionality n.
+          destruct n; auto.
+        }
+        rewrite <- rename_subst.
+
+        rewrite rename_simple_u_plug. {
+          f_equal.
+
+          assert (forall e : u_expr, rename pred e↑ = e). {
+            intros.
+            asimpl.
+            replace (ren ((+1) >>> pred)) with ids by auto.
+            autosubst.
+          }
+
+
+          induction x0; simpl; f_equal; auto.
+          contradiction i.
+        } {
+          induction x0; try contradiction i; simpl; auto.
+        }
       }
 
       rewrite H1.
       exact H0.
     }
 
-    transitivity (S1⟨(λ τe, S↑⟨`O⟩) @ e⟩). {
-      set (f := λ τe, S↑⟨`O⟩).
-      replace (λ τe, S↑↑⟨`O⟩) with (f↑); swap 1 2. {
+    transitivity (S1⟨(λ, (S^^τh)⟨var_0⟩) @ e⟩). {
+      set (f := λ, (S^^_)⟨var_0⟩).
+      replace (λ, ((S^^τh)^^τh)⟨var_0⟩) with (f^τh); swap 1 2. {
         revert S_simple; clear; intros.
         subst f.
         simpl.
+        elim_sig_exprs.
+        repeat destruct up_simple_ctx as [? [? ?]]; simpl in *.
+
+        elim_erase_eqs.
         f_equal.
 
-        rewrite rename_plugged_simple; swap 1 2. {
-          apply rename_simple.
-          auto.
-        } {
-          f_equal.
-          rewrite 2 ctx_rename_compose.
-          auto.
+        apply erase_injective.
+        rewrite erase_plug.
+        rewrite e1, H0.
+        rewrite erase_plug.
+        rewrite e0.
+        rewrite <- rename_subst.
+
+
+        assert (is_u_simple (erase_ctx S) ↑). {
+          rewrite <- e0.
+          clear_except i.
+          induction x; try contradiction i; auto.
         }
+        rewrite rename_simple_u_plug; auto.
+        simpl in *.
+        f_equal.
+
+        set (erase_ctx S) in *.
+        clearbody u.
+        revert H.
+        clear.
+        assert (forall e : u_expr, rename (0 .: (+2)) (e↑) = e↑↑)
+          by (intros; autosubst).
+        induction u; intros; simpl in *; f_equal; auto.
+        contradiction H0.
       }
 
-      assert (Hf : TC Γ ⊢ f : τe ~> τm). {
-        constructor.
-        refine (tc_plug (TCVar _) (up_tcx _ HS)); auto.
-      }
+      assert (is_val f) by exact I.
+      clearbody f.
 
-      destruct S1; try destruct S1; try contradiction S1_single. {
-        inversion HS1; subst.
-        inversion X0; subst.
-        eapply single_frame_case_app_l; eauto.
-      } {
-        inversion HS1; subst.
-        inversion X1; subst.
-        eapply single_frame_case_app_r; eauto.
-      } {
-        inversion HS1; subst.
-        inversion X0; subst.
-        apply single_frame_case_factor; auto.
-      } {
-        inversion HS1; subst.
-        inversion X0; subst.
-        apply single_frame_case_plus_l; auto.
-      } {
-        inversion HS1; subst.
-        inversion X1; subst.
-        apply single_frame_case_plus_r; auto.
-      }
+      d_destruct S1; try d_destruct S1; try contradiction S1_single; auto.
+      - apply single_frame_case_app_l; auto.
+      - apply single_frame_case_app_r; auto.
+      - apply single_frame_case_factor; auto.
+      - apply single_frame_case_plus_l; auto.
+      - apply single_frame_case_plus_r; auto.
     }
 
     rewrite plug_plug_ctx.
     erewrite compat_plug; eauto.
-    apply fundamental_property.
-    eapply tc_plug; eauto.
-    eapply tc_plug; eauto.
+    reflexivity.
   }
 Qed.
 

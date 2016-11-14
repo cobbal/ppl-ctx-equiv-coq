@@ -94,17 +94,17 @@ Lemma compat_real Γ r :
 Proof.
   left.
   exists (v_real r, nnr_1).
+
+  elim_sig_exprs.
+
   repeat constructor. {
     apply EPure'.
-    destruct close; simpl in *.
     apply erase_injective.
     auto.
   } {
     intros.
-    destruct close; simpl in *.
-    dependent destruction H.
     destruct_val v'.
-    inversion e.
+    d_destruct H.
     auto.
   }
 Qed.
@@ -115,22 +115,17 @@ Proof.
   left.
 
   destruct (env_search ρ Hx) as [v ρv].
+
+  elim_sig_exprs.
+  pose proof (lookup_subst _ ρv).
+  elim_erase_eqs.
+
   exists (v, nnr_1).
   repeat constructor; auto. {
     eapply apply_dG_rel; eauto.
   } {
-    apply EPure'.
-    destruct close; simpl in *.
-    apply lookup_subst in ρv.
-    elim_erase_eqs.
-    auto.
-  } {
     intros.
-    destruct close; simpl in *.
-    apply lookup_subst in ρv.
-    elim_erase_eqs.
-
-    destruct (invert_eval_val H); subst.
+    destruct (invert_eval_val H0); subst.
     auto.
   }
 Qed.
@@ -142,43 +137,28 @@ Proof.
   intros Hbody.
   left.
 
-  exists (v_lam (proj1_sig (body_subst ρ body)), nnr_1).
+  elim_sig_exprs.
+  d_destruct (e, He).
+
+  exists (v_lam e, nnr_1).
   constructor; [constructor |]. {
     constructor.
     intros.
-    destruct ty_subst1; simpl in *.
 
     specialize (Hbody _ (extend_dgrel X Hρ)).
+    elim_sig_exprs.
+    rewrite x in He1.
+    asimpl in He1.
+    elim_erase_eqs.
 
-    destruct close, body_subst; simpl in *.
-    replace x0 with x in Hbody; auto.
-    apply erase_injective.
-
-    rewrite e, e0, e1.
-    autosubst.
+    exact Hbody.
   } {
     apply EPure'.
-
-    apply erase_injective.
-    destruct close, body_subst; simpl in *.
-    rewrite e, e0.
     auto.
   } {
     intros.
-    destruct close, body_subst; simpl in *.
-    assert (is_val x). {
-      simpl.
-      rewrite e.
-      exact I.
-    }
-    change (EVAL σ ⊢ mk_val x H0 ⇓ v', w') in H.
+    change (EVAL σ ⊢ v_lam e ⇓ v', w') in H.
     destruct (invert_eval_val H); subst.
-    f_equal.
-
-    d_destruct (x, e).
-    elim_erase_eqs.
-
-    destruct H0.
     auto.
   }
 Qed.
@@ -193,8 +173,8 @@ Proof.
   specialize (Hef ρ Hρ (π 0 σ)).
   specialize (Hea ρ Hρ (π 1 σ)).
 
-  repeat destruct close; simpl in *.
-  destruct x1; inversion e1.
+  elim_sig_exprs.
+  d_destruct (e1, He1).
   elim_erase_eqs.
 
   destruct Hef as [[[vf wf] [[Hvf EVAL_f] uf]] | not_ex]. {
@@ -213,10 +193,10 @@ Proof.
 
 
         specialize (uf _ _ H).
-        specialize (ua _ _ H2).
+        specialize (ua _ _ H0).
         d_destruct (uf, ua).
 
-        specialize (ur _ _ H3).
+        specialize (ur _ _ H1).
         d_destruct ur.
 
         reflexivity.
@@ -264,8 +244,8 @@ Proof.
 
   specialize (He ρ Hρ σ).
 
-  repeat destruct close; simpl in *.
-  d_destruct (x0, e1).
+  elim_sig_exprs.
+  d_destruct (e1, He1).
   elim_erase_eqs.
 
   destruct He as [[[v w] [[Hv EVAL_e] u]] | not_ex]. {
@@ -310,8 +290,8 @@ Proof.
   intros ? ? ?.
   left.
 
-  destruct close; simpl in *.
-  d_destruct (x, e).
+  elim_sig_exprs.
+  d_destruct (e, He).
 
   eexists (_, _).
   repeat econstructor; eauto.
@@ -331,8 +311,8 @@ Proof.
   specialize (Hel ρ Hρ (π 0 σ)).
   specialize (Her ρ Hρ (π 1 σ)).
 
-  repeat destruct close; simpl in *.
-  d_destruct (x1, e1).
+  elim_sig_exprs.
+  d_destruct (e1, He1).
   elim_erase_eqs.
 
   destruct Hel as [[[vl wl] [[Hvl EVAL_l] ul]] | not_ex]. {
@@ -394,10 +374,8 @@ Theorem eval_dec {τ} (e : expr · τ) σ :
 Proof.
   pose proof (fundamental_property e dep_nil I) as fp.
 
-  destruct close; simpl in *.
-  rewrite subst_id in e0.
-  apply erase_injective in e0.
-  subst.
+  elim_sig_exprs.
+  elim_erase_eqs.
 
   destruct (fp σ); [left | right; auto]. {
     destruct s as [[v w] [[? ?] ?]].

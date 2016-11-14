@@ -14,6 +14,7 @@ Makefile.coq: auto-subst Makefile _CoqProject *.v
 clean:: Makefile.coq
 	$(MAKE) -f Makefile.coq clean
 	rm -f Makefile.coq
+	rm -f lia.cache
 	rm -rf dep-graph
 
 graph: dep-graph/graph.pdf
