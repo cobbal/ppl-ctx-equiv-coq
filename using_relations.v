@@ -17,13 +17,15 @@ Require Import properties_of_relations.
 
 Require Import micromega.Lia.
 
+Local Open Scope nat.
+
 Transparent π.
 
 Notation "x ~> y" := (Arrow x y) (at level 69, right associativity, y at level 70).
 (* Notation "` x" := (e_var x) (at level 1). *)
 Notation "'λ,' e" := (e_lam e) (at level 69, right associativity).
 Notation "e0 @ e1" := (e_app e0 e1) (at level 68, left associativity).
-Notation "e0 +! e1" := (e_plus e0 e1) (at level 68, left associativity).
+Notation "e0 +! e1" := (e_plus e0 e1).
 
 Definition var_0 {τ Γ} : expr (τ :: Γ) τ :=
   e_var O (eq_refl : lookup (τ :: Γ) O = Some τ).
@@ -130,7 +132,7 @@ Proof.
   } {
     simpl.
     rewrite <- integration_linear_mult_r.
-    nnr.
+    ring.
   }
 Qed.
 
@@ -154,7 +156,7 @@ Proof.
     decide_eval as [v0 w0 ex0 u0].
     decide_eval as [v1 w1 ex1 u1].
     simpl.
-    nnr.
+    ring.
   } {
     rewrite tonelli_μ_and_finite; auto.
   } {

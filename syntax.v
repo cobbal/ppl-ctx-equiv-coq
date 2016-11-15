@@ -13,7 +13,7 @@ Require Import List.
 
 Require Export Autosubst.Autosubst.
 
-Local Open Scope R.
+Local Open Scope ennr.
 
 Inductive Ty :=
 | ℝ : Ty
@@ -733,7 +733,7 @@ Qed.
 Reserved Notation "'EVAL' σ ⊢ e ⇓ v , w" (at level 69, e at level 99, no associativity).
 Inductive eval (σ : Entropy) : forall {τ} (e : expr · τ) (v : val τ) (w : R+), Type :=
 | EPure {τ} (v : val τ) :
-    (EVAL σ ⊢ v ⇓ v, nnr_1)
+    (EVAL σ ⊢ v ⇓ v, 1)
 | EApp {τa τr}
        {ef : expr · (τa ~> τr)}
        {ea : expr · τa}
@@ -744,22 +744,22 @@ Inductive eval (σ : Entropy) : forall {τ} (e : expr · τ) (v : val τ) (w : R
   : (EVAL (π 0 σ) ⊢ ef ⇓ mk_val (e_lam body) I, w0) ->
     (EVAL (π 1 σ) ⊢ ea ⇓ va, w1) ->
     (EVAL (π 2 σ) ⊢ proj1_sig (ty_subst1 body va) ⇓ vr, w2) ->
-    (EVAL σ ⊢ e_app ef ea ⇓ vr, w0 [*] w1 [*] w2)
-| EFactor {e : expr · ℝ} {r : R} {w : R+} {is_v} (rpos : 0 <= r)
+    (EVAL σ ⊢ e_app ef ea ⇓ vr, w0 * w1 * w2)
+| EFactor {e : expr · ℝ} {r : R} {w : R+} {is_v} (rpos : (0 <= r)%R)
   : (EVAL σ ⊢ e ⇓ mk_val (e_real r) is_v, w) ->
-    (EVAL σ ⊢ e_factor e ⇓ v_real r, mknnr r rpos [*] w)
+    (EVAL σ ⊢ e_factor e ⇓ v_real r, finite r rpos * w)
 | ESample
-  : (EVAL σ ⊢ e_sample ⇓ v_real (proj1_sig (σ O)), nnr_1)
+  : (EVAL σ ⊢ e_sample ⇓ v_real (proj1_sig (σ O)), 1)
 | EPlus {e0 e1 : expr · ℝ} {r0 r1 : R} {is_v0 is_v1} {w0 w1 : R+}
   : (EVAL (π 0 σ) ⊢ e0 ⇓ mk_val (e_real r0) is_v0, w0) ->
     (EVAL (π 1 σ) ⊢ e1 ⇓ mk_val (e_real r1) is_v1, w1) ->
-    (EVAL σ ⊢ e_plus e0 e1 ⇓ v_real (r0 + r1), w0 [*] w1)
+    (EVAL σ ⊢ e_plus e0 e1 ⇓ v_real (r0 + r1), w0 * w1)
 where "'EVAL' σ ⊢ e ⇓ v , w" := (@eval σ _ e v w)
 .
 
 Definition EPure' (σ : Entropy) {τ} (e : expr · τ) (v : val τ) :
   e = v ->
-  (EVAL σ ⊢ e ⇓ v, nnr_1).
+  (EVAL σ ⊢ e ⇓ v, 1).
 Proof.
   intros.
   rewrite H.
@@ -768,7 +768,7 @@ Qed.
 
 Lemma invert_eval_val {σ τ} {v v' : val τ} {w} :
   (EVAL σ ⊢ v ⇓ v', w) ->
-  v = v' /\ w = nnr_1.
+  v = v' /\ w = 1.
 Proof.
   intros.
   destruct τ;

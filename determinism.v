@@ -14,17 +14,19 @@ Require Import micromega.Lia.
 
 Import EqNotations.
 
-Local Open Scope R.
+Local Open Scope ennr.
 
 Definition dE_rel' τ (dV_rel_τ : val τ -> Type) (e : expr · τ) : Type :=
   forall σ,
-    (existsT (vw : val τ * R+),
-     let (v, w) := vw in
-     (dV_rel_τ v)
-       ⨉ (EVAL σ ⊢ e ⇓ v, w)
-       ⨉ (forall v' w', (EVAL σ ⊢ e ⇓ v', w') -> (v, w) = (v', w'))
-    ) +
-    ((existsT vw : (val τ * R+), let (v, w) := vw in EVAL σ ⊢ e ⇓ v, w) -> False).
+    {vw : (val τ * R+) &
+          let (v, w) := vw in
+          (dV_rel_τ v)
+            ⨉ (EVAL σ ⊢ e ⇓ v, w)
+            ⨉ (forall v' w', (EVAL σ ⊢ e ⇓ v', w') -> v' = v /\ w' = w)
+    } +
+    ({vw : (val τ * R+) &
+           let (v, w) := vw in EVAL σ ⊢ e ⇓ v, w}
+     -> False).
 
 Definition dV_rel_real (v : val ℝ) : Type := True.
 
@@ -93,11 +95,11 @@ Lemma compat_real Γ r :
   related_expr Γ ℝ (e_real r).
 Proof.
   left.
-  exists (v_real r, nnr_1).
+  exists (v_real r, 1).
 
   elim_sig_exprs.
 
-  repeat constructor. {
+  split; [repeat constructor |]. {
     apply EPure'.
     apply erase_injective.
     auto.
@@ -105,6 +107,7 @@ Proof.
     intros.
     destruct_val v'.
     d_destruct H.
+    simpl.
     auto.
   }
 Qed.
@@ -120,12 +123,13 @@ Proof.
   pose proof (lookup_subst _ ρv).
   elim_erase_eqs.
 
-  exists (v, nnr_1).
-  repeat constructor; auto. {
+  exists (v, 1).
+  split; [repeat constructor |]; auto. {
     eapply apply_dG_rel; eauto.
   } {
     intros.
     destruct (invert_eval_val H0); subst.
+    simpl.
     auto.
   }
 Qed.
@@ -140,7 +144,7 @@ Proof.
   elim_sig_exprs.
   d_destruct (e, He).
 
-  exists (v_lam e, nnr_1).
+  exists (v_lam e, 1).
   constructor; [constructor |]. {
     constructor.
     intros.
@@ -159,6 +163,7 @@ Proof.
     intros.
     change (EVAL σ ⊢ v_lam e ⇓ v', w') in H.
     destruct (invert_eval_val H); subst.
+    simpl.
     auto.
   }
 Qed.
@@ -185,21 +190,18 @@ Proof.
 
       destruct (Hvf va Hva (π 2 σ)) as [[[vr wr] [[Hvr EVAL_r] ur]] | not_ex]. {
         left.
-        exists (vr, wf [*] wa [*] wr).
+        exists (vr, wf * wa * wr).
 
-        repeat econstructor; eauto.
+        constructor; [repeat econstructor |]; eauto.
         intros.
         d_destruct H; try absurd_val.
 
+        destruct (uf _ _ H).
+        destruct (ua _ _ H0); subst.
+        d_destruct H2.
 
-        specialize (uf _ _ H).
-        specialize (ua _ _ H0).
-        d_destruct (uf, ua).
-
-        specialize (ur _ _ H1).
-        d_destruct ur.
-
-        reflexivity.
+        destruct (ur _ _ H1); subst.
+        auto.
       } {
         right.
         intros.
@@ -208,9 +210,9 @@ Proof.
 
         d_destruct y; try absurd_val.
 
-        specialize (uf _ _ y1).
-        specialize (ua _ _ y2).
-        d_destruct (uf, ua).
+        destruct (uf _ _ y1).
+        destruct (ua _ _ y2); subst.
+        d_destruct H.
 
         eexists (_, _); eauto.
       }
@@ -253,15 +255,16 @@ Proof.
 
     destruct (Rle_dec 0 r). {
       left.
-      exists (v_real r, mknnr r r0 [*] w).
-      repeat econstructor; eauto.
+      exists (v_real r, finite r r0 * w).
+      constructor; [repeat econstructor |]; eauto.
       intros.
       d_destruct H; try absurd_val.
 
-      specialize (u _ _ H).
-      d_destruct u.
+      destruct (u _ _ H); subst.
+      d_destruct H0.
+      split; auto.
       f_equal.
-      nnr.
+      ennr.
     } {
       right.
       intros.
@@ -269,8 +272,8 @@ Proof.
       destruct X as [[? ?] ?].
 
       d_destruct y; try absurd_val.
-      specialize (u _ _ y).
-      d_destruct u.
+      destruct (u _ _ y); subst.
+      d_destruct H.
       contradiction rpos.
     }
   } {
@@ -294,10 +297,11 @@ Proof.
   d_destruct (e, He).
 
   eexists (_, _).
-  repeat econstructor; eauto.
+  constructor; [repeat econstructor |]; eauto.
   intros.
 
   d_destruct H; try absurd_val.
+  simpl.
   auto.
 Qed.
 
@@ -321,16 +325,18 @@ Proof.
       destruct_val vl.
       destruct_val vr.
 
-      exists (v_real (r + r0), wl [*] wr).
-      repeat econstructor; eauto.
+      exists (v_real (r + r0), wl * wr).
+      constructor; [repeat econstructor |]; eauto.
       intros.
 
       d_destruct H; try absurd_val.
 
-      specialize (ul _ _ H).
-      specialize (ur _ _ H0).
-      d_destruct (ul, ur).
-      auto.
+      destruct (ul _ _ H); subst.
+      destruct (ur _ _ H0); subst.
+      inject H1.
+      inject H2.
+
+      split; auto.
     } {
       right.
       intros.
@@ -368,21 +374,38 @@ Proof.
   - eapply compat_plus; eauto.
 Qed.
 
-Theorem eval_dec {τ} (e : expr · τ) σ :
-  (existsT! vw : (val τ * R+), let (v, w) := vw in EVAL σ ⊢ e ⇓ v, w) +
-  ((existsT vw : (val τ * R+), let (v, w) := vw in EVAL σ ⊢ e ⇓ v, w) -> False).
-Proof.
-  pose proof (fundamental_property e dep_nil I) as fp.
+Module eval_dec.
 
-  elim_sig_exprs.
-  elim_erase_eqs.
+  Inductive eval_dec_result {τ} (e : expr · τ) (σ : Entropy) :=
+  | eval_dec_ex_unique
+      (v : val τ) (w : R+) (ev : EVAL σ ⊢ e ⇓ v, w)
+      (u : forall v' w',
+          (EVAL σ ⊢ e ⇓ v', w') ->
+          v' = v /\ w' = w)
+  | eval_dec_not_ex
+      (not_ex : forall v w,
+          (EVAL σ ⊢ e ⇓ v, w) ->
+          False)
+  .
+  Arguments eval_dec_ex_unique {_ _ _} v w _ _.
+  Arguments eval_dec_not_ex {_ _ _} not_ex.
 
-  destruct (fp σ); [left | right; auto]. {
-    destruct s as [[v w] [[? ?] ?]].
-    exists (v, w).
-    split; auto.
-    intro.
-    destruct x'.
-    apply e1.
-  }
-Qed.
+  Theorem eval_dec {τ} (e : expr · τ) σ : eval_dec_result e σ.
+  Proof.
+    pose proof (fundamental_property e dep_nil I) as fp.
+
+    elim_sig_exprs.
+    elim_erase_eqs.
+
+    destruct (fp σ). {
+      destruct s as [[v w] [[? ?] ?]].
+      eapply eval_dec_ex_unique; eauto.
+    } {
+      apply eval_dec_not_ex.
+      intros.
+      contradict f.
+      exists (v, w).
+      auto.
+    }
+  Qed.
+End eval_dec.
