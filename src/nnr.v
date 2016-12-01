@@ -32,6 +32,8 @@ Definition ennr_1 := finite 1 Rle_0_1.
 Notation "0" := ennr_0.
 Notation "1" := ennr_1.
 
+Definition ennr_abs (r : R) : R+ := finite (Rabs r) (Rabs_pos _).
+
 Definition ennr_plus (a b : R+) : R+ :=
   match a, b with
   | finite ra ra_pos, finite rb rb_pos
@@ -52,6 +54,46 @@ Definition ennr_mult (a b : R+) : R+ :=
     => infinite
   end.
 Infix "*" := ennr_mult.
+
+Local Lemma Rlt_and_neq {r : R} :
+  0 <= r ->
+  0%R <> r ->
+  0 < r.
+Proof.
+  intros.
+  destruct (total_order_T 0 r) as [[? | ?] | ?];
+    intuition fourier.
+Qed.
+
+Local Lemma Rinv_pos {r : R} :
+  0 <= r ->
+  0%R <> r ->
+  0 <= / r.
+Proof.
+  intros.
+  destruct (total_order_T 0 r) as [[? | ?] | ?];
+    try intuition fourier.
+
+  apply Rlt_le.
+  apply Rinv_0_lt_compat.
+  auto.
+Qed.
+
+Definition ennr_inv (a : R+) : R+ :=
+  match a with
+  | finite a a_pos
+    => match Req_EM_T 0 a with
+       | left _ => infinite
+       | right a_neq_0 => finite (/ a) (Rinv_pos a_pos a_neq_0)
+       end
+  | infinite
+    => 0
+  end.
+Notation "/ a" := (ennr_inv a).
+
+Definition ennr_div (a b : R+) : R+ := a * / b.
+Arguments ennr_div a !b.
+Infix "/" := ennr_div.
 
 Lemma finite_inj r0 r0_pos r1 r1_pos :
   r0 = r1 ->

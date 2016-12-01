@@ -14,14 +14,18 @@ Proof.
   apply H0, H, Hv.
 Qed.
 
-Lemma E_rel_symmetric' {τ} :
+Lemma E_rel_symmetric' {τ ϕ} :
   Symmetric (V_rel τ) ->
-  Symmetric (E_rel τ).
+  Symmetric (E_rel τ ϕ).
 Proof.
-  repeat intro.
-  apply eq_sym.
-  apply H0.
-  apply A_rel_symmetric'; auto.
+  split; intros. {
+    apply eq_sym.
+    apply H0.
+    apply A_rel_symmetric'; auto.
+  } {
+    apply eq_sym.
+    apply H0.
+  }
 Qed.
 
 Instance V_rel_symmetric {τ} : Symmetric (V_rel τ).
@@ -42,7 +46,7 @@ Proof.
   }
 Qed.
 
-Instance E_rel_symmetric {τ} : Symmetric (E_rel τ)
+Instance E_rel_symmetric {τ ϕ} : Symmetric (E_rel τ ϕ)
   := E_rel_symmetric' V_rel_symmetric.
 Instance A_rel_symmetric {τ} : Symmetric (A_rel τ)
   := A_rel_symmetric' V_rel_symmetric.
@@ -64,7 +68,7 @@ Proof.
   }
 Qed.
 
-Instance rel_expr_symmetric {Γ τ} : Symmetric (expr_rel Γ τ).
+Instance rel_expr_symmetric {Γ τ ϕ} : Symmetric (expr_rel Γ τ ϕ).
 Proof.
   intros e0 e1 He ? ? ?.
   symmetry.
@@ -86,16 +90,31 @@ Proof.
   transitivity v1; [| symmetry]; exact Hv.
 Qed.
 
-Instance E_rel_transitive' {τ} :
+Instance E_rel_transitive' {τ ϕ} :
   Transitive (V_rel τ) ->
-  Transitive (E_rel τ).
+  Transitive (E_rel τ ϕ).
 Proof.
   intros ? x y z Hxy Hyz.
-  repeat intro.
+  split; intros. {
+    transitivity (μ y A0). {
+      apply Hxy.
+      transitivity A1; [| symmetry]; exact HA.
+    } {
+      apply Hyz; auto.
+    }
+  } {
+    subst.
+    subst e0' e1'.
+    cbn.
 
-  transitivity (μ y A0); auto.
-  apply Hxy.
-  transitivity A1; [| symmetry]; exact HA.
+    transitivity (obs_μ y v A). {
+      destruct Hxy as [_ Hxy].
+      apply (Hxy eq_refl eq_refl).
+    } {
+      destruct Hyz as [_ Hyz].
+      apply (Hyz eq_refl eq_refl).
+    }
+  }
 Qed.
 
 Instance V_rel_transitive {τ} :
@@ -129,7 +148,7 @@ Proof.
   }
 Qed.
 
-Instance E_rel_transitive {τ} : Transitive (E_rel τ)
+Instance E_rel_transitive {τ ϕ} : Transitive (E_rel τ ϕ)
   := E_rel_transitive' V_rel_transitive.
 Instance A_rel_transitive {τ} : Transitive (A_rel τ)
   := A_rel_transitive' V_rel_transitive.
@@ -150,7 +169,7 @@ Proof.
   }
 Qed.
 
-Instance rel_expr_transitive {Γ τ} : Transitive (expr_rel Γ τ).
+Instance rel_expr_transitive {Γ τ ϕ} : Transitive (expr_rel Γ τ ϕ).
 Proof.
   intros x y z Hxy Hyz ? ? ?.
 
@@ -177,10 +196,11 @@ Proof.
   apply fundamental_property_of_values.
 Qed.
 
-Instance E_rel_reflexive {τ} : Reflexive (E_rel τ).
+Instance E_rel_reflexive {τ ϕ} : Reflexive (E_rel τ ϕ).
 Proof.
   intro e.
-  pose proof (fundamental_property _ _ e _ _ G_rel_nil).
+  pose proof (fundamental_property e) as fp.
+  specialize (fp _ _ G_rel_nil).
   elim_sig_exprs.
   elim_erase_eqs.
   auto.
@@ -203,13 +223,13 @@ Proof.
   }
 Qed.
 
-Instance rel_expr_reflexive {Γ τ} : Reflexive (expr_rel Γ τ)
-  := fundamental_property _ _.
+Instance rel_expr_reflexive {Γ τ ϕ} : Reflexive (expr_rel Γ τ ϕ)
+  := fundamental_property.
 
-Lemma same_substitution_suffices {Γ τ} (e0 e1 : expr Γ τ) :
+Lemma same_substitution_suffices {Γ τ ϕ} (e0 e1 : expr Γ τ ϕ) :
   (forall (ρ : wt_env Γ),
-      E_rel τ (proj1_sig (close ρ e0)) (proj1_sig (close ρ e1))) ->
-  (EXP Γ ⊢ e0 ≈ e1 : τ).
+      E_rel τ ϕ (proj1_sig (close ρ e0)) (proj1_sig (close ρ e1))) ->
+  (EXP Γ ⊢ e0 ≈ e1 : τ, ϕ).
 Proof.
   intros ? ρ0 ρ1 Hρ.
 
@@ -220,16 +240,20 @@ Proof.
   }
 Qed.
 
-Lemma relate_exprs {Γ τ} (e0 e1 : expr Γ τ) :
-  (forall ρ A, μ (proj1_sig (close ρ e0)) A = μ (proj1_sig (close ρ e1)) A) ->
-  (EXP Γ ⊢ e0 ≈ e1 : τ).
-Proof.
-  intros.
+(* Lemma relate_exprs {Γ τ ϕ} (e0 e1 : expr Γ τ ϕ) : *)
+(*   (forall ρ A, μ (proj1_sig (close ρ e0)) A = μ (proj1_sig (close ρ e1)) A) -> *)
+(*   (EXP Γ ⊢ e0 ≈ e1 : τ, ϕ). *)
+(* Proof. *)
+(*   intros. *)
 
-  apply same_substitution_suffices; auto.
+(*   apply same_substitution_suffices; auto. *)
 
-  repeat intro.
-
-  rewrite (A_rel_subidentity HA).
-  apply H.
-Qed.
+(*   split; intros. { *)
+(*     rewrite (A_rel_subidentity HA). *)
+(*     apply H. *)
+(*   } { *)
+(*     subst. *)
+(*     subst e0' e1'. *)
+(*     cbn. *)
+(*   } *)
+(* Qed. *)

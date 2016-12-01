@@ -10,31 +10,86 @@ Require Import nnr.
 Require Export entropy.
 Require Import utils.
 Require Import List.
+Require Import FinFun.
+Require Import RelationClasses.
 
 Require Export Autosubst.Autosubst.
 
 Local Open Scope ennr.
 
+Inductive Effect :=
+| ObsR
+| ObsNone
+.
+
+Reserved Infix "≼" (at level 70, no associativity).
+
+Definition subeffect (ϕ0 ϕ1 : Effect) : Prop :=
+  match ϕ0, ϕ1 with
+  | ObsNone, ObsR => False
+  | _, _ => True
+  end.
+Infix "≼" := subeffect.
+
 Inductive Ty :=
 | ℝ : Ty
-| Arrow : Ty -> Ty -> Ty
+| Arrow : Effect -> Ty -> Ty -> Ty
 .
-Notation "x ~> y" := (Arrow x y) (at level 69, right associativity, y at level 70).
+Notation "x ~~ ϕ ~> y" := (Arrow ϕ x y) (at level 69, right associativity, y at level 70).
+
+Instance subeffect_refl : Reflexive subeffect.
+Proof.
+  intro ϕ.
+  destruct ϕ; cbn; auto.
+Qed.
+
+Lemma effect_eq_dec : forall (ϕ ϕ' : Effect), {ϕ = ϕ'} + {ϕ <> ϕ'}.
+Proof.
+  decide equality.
+Qed.
 
 Lemma ty_eq_dec : forall (τ τ' : Ty), {τ = τ'} + {τ <> τ'}.
 Proof.
   decide equality.
+  apply effect_eq_dec.
 Defined.
+
+Inductive binop :=
+| Add
+| Mult
+.
+
+Definition δ (op : binop) : R -> R -> R :=
+  match op with
+  | Add => Rplus
+  | Mult => Rmult
+  end.
+
+(* if {v1} = op^-1(v0, ·)({v})
+   then return v1 *)
+Definition δ_unique_inv (op : binop) (v1 : R) (v : R) : option R :=
+  match op with
+  | Add => Some (v - v1)%R
+  | Mult => Some (v / v1)%R
+  end.
+
+Definition δ_partial_deriv_2 (op : binop) (v0 v1 : R) : R :=
+  match op with
+  | Add => 1
+  | Mult => v0
+  end.
 
 (* u for untyped *)
 Inductive u_expr :=
-| u_app : u_expr -> u_expr -> u_expr
-| u_factor : u_expr -> u_expr
-| u_sample : u_expr
-| u_plus : u_expr -> u_expr -> u_expr
-| u_real : R -> u_expr
-| u_lam : Ty -> {bind u_expr} -> u_expr
-| u_var : var -> u_expr
+| u_app (uf ua : u_expr)
+| u_factor (u : u_expr)
+| u_sample
+| u_observe (u0 u1 : u_expr)
+| u_binop (op : binop) (ul ur : u_expr)
+| u_real (r : R)
+| u_lam (τ : Ty) (body : {bind u_expr})
+| u_var (x : var)
+| u_hide_observable (u : u_expr)
 .
 
 Definition is_pure (e : u_expr) : Prop :=
@@ -62,56 +117,70 @@ Fixpoint lookup {T} (ρ : Env T) x : option T :=
     end
   end.
 
-Inductive expr (Γ : Env Ty) : Ty -> Type :=
-| e_real (r : R) : expr Γ ℝ
-| e_var {τ : Ty} (x : var)
+Inductive expr (Γ : Env Ty) : Ty -> Effect -> Type :=
+| e_real (r : R) : expr Γ ℝ ObsNone
+| e_var {τ} (x : var)
         (H : lookup Γ x = Some τ)
-  : expr Γ τ
-| e_lam {τa τr}
-        (body : expr (τa :: Γ) τr)
-  : expr Γ (τa ~> τr)
-| e_app {τa τr}
-        (ef : expr Γ (τa ~> τr))
-        (ea : expr Γ τa)
-  : expr Γ τr
-| e_factor (e : expr Γ ℝ)
-  : expr Γ ℝ
+  : expr Γ τ ObsNone
+| e_lam {τa τr ϕ}
+        (body : expr (τa :: Γ) τr ϕ)
+  : expr Γ (τa ~~ ϕ ~> τr) ObsNone
+| e_app {τa τr ϕa ϕf ϕ}
+        (ef : expr Γ (τa ~~ ϕ ~> τr) ϕf)
+        (ea : expr Γ τa ϕa)
+  : expr Γ τr ϕ
+| e_factor {ϕ} (e : expr Γ ℝ ϕ)
+  : expr Γ ℝ ObsNone
 | e_sample
-  : expr Γ ℝ
-| e_plus (el : expr Γ ℝ)
-         (er : expr Γ ℝ)
-  : expr Γ ℝ.
+  : expr Γ ℝ ObsR
+| e_observe {ϕ0}
+            (e0 : expr Γ ℝ ϕ0)
+            (e1 : expr Γ ℝ ObsR)
+  : expr Γ ℝ ObsNone
+| e_binop {ϕl ϕr}
+          (op : binop)
+          (el : expr Γ ℝ ϕl)
+          (er : expr Γ ℝ ϕr)
+  : expr Γ ℝ ϕr
+| e_hide_observable (e : expr Γ ℝ ObsR)
+  : expr Γ ℝ ObsNone
+.
 
 Arguments e_real {Γ} r.
 Arguments e_var {Γ τ} x H.
-Arguments e_lam {Γ τa τr} body.
-Arguments e_app {Γ τa τr} ef ea.
-Arguments e_factor {Γ} e.
+Arguments e_lam {Γ τa τr ϕ} body.
+Arguments e_app {Γ τa τr ϕa ϕf ϕ} ef ea.
+Arguments e_factor {Γ ϕ} e.
 Arguments e_sample {Γ}.
-Arguments e_plus {Γ} el er.
+Arguments e_observe {Γ ϕ0} e0 e1.
+Arguments e_binop {Γ ϕl ϕr} op el er.
+Arguments e_hide_observable {Γ} e.
 
-Fixpoint erase {Γ τ} (e : expr Γ τ) : u_expr :=
+Fixpoint erase {Γ τ ϕ} (e : expr Γ τ ϕ) : u_expr :=
   match e with
   | e_real r => u_real r
   | e_var x _ => u_var x
-  | @e_lam _ τa τr body => u_lam τa (erase body)
+  | @e_lam _ τa τr _ body => u_lam τa (erase body)
   | e_app ef ea => u_app (erase ef) (erase ea)
   | e_factor e => u_factor (erase e)
   | e_sample => u_sample
-  | e_plus el er => u_plus (erase el) (erase er)
+  | e_observe el er => u_observe (erase el) (erase er)
+  | e_binop op el er => u_binop op (erase el) (erase er)
+  | e_hide_observable e => u_hide_observable (erase e)
   end.
-Coercion erase' {Γ τ} : expr Γ τ -> u_expr := erase.
-Arguments erase' / {_ _} _.
+Coercion erase' {Γ τ ϕ} : expr Γ τ ϕ -> u_expr := erase.
+Arguments erase' / {_ _ _} _.
 
-Lemma expr_type_unique {Γ τ0 τ1} (e0 : expr Γ τ0) (e1 : expr Γ τ1) :
+Lemma expr_type_unique {Γ τ0 ϕ0 τ1 ϕ1} (e0 : expr Γ τ0 ϕ0) (e1 : expr Γ τ1 ϕ1) :
   erase e0 = erase e1 ->
-  τ0 = τ1.
+  τ0 = τ1 /\ ϕ0 = ϕ1.
 Proof.
   intros Heq.
-  revert τ1 e1 Heq.
+  revert τ1 ϕ1 e1 Heq.
   dependent induction e0; intros;
     dependent destruction e1;
     inversion Heq; subst;
+      try (split; auto; [idtac]);
     auto.
   {
     clear Heq.
@@ -119,18 +188,18 @@ Proof.
     inversion H.
     auto.
   } {
-    f_equal.
-    eapply IHe0.
-    eauto.
+    f_equal; eapply IHe0; eauto.
   } {
-    specialize (IHe0_1 _ _ H0).
-    inversion IHe0_1.
+    specialize (IHe0_1 _ _ _ H0).
+    inject IHe0_1.
+    inject H.
     auto.
+  } {
+    eapply IHe0_2; eauto.
   }
 Qed.
 
-Require Import FinFun.
-Lemma erase_injective Γ τ : Injective (@erase Γ τ).
+Lemma erase_injective Γ τ ϕ : Injective (@erase Γ τ ϕ).
 Proof.
   intro x.
   dependent induction x;
@@ -139,23 +208,29 @@ Proof.
     inversion Hxy; subst; auto.
   {
     f_equal.
-    apply UIP_dec.
-    decide equality.
-    apply ty_eq_dec.
+    apply proof_irrelevance.
   } {
     f_equal.
     apply IHx; auto.
   } {
     pose proof expr_type_unique x1 y1 H0.
-    inversion H; subst.
-    erewrite IHx1; eauto.
-    erewrite IHx2; eauto.
+    pose proof expr_type_unique x2 y2 H1.
+    intuition idtac; subst.
+    rewrite (IHx1 y1), (IHx2 y2); auto.
   } {
-    f_equal.
-    apply IHx; auto.
+    pose proof expr_type_unique x y H0.
+    inject H.
+    rewrite (IHx y); auto.
   } {
-    erewrite IHx1; eauto.
-    erewrite IHx2; eauto.
+    pose proof expr_type_unique x1 y1 H0.
+    inject H.
+    rewrite (IHx1 y1), (IHx2 y2); auto.
+  } {
+    pose proof expr_type_unique x1 y1 H1.
+    inject H.
+    rewrite (IHx1 y1), (IHx2 y2); auto.
+  } {
+    erewrite IHx; eauto.
   }
 Qed.
 Arguments erase_injective {_ _ _ _} _.
@@ -170,15 +245,17 @@ Ltac inject_erase_directly :=
 Ltac match_erase_eqs :=
   let H := fresh "H" in
   let H' := fresh "H" in
+  let H'' := fresh "H" in
   match goal with
   | [H0 : erase ?x = ?s, H1 : erase ?y = ?s |- _ ] =>
     pose proof (eq_trans H0 (eq_sym H1)) as H;
     let z := type of y in
     match type of x with
     | z => idtac
-    | expr · ?τ =>
-      pose proof (expr_type_unique _ _ H) as H';
-      (subst τ || d_destruct H')
+    | expr · ?τ ?ϕ =>
+      pose proof (expr_type_unique _ _ H) as [H' H''];
+      (subst τ || d_destruct H');
+      (subst ϕ || d_destruct H'')
     end;
     apply erase_injective in H;
     subst x
@@ -196,9 +273,9 @@ Ltac subst_erase_eq :=
 (* TODO: speed up even more for exprs *)
 Ltac expr_destruct e :=
   match type of e with
-  | expr _ (_ ~> _) => d_destruct e
-  | expr _ ℝ => d_destruct e
-  | expr _ _ => destruct e
+  | expr _ (_ ~~ _ ~> _) _ => d_destruct e
+  | expr _ ℝ _ => d_destruct e
+  | expr _ _ _ => destruct e
   end.
 
 Ltac inject_erased :=
@@ -208,12 +285,13 @@ Ltac inject_erased :=
      | [ H : erase ?e = u_app _ _ |- _ ] => go e H
      | [ H : erase ?e = u_factor _ |- _ ] => go e H
      | [ H : erase ?e = u_sample |- _ ] => expr_destruct e; try inject H
-     | [ H : erase ?e = u_plus _ _ |- _ ] => go e H
+     | [ H : erase ?e = u_observe _ _ |- _ ] => go e H
+     | [ H : erase ?e = u_binop _ _ _ |- _ ] => go e H
      | [ H : erase ?e = u_real _ |- _ ] => go e H
      | [ H : erase ?e = u_lam _ _ |- _ ] => go e H
      | [ H : erase ?e = u_var _ |- _ ] => go e H
+     | [ H : erase ?e = u_hide_observable _ |- _ ] => go e H
      end.
-
 
 Ltac elim_erase_eqs :=
   progress repeat (subst_erase_eq
@@ -231,10 +309,10 @@ Ltac elim_sig_exprs :=
        asimpl in He) in
   progress repeat
            match goal with
-           | [ H : context [ @proj1_sig (expr ?Γ ?τ) _ ?pair ] |- _ ] =>
-             doit Γ τ pair ltac:(simpl in H)
-           | [ |- context [ @proj1_sig (expr ?Γ ?τ) _ ?pair ] ] =>
-             doit Γ τ pair ltac:(simpl)
+           | [ H : context [ @proj1_sig (expr ?Γ ?τ ?ϕ) _ ?pair ] |- _ ] =>
+             doit Γ τ pair ltac:(cbn in H)
+           | [ |- context [ @proj1_sig (expr ?Γ ?τ ?ϕ) _ ?pair ] ] =>
+             doit Γ τ pair ltac:(cbn)
            end.
 Definition is_val (e : u_expr) : Prop :=
   match e with
@@ -249,14 +327,14 @@ Proof.
 Qed.
 
 Inductive val τ :=
-  mk_val (e : expr · τ) (H : is_val e).
+  mk_val (e : expr · τ ObsNone) (H : is_val e).
 Arguments mk_val {τ} e H.
-Coercion expr_of_val {τ} : val τ -> expr · τ :=
+Coercion expr_of_val {τ} : val τ -> expr · τ ObsNone :=
   fun v => let (e, _) := v in e.
 
 Lemma val_eq {τ} {v0 v1 : val τ} :
-  @eq (expr · τ) v0 v1 ->
-  @eq (val τ) v0 v1.
+  v0 = v1 :> expr · τ ObsNone ->
+  v0 = v1 :> val τ.
 Proof.
   intros.
   destruct v0, v1.
@@ -269,14 +347,15 @@ Qed.
 Definition v_real r : val ℝ :=
   mk_val (e_real r) I.
 
-Definition v_lam {τa τr} body : val (τa ~> τr) :=
+Definition v_lam {τa τr ϕ} body : val (τa ~~ ϕ ~> τr) :=
   mk_val (e_lam body) I.
 
 Definition rewrite_v_real r : e_real r = v_real r := eq_refl.
-Definition rewrite_v_lam {τa τr} body : e_lam body = @v_lam τa τr body := eq_refl.
+Definition rewrite_v_lam {τa τr ϕ} body :
+  e_lam body = @v_lam τa τr ϕ body := eq_refl.
 
-Lemma val_arrow_rect {τa τr}
-      (P : val (τa ~> τr) -> Type)
+Lemma val_arrow_rect {τa τr ϕ}
+      (P : val (τa ~~ ϕ ~> τr) -> Type)
       (case_lam : forall body, P (v_lam body)) :
   forall v, P v.
 Proof.
@@ -305,8 +384,8 @@ Lemma wt_val_rect {τ}
          forall r (τeq : ℝ = τ),
            P (rew τeq in v_real r))
       (case_lam :
-         forall τa τr
-                (τeq : (τa ~> τr) = τ)
+         forall {τa τr ϕ}
+                (τeq : (τa ~~ ϕ ~> τr) = τ)
                 body,
            P (rew τeq in v_lam body)) :
   forall v, P v.
@@ -319,7 +398,7 @@ Proof.
   } {
     apply val_arrow_rect.
     intros.
-    exact (case_lam _ _ eq_refl body).
+    exact (case_lam _ _ _ eq_refl body).
   }
 Qed.
 
@@ -327,13 +406,13 @@ Ltac destruct_val wt_v :=
   match (type of wt_v) with
   | val ℝ =>
     destruct wt_v using val_real_rect
-  | val (?τa ~> ?τr) =>
+  | val (?τa ~~ ?ϕ ~> ?τr) =>
     destruct wt_v using val_arrow_rect
   | val ?τ =>
     destruct wt_v using wt_val_rect
   end.
 
-Lemma for_absurd_val {τ} {v : val τ} {e : expr · τ} :
+Lemma for_absurd_val {τ} {v : val τ} {e : expr · τ ObsNone} :
   (expr_of_val v) = e ->
   is_val e.
 Proof.
@@ -389,7 +468,7 @@ Fixpoint dep_env_allT {A} {v : A -> Type} {Γ}
 
 Definition wt_env := dep_env val.
 
-Fixpoint erase_wt_expr_env {Γ Δ} (ρ : dep_env (expr Δ) Γ)
+Fixpoint erase_wt_expr_env {Γ Δ} (ρ : dep_env (fun τ => expr Δ τ ObsNone) Γ)
   : (nat -> u_expr) :=
   match ρ with
   | dep_nil => ids
@@ -406,7 +485,7 @@ Lemma erase_envs_equiv {Γ} (ρ : wt_env Γ) :
   erase_wt_expr_env (dep_env_map (@expr_of_val) ρ) =
   erase_wt_env ρ.
 Proof.
-  induction ρ; simpl; auto.
+  induction ρ; cbn; auto.
   f_equal.
   auto.
 Qed.
@@ -449,7 +528,7 @@ Proof.
   } {
     destruct Γ; try solve [inversion H]; subst.
     dependent destruction ρ.
-    simpl in *.
+    cbn in *.
     exact (IHx _ _ H).
   }
 Qed.
@@ -465,7 +544,7 @@ Proof.
     auto.
   } {
     destruct ρ; inversion H; subst.
-    simpl.
+    cbn.
     apply IHx.
     auto.
   }
@@ -488,7 +567,7 @@ Proof.
   }
 Qed.
 
-Fixpoint weaken {Γ τ} (e : expr Γ τ) Γw : expr (Γ ++ Γw) τ :=
+Fixpoint weaken {Γ τ ϕ} (e : expr Γ τ ϕ) Γw : expr (Γ ++ Γw) τ ϕ :=
   match e with
   | e_real r => e_real r
   | e_var x H => e_var x (weaken_lookup H)
@@ -496,18 +575,20 @@ Fixpoint weaken {Γ τ} (e : expr Γ τ) Γw : expr (Γ ++ Γw) τ :=
   | e_app ef ea => e_app (weaken ef Γw) (weaken ea Γw)
   | e_factor e => e_factor (weaken e Γw)
   | e_sample => e_sample
-  | e_plus el er => e_plus (weaken el Γw) (weaken er Γw)
+  | e_observe e0 e1 => e_observe (weaken e0 Γw) (weaken e1 Γw)
+  | e_binop op el er => e_binop op (weaken el Γw) (weaken er Γw)
+  | e_hide_observable e => e_hide_observable (weaken e Γw)
   end.
 
-Lemma weaken_eq {Γ τ} (e : expr Γ τ) Γw :
+Lemma weaken_eq {Γ τ ϕ} (e : expr Γ τ ϕ) Γw :
   erase e = erase (weaken e Γw).
 Proof.
   induction e; simpl; f_equal; auto.
 Qed.
 
-Lemma expr_ren {Γ τ} ξ (e : expr Γ τ) Δ :
+Lemma expr_ren {Γ τ ϕ} ξ (e : expr Γ τ ϕ) Δ :
   lookup Γ = ξ >>> lookup Δ ->
-  {e' : expr Δ τ |
+  {e' : expr Δ τ ϕ |
    erase e' = rename ξ (erase e)}.
 Proof.
   revert ξ Δ.
@@ -549,9 +630,21 @@ Proof.
     exists e_sample; auto.
   } {
     edestruct IHe1, IHe2; eauto.
-    eexists (e_plus _ _).
+    eexists (e_observe _ _).
     simpl.
     rewrite e, e0.
+    auto.
+  } {
+    edestruct IHe1, IHe2; eauto.
+    eexists (e_binop op _ _).
+    simpl.
+    rewrite e, e0.
+    auto.
+  } {
+    edestruct IHe; eauto.
+    eexists (e_hide_observable _).
+    simpl.
+    rewrite e0.
     auto.
   }
 Qed.
@@ -587,9 +680,9 @@ Lemma up_inj : Injective up.
 Qed.
 
 Lemma up_expr_env {Γ Δ : Env Ty}
-      (σ : dep_env (expr Δ) Γ)
+      (σ : dep_env (fun τ => expr Δ τ ObsNone) Γ)
       (τa : Ty)
-  : { σ' : dep_env (expr (τa :: Δ)) (τa :: Γ) |
+  : { σ' : dep_env (fun τ => expr (τa :: Δ) τ ObsNone) (τa :: Γ) |
       forall x τ,
         lookup (τa :: Γ) x = Some τ ->
         erase_wt_expr_env σ' x = up (erase_wt_expr_env σ) x }.
@@ -623,7 +716,7 @@ Proof.
   }
 Qed.
 
-Lemma subst_only_matters_up_to_env {Γ τ} (e : expr Γ τ) σ0 σ1 :
+Lemma subst_only_matters_up_to_env {Γ τ ϕ} (e : expr Γ τ ϕ) σ0 σ1 :
   (forall x τ,
       lookup Γ x = Some τ ->
       σ0 x = σ1 x) ->
@@ -643,9 +736,9 @@ Proof.
   auto.
 Qed.
 
-Lemma ty_subst {Γ τ} (e : expr Γ τ) :
-  forall Δ (ρ : dep_env (expr Δ) Γ),
-    {e' : expr Δ τ |
+Lemma ty_subst {Γ τ ϕ} (e : expr Γ τ ϕ) :
+  forall Δ (ρ : dep_env (fun τ => expr Δ τ ObsNone) Γ),
+    {e' : expr Δ τ ϕ |
      erase e' = (erase e).[erase_wt_expr_env ρ]}.
 Proof.
   induction e; intros. {
@@ -665,13 +758,13 @@ Proof.
       apply IHx; auto.
     }
   } {
-    destruct (up_expr_env ρ τa).
-    destruct (IHe _ x).
+    destruct (up_expr_env ρ τa) as [ρ' Hρ'].
+    destruct (IHe _ ρ').
 
     eexists (e_lam _).
     simpl.
     f_equal.
-    rewrite e1.
+    rewrite e0.
 
     apply subst_only_matters_up_to_env.
     auto.
@@ -692,53 +785,107 @@ Proof.
     reflexivity.
   } {
     edestruct IHe1, IHe2; auto.
-    exists (e_plus x x0).
+    exists (e_observe x x0).
     simpl.
     rewrite e, e0.
+    reflexivity.
+  } {
+    edestruct IHe1, IHe2; auto.
+    exists (e_binop op x x0).
+    simpl.
+    rewrite e, e0.
+    reflexivity.
+  } {
+    edestruct IHe; auto.
+    exists (e_hide_observable x).
+    simpl.
+    rewrite e0.
     reflexivity.
   }
 Qed.
 
-Lemma close {Γ} (ρ : wt_env Γ) {τ} (e : expr Γ τ) :
-  {e' : expr · τ |
+Lemma close {Γ} (ρ : wt_env Γ) {τ ϕ} (e : expr Γ τ ϕ) :
+  {e' : expr · τ ϕ |
    erase e' = (erase e).[erase_wt_env ρ]}.
 Proof.
   rewrite <- erase_envs_equiv.
   apply ty_subst.
 Qed.
 
-Definition ty_subst1 {τa τr}
-      (e : expr (τa :: ·) τr)
+Definition ty_subst1 {τa τr ϕ}
+      (e : expr (τa :: ·) τr ϕ)
       (v : val τa) :
-  { e' : expr · τr |
+  { e' : expr · τr ϕ |
     erase e' = (erase e).[erase v /] }
-  := ty_subst e · (dep_cons (v : expr · τa) dep_nil).
+  := ty_subst e · (dep_cons (v : expr _ _ _) dep_nil).
 
 Reserved Notation "'EVAL' σ ⊢ e ⇓ v , w" (at level 69, e at level 99, no associativity).
-Inductive eval (σ : Entropy) : forall {τ} (e : expr · τ) (v : val τ) (w : R+), Type :=
+Reserved Notation "'OBS_EVAL' σ ⊢ e ⇓ v , w" (at level 69, e at level 99, no associativity).
+Inductive eval (σ : Entropy) : forall {τ ϕ} (e : expr · τ ϕ) (v : val τ) (w : R+), Type :=
 | EPure {τ} (v : val τ) :
     (EVAL σ ⊢ v ⇓ v, 1)
-| EApp {τa τr}
-       {ef : expr · (τa ~> τr)}
-       {ea : expr · τa}
-       {body : expr (τa :: ·) τr}
+| EApp {τa τr ϕf ϕa ϕ}
+       {ef : expr · (τa ~~ ϕ ~> τr) ϕf}
+       {ea : expr · τa ϕa}
+       {body : expr (τa :: ·) τr ϕ}
        {va : val τa}
        {vr : val τr}
        {w0 w1 w2 : R+}
-  : (EVAL (π 0 σ) ⊢ ef ⇓ mk_val (e_lam body) I, w0) ->
+  : (EVAL (π 0 σ) ⊢ ef ⇓ (v_lam body), w0) ->
     (EVAL (π 1 σ) ⊢ ea ⇓ va, w1) ->
     (EVAL (π 2 σ) ⊢ proj1_sig (ty_subst1 body va) ⇓ vr, w2) ->
     (EVAL σ ⊢ e_app ef ea ⇓ vr, w0 * w1 * w2)
-| EFactor {e : expr · ℝ} {r : R} {w : R+} {is_v} (rpos : (0 <= r)%R)
+| EFactor {ϕ} {e : expr · ℝ ϕ} {r : R} {w : R+} {is_v} (rpos : (0 <= r)%R)
   : (EVAL σ ⊢ e ⇓ mk_val (e_real r) is_v, w) ->
     (EVAL σ ⊢ e_factor e ⇓ v_real r, finite r rpos * w)
 | ESample
   : (EVAL σ ⊢ e_sample ⇓ v_real (proj1_sig (σ O)), 1)
-| EPlus {e0 e1 : expr · ℝ} {r0 r1 : R} {is_v0 is_v1} {w0 w1 : R+}
+| EObserve {ϕ0} {e0 : expr · ℝ ϕ0} {e1 : expr · ℝ ObsR} {v : val ℝ} {w0 w1 : R+}
+  : (EVAL (π 0 σ) ⊢ e0 ⇓ v, w0) ->
+    (OBS_EVAL (π 1 σ) ⊢ e1 ⇓ v, w1) ->
+    (EVAL σ ⊢ e_observe e0 e1 ⇓ v, w0 * w1)
+| EBinop {op : binop}
+         {ϕ0 ϕ1}
+         {e0 : expr · ℝ ϕ0}
+         {e1 : expr · ℝ ϕ1}
+         {r0 r1 : R}
+         {is_v0 is_v1}
+         {w0 w1 : R+}
   : (EVAL (π 0 σ) ⊢ e0 ⇓ mk_val (e_real r0) is_v0, w0) ->
     (EVAL (π 1 σ) ⊢ e1 ⇓ mk_val (e_real r1) is_v1, w1) ->
-    (EVAL σ ⊢ e_plus e0 e1 ⇓ v_real (r0 + r1), w0 * w1)
-where "'EVAL' σ ⊢ e ⇓ v , w" := (@eval σ _ e v w)
+    (EVAL σ ⊢ e_binop op e0 e1 ⇓ v_real (δ op r0 r1), w0 * w1)
+| EHide {v w}
+        {e : expr · ℝ ObsR}
+  : (EVAL σ ⊢ e ⇓ v, w) ->
+    (EVAL σ ⊢ e_hide_observable e ⇓ v, w)
+with
+(* should `val ℝ` be replaced with R here? *)
+eval_obs (σ : Entropy) : forall (e : expr · ℝ ObsR) (v : val ℝ) (w : R+), Type :=
+| OApp {τa ϕf ϕa}
+       {ef : expr · (τa ~~ ObsR ~> ℝ) ϕf}
+       {ea : expr · τa ϕa}
+       {body : expr (τa :: ·) ℝ ObsR}
+       {va : val τa}
+       {vr : val ℝ}
+       {w0 w1 w2 : R+}
+  : (EVAL (π 0 σ) ⊢ ef ⇓ mk_val (e_lam body) I, w0) ->
+    (EVAL (π 1 σ) ⊢ ea ⇓ va, w1) ->
+    (OBS_EVAL (π 2 σ) ⊢ proj1_sig (ty_subst1 body va) ⇓ vr, w2) ->
+    (OBS_EVAL σ ⊢ e_app ef ea ⇓ vr, w0 * w1 * w2)
+| OBinop {op : binop}
+         {ϕ0}
+         {e0 : expr · ℝ ϕ0}
+         {e1 : expr · ℝ ObsR}
+         {r0 r1 r : R} {is_v0 is_v1} {w0 w1 : R+}
+  : (EVAL (π 0 σ) ⊢ e0 ⇓ mk_val (e_real r0) is_v0, w0) ->
+    δ_unique_inv op r r0 = Some r1 ->
+    (OBS_EVAL (π 1 σ) ⊢ e1 ⇓ mk_val (e_real r1) is_v1, w1) ->
+    (OBS_EVAL σ ⊢ e_binop op e0 e1 ⇓ v_real r, w0 * w1 / ennr_abs (δ_partial_deriv_2 op r0 r1))
+| OSample {r : R}
+  : (0 < r < 1)%R ->
+    (OBS_EVAL σ ⊢ e_sample ⇓ v_real r, 1)
+where "'OBS_EVAL' σ ⊢ e ⇓ v , w" := (eval_obs σ e v w)
+and "'EVAL' σ ⊢ e ⇓ v , w" := (eval σ e v w)
 .
 
 Lemma invert_eval_val {σ τ} {v v' : val τ} {w} :
@@ -756,16 +903,11 @@ Qed.
 Lemma u_expr_eq_dec (u0 u1 : u_expr) :
   {u0 = u1} + {u0 <> u1}.
 Proof.
-  decide equality. {
-    apply Req_EM_T.
-  } {
-    decide equality.
-  } {
-    decide equality.
-  }
+  repeat decide equality.
+  apply Req_EM_T.
 Qed.
 
-Lemma expr_eq_dec {Γ τ} (e0 e1 : expr Γ τ) :
+Lemma expr_eq_dec {Γ τ ϕ} (e0 e1 : expr Γ τ ϕ) :
   {e0 = e1} + {e0 <> e1}.
 Proof.
   destruct (u_expr_eq_dec (erase e0) (erase e1)). {

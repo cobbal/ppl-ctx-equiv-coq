@@ -6,6 +6,7 @@ Require Export Coq.Program.Equality.
 Require Export Coq.Program.Tactics.
 Require Export Coq.setoid_ring.Ring_theory.
 Require Import Coq.Classes.Morphisms.
+Require Import List.
 
 Export EqNotations.
 Open Scope ennr.
@@ -122,3 +123,11 @@ Ltac d_destruct xs :=
   | (?a, ?b) => d_destruct a; m b
   | ?a => m a
   end.
+
+Lemma the_infinite_cons_doesnt_exist {A} {x : A} {xs} : (x :: xs <> xs).
+Proof.
+  intro.
+  change ((x :: nil) ++ xs = nil ++ xs) in H.
+  apply app_inv_tail in H.
+  discriminate H.
+Qed.

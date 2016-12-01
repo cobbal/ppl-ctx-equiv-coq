@@ -11,12 +11,15 @@ Require Export chain.
    fully typed context *)
 
 Inductive u_ctx_frame :=
-| uc_app_f (ua : u_expr)
+| uc_app_f (ϕ : Effect) (ua : u_expr)
 | uc_app_a (uf : u_expr)
 | uc_factor
-| uc_plus_l (ur : u_expr)
-| uc_plus_r (ul : u_expr)
+| uc_observe_l (ur : u_expr)
+| uc_observe_r (ul : u_expr)
+| uc_binop_l (op : binop) (ur : u_expr)
+| uc_binop_r (op : binop) (ul : u_expr)
 | uc_lam (τa : Ty)
+| uc_hide
 .
 
 Definition u_ctx := list u_ctx_frame.
@@ -27,45 +30,58 @@ Definition uc_hole : u_ctx := nil.
    sit at type `Γo ⊢ τo`". The outermost chain_cons is the outermost context
    frame here. *)
 
-Reserved Notation "'FRAME' Γo ⊢ [ Γh ⊢ τh ] : τo"
-         (at level 70, Γo, Γh, τh, τo at level 200, no associativity).
-Reserved Notation "'CTX' Γo ⊢ [ Γh ⊢ τh ] : τo"
+Reserved Notation "'FRAME' Γo ⊢ [ Γh ⊢ τh , ϕh ] : τo , ϕo"
+         (at level 70, Γo, Γh, τh, τo, ϕh, ϕo at level 200, no associativity).
+Reserved Notation "'CTX' Γo ⊢ [ Γh ⊢ τh , ϕh ] : τo , ϕo"
          (at level 70, Γo, Γh, τh, τo at level 200, no associativity).
 
-Inductive ctx_frame : Env Ty -> Ty -> Env Ty -> Ty -> Type :=
-| c_app_f {Γ τa τr} :
-    expr Γ τa ->
-    (FRAME Γ ⊢ [Γ ⊢ τa ~> τr] : τr)
-| c_app_a {Γ τa τr} :
-    expr Γ (τa ~> τr) ->
-    (FRAME Γ ⊢ [Γ ⊢ τa] : τr)
-| c_factor {Γ} :
-    (FRAME Γ ⊢ [Γ ⊢ ℝ] : ℝ)
-| c_plus_l {Γ} :
-    expr Γ ℝ ->
-    (FRAME Γ ⊢ [Γ ⊢ ℝ] : ℝ)
-| c_plus_r {Γ} :
-    expr Γ ℝ ->
-    (FRAME Γ ⊢ [Γ ⊢ ℝ] : ℝ)
-| c_lam {Γ τa τr} :
-    (FRAME Γ ⊢ [τa :: Γ ⊢ τr] : τa ~> τr)
-where "'FRAME' Γo ⊢ [ Γh ⊢ τh ] : τo" := (ctx_frame Γo τo Γh τh).
+Inductive ctx_frame : Env Ty -> Ty -> Effect -> Env Ty -> Ty -> Effect -> Type :=
+| c_app_f {Γ τa ϕ τr ϕf ϕa} :
+    expr Γ τa ϕa ->
+    (FRAME Γ ⊢ [Γ ⊢ τa ~~ ϕ ~> τr, ϕf] : τr, ϕ)
+| c_app_a {Γ τa ϕ τr ϕf ϕa} :
+    expr Γ (τa ~~ ϕ ~> τr) ϕf ->
+    (FRAME Γ ⊢ [Γ ⊢ τa, ϕa] : τr, ϕ)
+| c_factor {Γ ϕ} :
+    (FRAME Γ ⊢ [Γ ⊢ ℝ, ϕ] : ℝ, ObsNone)
+| c_observe_l {Γ ϕl} :
+    expr Γ ℝ ObsR ->
+    (FRAME Γ ⊢ [Γ ⊢ ℝ, ϕl] : ℝ, ObsNone)
+| c_observe_r {Γ ϕl} :
+    expr Γ ℝ ϕl ->
+    (FRAME Γ ⊢ [Γ ⊢ ℝ, ObsR] : ℝ, ObsNone)
+| c_binop_l {Γ ϕl ϕr} :
+    binop ->
+    expr Γ ℝ ϕr ->
+    (FRAME Γ ⊢ [Γ ⊢ ℝ, ϕl] : ℝ, ϕr)
+| c_binop_r {Γ ϕl ϕr} :
+    binop ->
+    expr Γ ℝ ϕl ->
+    (FRAME Γ ⊢ [Γ ⊢ ℝ, ϕr] : ℝ, ϕr)
+| c_lam {Γ τa ϕ τr} :
+    (FRAME Γ ⊢ [τa :: Γ ⊢ τr, ϕ] : τa ~~ ϕ ~> τr, ObsNone)
+| c_hide {Γ} :
+    (FRAME Γ ⊢ [Γ ⊢ ℝ, ObsR] : ℝ, ObsNone)
+where "'FRAME' Γo ⊢ [ Γh ⊢ τh , ϕh ] : τo , ϕo" := (ctx_frame Γo τo ϕo Γh τh ϕh).
 
-Definition ctx := bichain ctx_frame.
-Notation "'CTX' Γo ⊢ [ Γh ⊢ τh ] : τo" := (ctx Γo τo Γh τh).
-Definition c_hole {Γ τ} : (CTX Γ ⊢ [Γ ⊢ τ] : τ) := chain_nil.
+Definition ctx := trichain ctx_frame.
+Notation "'CTX' Γo ⊢ [ Γh ⊢ τh , ϕh ] : τo , ϕo" := (ctx Γo τo ϕo Γh τh ϕh).
+Definition c_hole {Γ τ ϕ} : (CTX Γ ⊢ [Γ ⊢ τ, ϕ] : τ , ϕ) := chain_nil.
 
 Set Typeclasses Unique Instances.
 
 Instance Rename_u_ctx_frame : Rename u_ctx_frame :=
   fun σ f =>
     match f with
-    | uc_app_f ea => uc_app_f (rename σ ea)
+    | uc_app_f ϕ ea => uc_app_f ϕ (rename σ ea)
     | uc_app_a ef => uc_app_a (rename σ ef)
     | uc_factor => uc_factor
-    | uc_plus_l er => uc_plus_l (rename σ er)
-    | uc_plus_r el => uc_plus_r (rename σ el)
+    | uc_observe_l er => uc_observe_l (rename σ er)
+    | uc_observe_r el => uc_observe_r (rename σ el)
+    | uc_binop_l op er => uc_binop_l op (rename σ er)
+    | uc_binop_r op el => uc_binop_r op (rename σ el)
     | uc_lam τa => uc_lam τa
+    | uc_hide => uc_hide
     end.
 
 Instance Rename_u_ctx : Rename u_ctx :=
@@ -91,12 +107,15 @@ Notation "C ⟨ e ⟩" := (Plug.plug C e)
 Instance u_plug_frame : Plug.type u_ctx_frame u_expr u_expr :=
   { plug f e :=
       match f with
-      | uc_app_f ea => u_app e ea
+      | uc_app_f _ ea => u_app e ea
       | uc_app_a ef => u_app ef e
       | uc_factor => u_factor e
-      | uc_plus_l er => u_plus e er
-      | uc_plus_r el => u_plus el e
+      | uc_observe_l er => u_observe e er
+      | uc_observe_r el => u_observe el e
+      | uc_binop_l op er => u_binop op e er
+      | uc_binop_r op el => u_binop op el e
       | uc_lam τa => u_lam τa e
+      | uc_hide => u_hide_observable e
       end
   }.
 
@@ -108,235 +127,147 @@ Fixpoint u_plug (U : u_ctx) (e : u_expr) : u_expr :=
 
 Instance u_plug' : Plug.type u_ctx u_expr u_expr := { plug := u_plug }.
 
-Instance plug_frame {Γo τo Γh τh}
-  : Plug.type (FRAME Γo ⊢ [Γh ⊢ τh] : τo) (expr Γh τh) (expr Γo τo) :=
+Instance plug_frame {Γo τo ϕo Γh τh ϕh}
+  : Plug.type (FRAME Γo ⊢ [Γh ⊢ τh, ϕh] : τo, ϕo) (expr Γh τh ϕh) (expr Γo τo ϕo) :=
   { plug f :=
-      match f in (FRAME Γo' ⊢ [Γh' ⊢ τh'] : τo')
-            return (expr Γh' τh' -> expr Γo' τo') with
+      match f in (FRAME Γo' ⊢ [Γh' ⊢ τh', ϕh'] : τo', ϕo')
+            return (expr Γh' τh' ϕh' -> expr Γo' τo' ϕo') with
       | c_app_f ea => fun e => e_app e ea
       | c_app_a ef => fun e => e_app ef e
       | c_factor => fun e => e_factor e
-      | c_plus_l er => fun e => e_plus e er
-      | c_plus_r el => fun e => e_plus el e
+      | c_observe_l er => fun e => e_observe e er
+      | c_observe_r el => fun e => e_observe el e
+      | c_binop_l op er => fun e => e_binop op e er
+      | c_binop_r op el => fun e => e_binop op el e
       | c_lam => fun e => e_lam e
+      | c_hide => fun e => e_hide_observable e
       end
   }.
 
-Instance plug {Γo τo Γh τh}
-  : Plug.type (CTX Γo ⊢ [Γh ⊢ τh] : τo) (expr Γh τh) (expr Γo τo) :=
-  { plug C e := bichain_fold_right (fun _ _ _ _ C e => C⟨e⟩) e C }.
+Instance plug {Γo τo ϕo Γh τh ϕh}
+  : Plug.type (CTX Γo ⊢ [Γh ⊢ τh, ϕh] : τo, ϕo) (expr Γh τh ϕh) (expr Γo τo ϕo) :=
+  { plug C e := trichain_fold_right (fun _ _ _ _ _ _ C e => C⟨e⟩) e C }.
 
-Lemma plug_cons {Γo τo Γm τm Γi τi}
-      (f : (FRAME Γo ⊢ [Γm ⊢ τm] : τo))
-      C (e : expr Γi τi) :
-  (f :::: C)⟨e⟩ = f⟨C⟨e⟩⟩.
+Lemma plug_cons {Γo τo ϕo Γm τm ϕm Γi τi ϕi}
+      (f : (FRAME Γo ⊢ [Γm ⊢ τm, ϕm] : τo, ϕo))
+      C (e : expr Γi τi ϕi) :
+  (f :3: C)⟨e⟩ = f⟨C⟨e⟩⟩.
 Proof.
   trivial.
 Qed.
 
-Definition erase_ctx_frame {Γo τo Γh τh} (f : (FRAME Γo ⊢ [Γh ⊢ τh] : τo))
+Definition erase_ctx_frame {Γo τo ϕo Γh τh ϕh} (f : (FRAME Γo ⊢ [Γh ⊢ τh, ϕh] : τo, ϕo))
   : u_ctx_frame :=
   match f with
-  | c_app_f ea => uc_app_f (erase ea)
+  | @c_app_f _ _ ϕ _ _ _ ea => uc_app_f ϕ (erase ea)
   | c_app_a ef => uc_app_a (erase ef)
   | c_factor => uc_factor
-  | c_plus_l er => uc_plus_l (erase er)
-  | c_plus_r el => uc_plus_r (erase el)
+  | c_observe_l er => uc_observe_l (erase er)
+  | c_observe_r el => uc_observe_r (erase el)
+  | c_binop_l op er => uc_binop_l op (erase er)
+  | c_binop_r op el => uc_binop_r op (erase el)
   | @c_lam _ τa _ => uc_lam τa
+  | c_hide => uc_hide
   end.
 
-Definition erase_ctx {Γo τo Γh τh} (C : (CTX Γo ⊢ [Γh ⊢ τh] : τo)) : u_ctx :=
-  bichain_to_list (@erase_ctx_frame) C.
+Definition erase_ctx {Γo τo ϕo Γh τh ϕh} (C : (CTX Γo ⊢ [Γh ⊢ τh, ϕh] : τo, ϕo)) : u_ctx :=
+  trichain_to_list (@erase_ctx_frame) C.
 
-Lemma erase_cons {Γo τo Γm τm Γi τi}
-      (f : (FRAME Γo ⊢ [Γm ⊢ τm] : τo))
-      (C : (CTX Γm ⊢ [Γi ⊢ τi] : τm)) :
-  erase_ctx (f :::: C) = erase_ctx_frame f :: erase_ctx C.
+Lemma erase_cons {Γo τo ϕo Γm τm ϕm Γi τi ϕi}
+      (f : (FRAME Γo ⊢ [Γm ⊢ τm, ϕm] : τo, ϕo))
+      (C : (CTX Γm ⊢ [Γi ⊢ τi, ϕi] : τm, ϕm)) :
+  erase_ctx (f :3: C) = erase_ctx_frame f :: erase_ctx C.
 Proof.
   trivial.
 Qed.
 
-Require Import FinFun.
-Lemma erase_ctx_injective {Γo τo Γh τh} : Injective (@erase_ctx Γo τo Γh τh).
-Proof.
-  repeat intro.
-
-  revert y H.
-  induction x using bichain_rect; intros. {
-    cbn in *.
-    dependent destruction y0 using bichain_rect; try discriminate.
-    reflexivity.
-  } {
-    dependent destruction y using bichain_rect; try discriminate.
-    rewrite !erase_cons in H.
-    inject H.
-
-    d_destruct (x, x1);
-      try discriminate H1;
-      f_equal;
-      auto;
-      inject H1;
-      try (erewrite erase_injective; eauto).
-    {
-      pose proof expr_type_unique _ _ H0.
-      subst.
-      erewrite IHx; eauto.
-      f_equal.
-      erewrite erase_injective; eauto.
-    } {
-      pose proof expr_type_unique _ _ H0.
-      inject H.
-      erewrite IHx; eauto.
-      f_equal.
-      erewrite erase_injective; eauto.
-    }
-  }
-Qed.
-Arguments erase_ctx_injective {_ _ _ _ _ _} _.
-
-Lemma ctx_type_unique {Γo τo}
-      {Γi τi} (C : (CTX Γo ⊢ [Γi ⊢ τi] : τo))
-      {Γi' τi'} (C' : (CTX Γo ⊢ [Γi' ⊢ τi'] : τo)) :
-  erase_ctx C = erase_ctx C' ->
-  Γi = Γi' /\ τi = τi'.
-Proof.
-  intros Heq.
-  revert_until C.
-  dependent induction C using bichain_rect;
-    intros;
-    dependent destruction C' using bichain_rect;
-    inversion Heq;
-    subst;
-    auto.
-  change (erase_ctx C = erase_ctx C') in H1.
-
-  d_destruct (x, x0);
-    try inject Heq;
-    try solve [eapply IHC; eauto].
-  {
-    pose proof expr_type_unique _ _ H2.
-    subst.
-    eapply IHC; eauto.
-  } {
-    pose proof expr_type_unique _ _ H2.
-    inject H.
-    eapply IHC; eauto.
-  }
-Qed.
-
-Definition ctx_equiv {Γ τ} (e0 e1 : expr Γ τ) :=
-  forall (C : (CTX · ⊢ [Γ ⊢ τ] : ℝ)) A,
+Definition ctx_equiv {Γ τ ϕ} (e0 e1 : expr Γ τ ϕ) :=
+  forall (C : (CTX · ⊢ [Γ ⊢ τ, ϕ] : ℝ, ObsNone)) A,
     μ C⟨e0⟩ A = μ C⟨e1⟩ A.
 
-Lemma relation_sound {Γ τ} (e0 e1 : expr Γ τ) :
-  (EXP Γ ⊢ e0 ≈ e1 : τ) ->
+(* This definition is equivalent to the previous one, but can be easier to work with *)
+Definition ctx_equiv_by_both_μs {Γ τ ϕ} (e0 e1 : expr Γ τ ϕ) :=
+  forall ϕo (C : (CTX · ⊢ [Γ ⊢ τ, ϕ] : ℝ, ϕo)),
+    (forall A, μ C⟨e0⟩ A = μ C⟨e1⟩ A) /\
+    (forall v A (H : ϕo = ObsR),
+        let C' := (rew [fun ϕo => CTX · ⊢ [Γ ⊢ τ, ϕ] : ℝ, ϕo] H in C) in
+        obs_μ C'⟨e0⟩ v A = obs_μ C'⟨e1⟩ v A).
+
+Lemma ctx_equivs_equiv {Γ τ ϕ} (e0 e1 : expr Γ τ ϕ) :
+  ctx_equiv e0 e1 <-> ctx_equiv_by_both_μs e0 e1.
+Proof.
+  split; repeat intro. {
+    destruct ϕo; [| split; intros; auto; discriminate].
+
+    pose proof (H (c_hide :3: C)).
+    change (forall A, μ (e_hide_observable C⟨e0⟩) A = μ (e_hide_observable C⟨e1⟩) A) in H0.
+    rewrite 2 μ_hide in H0.
+    split; auto.
+
+    intros; subst.
+    d_destruct H1.
+    cbn in C'.
+    subst C'.
+
+    rewrite 2 μ_of_obs_μ.
+    f_equal.
+    apply (H (c_observe_r v :3: C)).
+  } {
+    destruct (H _ C); auto.
+  }
+Qed.
+
+Lemma compat_plug1 {Γo τo ϕo Γh τh ϕh}
+      (f : FRAME Γo ⊢ [Γh ⊢ τh, ϕh] : τo, ϕo)
+      e0 e1 :
+  (EXP Γh ⊢ e0 ≈ e1 : τh, ϕh) ->
+  (EXP Γo ⊢ f⟨e0⟩ ≈ f⟨e1⟩ : τo, ϕo).
+Proof.
+  intros.
+  d_destruct f; cbn;
+    apply compat_app ||
+    apply compat_factor ||
+    apply compat_observe ||
+    apply compat_binop ||
+    apply compat_plus ||
+    apply compat_lam ||
+    apply compat_hide;
+    auto;
+    reflexivity.
+Qed.
+
+Lemma compat_plug {Γo τo ϕo Γh τh ϕh}
+      (C : CTX Γo ⊢ [Γh ⊢ τh, ϕh] : τo, ϕo)
+      e0 e1 :
+  (EXP Γh ⊢ e0 ≈ e1 : τh, ϕh) ->
+  (EXP Γo ⊢ C⟨e0⟩ ≈ C⟨e1⟩ : τo, ϕo).
+Proof.
+  intros He.
+  dependent induction C using trichain_rect. {
+    exact He.
+  } {
+    rewrite !plug_cons.
+    apply compat_plug1.
+    auto.
+  }
+Qed.
+
+Lemma relation_sound {Γ τ ϕ} (e0 e1 : expr Γ τ ϕ) :
+  (EXP Γ ⊢ e0 ≈ e1 : τ, ϕ) ->
   ctx_equiv e0 e1.
 Proof.
   intros re.
 
   repeat intro.
 
-  set (A0 := A) at 1.
-  set (A1 := A).
+  pose proof compat_plug C e0 e1 re.
+  specialize (H _ _ G_rel_nil).
+  destruct H as [H _].
+  elim_sig_exprs.
+  elim_erase_eqs.
+  apply H.
 
-  assert (HA : A_rel ℝ A0 A1). {
-    intros ? ? ?.
-    rewrite Hv.
-    auto.
-  }
-  clearbody A0 A1.
-  clear A.
-
-  revert C.
-  enough (forall Γo ρC0 ρC1 (Hρ : G_rel Γo ρC0 ρC1)
-                 (C : (CTX Γo ⊢ [Γ ⊢ τ] : ℝ)),
-             μ (proj1_sig (close ρC0 C⟨e0⟩)) A0 =
-             μ (proj1_sig (close ρC1 C⟨e1⟩)) A1); intros.
-  {
-    specialize (H _ _ _ G_rel_nil C).
-
-    elim_sig_exprs.
-    apply erase_injective in He.
-    apply erase_injective in He2.
-    subst.
-    auto.
-  }
-
-  move Hρ after A0.
-  induction C using bichain_rect. {
-    apply re; auto.
-  } {
-    specialize (IHC _ _ re).
-    rewrite !plug_cons.
-    destruct x; try specialize (IHC _ _ Hρ). {
-      pose proof (fundamental_property _ _ e _ _ Hρ).
-
-      elim_sig_exprs.
-      d_destruct (e6, He6).
-      d_destruct (e7, He7).
-      elim_erase_eqs.
-
-      apply case_app; auto.
-    } {
-      pose proof (fundamental_property _ _ e _ _ Hρ).
-
-      elim_sig_exprs.
-      d_destruct (e6, He6).
-      d_destruct (e7, He7).
-      elim_erase_eqs.
-
-      apply case_app; auto.
-    } {
-      elim_sig_exprs.
-      d_destruct (e3, He3).
-      d_destruct (e4, He4).
-      elim_erase_eqs.
-
-      apply case_factor; auto.
-    } {
-      pose proof (fundamental_property _ _ e _ _ Hρ).
-
-      elim_sig_exprs.
-      d_destruct (e6, He6).
-      d_destruct (e7, He7).
-      elim_erase_eqs.
-
-      apply case_plus; auto.
-    } {
-      pose proof (fundamental_property _ _ e _ _ Hρ).
-
-      elim_sig_exprs.
-      d_destruct (e6, He6).
-      d_destruct (e7, He7).
-      elim_erase_eqs.
-
-      apply case_plus; auto.
-    } {
-      elim_sig_exprs.
-      d_destruct (e, He).
-      d_destruct (e2, He2).
-
-      rewrite !rewrite_v_lam.
-      rewrite 2 val_is_dirac.
-      unfold dirac, indicator.
-      f_equal.
-      apply HA.
-
-      constructor.
-      intros.
-
-      specialize (IHC _ _ (G_rel_cons H Hρ)).
-
-      elim_sig_exprs.
-      rewrite x0 in He5.
-      rewrite x in He6.
-      asimpl in He5.
-      asimpl in He6.
-      elim_erase_eqs.
-
-      repeat intro.
-      apply IHC.
-      auto.
-    }
-  }
+  repeat intro.
+  inject Hv.
+  trivial.
 Qed.

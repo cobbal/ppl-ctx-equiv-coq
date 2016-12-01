@@ -1,4 +1,5 @@
 Require Import Coq.Program.Basics.
+Require Import Coq.Program.Tactics.
 Import EqNotations.
 
 (* A chain is like a list, but with dependent types that must link between
@@ -140,6 +141,18 @@ Definition chain_to_list {X} {P : X -> X -> Type}
       cons (f x) (chain_to_list c')
     end.
 
+Lemma chain_to_list_app {X} {P : X -> X -> Type}
+      {L}
+      (f : forall A B, P A B -> L)
+  : forall {A B C} (c : chain P A B) (c' : chain P B C),
+    chain_to_list f (c +++ c') =
+    app (chain_to_list f c) (chain_to_list f c').
+Proof.
+  intros.
+  induction c; cbn; auto.
+  rewrite IHc; auto.
+Qed.
+
 (* A bichain is just a chain on a product, but it makes a lot of things easier
    to spell it out . *)
 
@@ -178,7 +191,7 @@ Definition bichain_cons {X Y} {P : X -> Y -> X -> Y -> Type} {xA yA xB yB xC yC}
   P xA yA xB yB -> bichain P xB yB xC yC -> bichain P xA yA xC yC
   := @chain_cons (X * Y) (bicurry P) (xA, yA) (xB, yB) (xC, yC).
 (* Note to self: get more creative with notation *)
-Infix "::::" := bichain_cons (at level 60, right associativity).
+Infix ":2:" := bichain_cons (at level 60, right associativity).
 
 Definition bichain_fold_right {X Y} {P : X -> Y -> X -> Y -> Type}
            {F : X -> Y -> Type}
@@ -213,13 +226,6 @@ Proof.
   eapply f; eauto.
 Defined.
 
-(* chain_rect *)
-(*      : forall (X : Type) (P : X -> X -> Type) *)
-(*          (P0 : forall x x0 : X, chain P x x0 -> Type), *)
-(*        (forall A : X, P0 A A chain_nil) -> *)
-(*        (forall (A B C : X) (p : P A B) (c : chain P B C), P0 B C c -> P0 A C (p ::: c)) -> *)
-(*        forall (y y0 : X) (c : chain P y y0), P0 y y0 c *)
-
 Local Lemma surjective_pairing' {A B} (p : A * B) :
   p = (fst p, snd p).
 Proof.
@@ -227,81 +233,232 @@ Proof.
   auto.
 Defined.
 
-(* well this is ugly... *)
 Lemma bichain_rect X Y (P : X -> Y -> X -> Y -> Type)
       (motive : forall {xA xB yA yB}, bichain P xA xB yA yB -> Type)
       (case_nil : forall {x y}, @motive x y x y chain_nil)
       (case_cons : forall {xA yA xB yB xC yC}
                           (x : P xA yA xB yB)
                           (xs : bichain P xB yB xC yC),
-          motive xs -> motive (x :::: xs)) :
+          motive xs -> motive (x :2: xs)) :
   forall {xA yA xB yB} (c : bichain P xA yA xB yB), motive c.
 Proof.
-  intros ? ? ? ?.
-
-  set (A := (xA, yA)).
-  set (B := (xB, yB)).
-  replace xA with (fst A) by auto.
-  replace yA with (snd A) by auto.
-  replace xB with (fst B) by auto.
-  replace yB with (snd B) by auto.
-  clearbody A B.
-  clear xA yA xB yB.
-
   intros.
 
-  unfold bichain in *.
-  set (P' := bicurry P) in *.
-  pose (m' := dep_bicurry motive).
-  unfold bicurry in m'.
+  pose proof chain_rect (X * Y) (bicurry P).
 
-  change (m' (fst A, snd A) (fst B, snd B) c).
-  assert (case_nil' : forall A, m' (fst A, snd A) (fst A, snd A) chain_nil). {
-    intros [? ?].
+  (* "transparent assert" from https://sympa.inria.fr/sympa/arc/coq-club/2015-10/msg00047.html *)
+  simple refine (let motive' : forall A B : X * Y, chain (bicurry P) A B -> Type := _ in _). {
+    intros.
+    destruct_pairs.
+    eapply motive.
+    exact X1.
+  }
+
+  change (motive' _ _ c).
+  apply X0; intros; destruct_pairs. {
     apply case_nil.
-  }
-  clear case_nil.
-  assert (case_cons' : forall A B C x xs,
-             m' (fst B, snd B) (fst C, snd C) xs ->
-             m' (fst A, snd A) (fst C, snd C) (x ::: xs)).
-  {
-    intros [? ?] [? ?] [? ?] ? ? ?.
-    apply case_cons.
-    apply X0.
-  }
-  clearbody m'.
-  clear case_cons motive.
-  clearbody P'.
-  clear P.
-  cbn in *.
-
-  pose (H := @surjective_pairing' X Y).
-
-  assert ({c' : chain P' A B &
-                m' A B (rew [fun A => chain P' A _] H A in
-                           rew [chain P' A] H B in c') ->
-                m' (fst A, snd A) (fst B, snd B) c}).
-  {
-    destruct A, B.
-    cbn in *.
-    exists c.
-
-    exact id.
-  }
-
-  destruct X0 as [c' H0].
-  apply H0.
-  clear H0 c.
-
-  induction c'. {
-    specialize (case_nil' A).
-    destruct A.
-    cbn in *.
-    assumption.
   } {
-    specialize (case_cons' A B C).
-    destruct A, B, C.
-    cbn in *.
-    auto.
+    apply case_cons; auto.
   }
 Qed.
+
+(* A trichain is just a chain on even more products!, this is getting stupid... *)
+
+Local Notation "'π0' x" := (fst (fst x)) (at level 200).
+Local Notation "'π1' x" := (snd (fst x)) (at level 200).
+Local Notation "'π2' x" := (snd x) (at level 200).
+
+Definition tricurry {A B C D E F G} (f : A -> B -> C -> D -> E -> F -> G)
+  : (A * B * C) -> (D * E * F) -> G :=
+  fun abc def => f (π0 abc) (π1 abc) (π2 abc) (π0 def) (π1 def) (π2 def).
+
+Lemma dep_tricurry {A B C D E F} {G : A -> B -> C -> D -> E -> F -> Type}
+      (f : forall A B C D E F, G A B C D E F)
+  : forall (abc : A * B * C) (def : D * E * F),
+    tricurry G abc def.
+Proof.
+  intros [[? ?] ?] [[? ?] ?].
+  apply f.
+Defined.
+Print dep_tricurry.
+
+
+Section trichain.
+  Context {X Y Z : Type} {P : X -> Y -> Z -> X -> Y -> Z -> Type}.
+
+  Definition trichain (xA : X) (yA : Y) (zA : Z) (xB : X) (yB : Y) (zB : Z)
+    : Type := @chain
+                (X * Y * Z)
+                (tricurry P)
+                (xA, yA, zA)
+                (xB, yB, zB).
+
+  Definition trichain_cons
+             {xA yA zA xB yB zB xC yC zC} :
+    P xA yA zA xB yB zB -> trichain xB yB zB xC yC zC -> trichain xA yA zA xC yC zC
+    := @chain_cons (X * Y * Z) (tricurry P) (xA, yA, zA) (xB, yB, zB) (xC, yC, zC).
+  (* Note to self: get more creative with notation *)
+  Infix ":3:" := trichain_cons (at level 60, right associativity).
+
+  Definition prod3_curry {A B C D} (f : A -> B -> C -> D) : A * B * C -> D :=
+    fun abc =>
+      f (π0 abc) (π1 abc) (π2 abc).
+
+  Definition trichain_fold_right
+             {F : X -> Y -> Z -> Type}
+             (f : forall {xA yA zA xB yB zB}, P xA yA zA xB yB zB -> F xB yB zB -> F xA yA zA)
+             {xB yB zB}
+             (b : F xB yB zB)
+             {xA : X} {yA : Y} {zA : Z}
+             (c : trichain xA yA zA xB yB zB)
+    : F xA yA zA.
+  Proof.
+    refine
+      (@chain_fold_right
+         (X * Y * Z)
+         (tricurry P)
+         (prod3_curry _)
+         _
+         (xB, yB, zB)
+         b
+         (xA, yA, zA)
+         c).
+    intros [[? ?] ?] [[? ?] ?] ? ?.
+    exact (f _ _ _ _ _ _ X0 X1).
+  Defined.
+
+  Definition trichain_to_list
+             {L : Type}
+             (f : forall {xA yA zA xB yB zB}, P xA yA zA xB yB zB -> L)
+             {xA yA zA xB yB zB} (c : trichain xA yA zA xB yB zB) : list L.
+  Proof.
+    refine (chain_to_list _ c).
+    intros [[? ?] ?] [[? ?] ?] ?.
+    eapply f; eauto.
+  Defined.
+
+  Local Lemma surjective_pairing'' {A B C} : forall (p : A * B * C),
+      p = (π0 p, π1 p, π2 p).
+  Proof.
+    intros [[? ?] ?].
+    auto.
+  Defined.
+
+  (* well this is ugly... *)
+  Lemma trichain_rect
+        (motive : forall {xA yA zA xB yB zB}, trichain xA yA zA xB yB zB -> Type)
+        (case_nil : forall {x y z}, @motive x y z x y z chain_nil)
+        (case_cons : forall {xA yA zA xB yB zB xC yC zC}
+                            (x : P xA yA zA xB yB zB)
+                            (xs : trichain xB yB zB xC yC zC),
+            motive xs -> motive (x :3: xs)) :
+    forall {xA yA zA xB yB zB} (c : trichain xA yA zA xB yB zB), motive c.
+  Proof.
+    intros ? ? ? ? ? ?.
+
+    set (A := (xA, yA, zA)).
+    set (B := (xB, yB, zB)).
+    replace xA with (π0 A) by auto.
+    replace yA with (π1 A) by auto.
+    replace zA with (π2 A) by auto.
+    replace xB with (π0 B) by auto.
+    replace yB with (π1 B) by auto.
+    replace zB with (π2 B) by auto.
+    clearbody A B.
+    clear xA yA zA xB yB zB.
+
+    intros.
+
+    unfold trichain in *.
+    set (P' := tricurry P) in *.
+    pose (m' := dep_tricurry motive).
+    unfold tricurry in m'.
+
+    change (m' (_, _, _) (_, _, _) c).
+    assert (case_nil' : forall A, m' (π0 A, π1 A, π2 A)
+                                     (π0 A, π1 A, π2 A) chain_nil). {
+      intros [[? ?] ?].
+      apply case_nil.
+    }
+    clear case_nil.
+    assert (case_cons' : forall A B C x xs,
+               m' (π0 B, π1 B, π2 B) (π0 C, π1 C, π2 C) xs ->
+               m' (π0 A, π1 A, π2 A) (π0 C, π1 C, π2 C) (x ::: xs)).
+    {
+      intros [[? ?] ?] [[? ?] ?] [[? ?] ?] ? ? ?.
+      apply case_cons.
+      apply X0.
+    }
+    clearbody m'.
+    clear case_cons motive.
+    clearbody P'.
+    clear P.
+
+    pose (H := @surjective_pairing'' X Y Z).
+
+    assert ({c' : chain P' A B &
+                  m' A B (rew [fun A => chain P' A _] H A in
+                             rew [chain P' A] H B in c') ->
+                  m' (π0 A, π1 A, π2 A) (π0 B, π1 B, π2 B) c}).
+    {
+      destruct A as [[? ?] ?], B as [[? ?] ?].
+      cbn in *.
+      exists c.
+
+      exact id.
+    }
+
+    destruct X0 as [c' H0].
+    apply H0.
+    clear H0 c.
+
+    induction c'. {
+      specialize (case_nil' A).
+      destruct A as [[? ?] ?].
+      cbn in *.
+      assumption.
+    } {
+      specialize (case_cons' A B C).
+      destruct A as [[? ?] ?], B as [[? ?] ?], C as [[? ?] ?].
+      cbn in *.
+      auto.
+    }
+  Qed.
+
+  Definition trichain_snoc {xA yA zA xB yB zB xC yC zC} :
+    trichain xA yA zA xB yB zB -> P xB yB zB xC yC zC -> trichain xA yA zA xC yC zC :=
+    fun c x => c +++ x :3: chain_nil.
+
+  Lemma rev_trichain_rect
+        (motive : forall xA yA zA xB yB zB, trichain xA yA zA xB yB zB -> Type)
+        (case_nil : forall xA yA zA, motive xA yA zA xA yA zA chain_nil)
+        (case_snoc : forall xA yA zA xB yB zB xC yC zC
+                            (x : P xB yB zB xC yC zC)
+                            (c : trichain xA yA zA xB yB zB),
+            motive xA yA zA xB yB zB c -> motive xA yA zA xC yC zC (trichain_snoc c x))
+    : forall {xA yA zA xB yB zB} (c : trichain xA yA zA xB yB zB), motive xA yA zA xB yB zB c.
+  Proof.
+    intros.
+    pose proof rev_chain_rect (X * Y * Z) (tricurry P).
+
+    (* "transparent assert" from https://sympa.inria.fr/sympa/arc/coq-club/2015-10/msg00047.html *)
+    simple refine (let motive' : forall A B : X * Y * Z, chain (tricurry P) A B -> Type := _ in _). {
+      clear_except motive.
+      intros.
+      destruct_pairs.
+      eapply motive.
+      exact X0.
+    }
+    change (motive' _ _ c).
+    apply X0; intros; destruct_pairs. {
+      apply case_nil.
+    } {
+      apply case_snoc; auto.
+    }
+  Qed.
+End trichain.
+
+Arguments trichain {X Y Z} P.
+Infix ":3:" := trichain_cons (at level 60, right associativity).
+Arguments trichain_rect : clear implicits.
+Arguments rev_trichain_rect : clear implicits.

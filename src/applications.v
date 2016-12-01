@@ -100,80 +100,6 @@ Proof.
   reflexivity.
 Qed.
 
-(* A subset of things that can be tonellied *)
-(* TODO: figure out exactly what's needed to make this not a whitelist *)
-Inductive interchangable : forall {A}, Meas A -> Type :=
-| interchangable_μ {τ} (e : expr · τ) : interchangable (μ e)
-| interchangable_sig_fi {A} (m : Meas A) : SigmaFinite m -> interchangable m
-.
-Hint Constructors interchangable.
-
-(* Lemma tonelli_μ {τ0 τ1 B} *)
-(*       (e0 : expr · τ0) *)
-(*       (e1 : expr · τ1) *)
-(*       (f : val τ0 -> val τ1 -> Meas B) : *)
-(*   μ e0 >>= (fun x => μ e1 >>= (fun y => f x y)) = *)
-(*   μ e1 >>= (fun y => μ e0 >>= (fun x => f x y)). *)
-(* Proof. *)
-(* Abort. *)
-
-Lemma tonelli_μ_and_finite {τ B C}
-      (μFin : Meas B)
-      (f : val τ -> B -> Meas C)
-      (e : expr · τ) :
-  SigmaFinite μFin ->
-  μ e >>= (fun x => μFin >>= (fun y => f x y)) =
-  μFin >>= (fun y => μ e >>= (fun x => f x y)).
-Proof.
-  intros.
-
-  extensionality A.
-
-  rewrite μe_eq_μEntropy.
-  setoid_rewrite μe_eq_μEntropy.
-  setoid_rewrite tonelli_sigma_finite; auto.
-  unfold ">>=".
-  integrand_extensionality σ0.
-  decide_eval as [v0 w0 ex0 u0]. {
-    simpl.
-    apply integration_linear_mult_r.
-  } {
-    simpl.
-    rewrite <- integration_linear_mult_r.
-    ring.
-  }
-Qed.
-
-Lemma tonelli
-      {A B C} (μ0 : Meas A) (μ1 : Meas B)
-      (f : A -> B -> Meas C) :
-  interchangable μ0 ->
-  interchangable μ1 ->
-  μ0 >>= (fun x0 => μ1 >>= (fun x1 => f x0 x1)) =
-  μ1 >>= (fun x1 => μ0 >>= (fun x0 => f x0 x1)).
-Proof.
-  intros.
-
-  extensionality ev.
-  d_destruct (X, X0). {
-    rewrite !μe_eq_μEntropy2.
-    setoid_rewrite tonelli_sigma_finite at 1; auto.
-    integrand_extensionality σ0.
-    integrand_extensionality σ1.
-
-    decide_eval as [v0 w0 ex0 u0].
-    decide_eval as [v1 w1 ex1 u1].
-    simpl.
-    ring.
-  } {
-    rewrite tonelli_μ_and_finite; auto.
-  } {
-    rewrite tonelli_μ_and_finite; auto.
-  } {
-    apply tonelli_sigma_finite; auto.
-  }
-Qed.
-
 Lemma add_comm_related Γ (e0 e1 : expr Γ ℝ) :
   (EXP Γ ⊢ e0 +! e1 ≈ e1 +! e0 : ℝ).
 Proof.
@@ -384,13 +310,6 @@ Proof.
   apply val_is_dirac.
 Qed.
 
-Lemma the_infinite_cons_doesnt_exist {A} {x : A} {xs} : (x :: xs <> xs).
-Proof.
-  intro.
-  change ((x :: nil) ++ xs = nil ++ xs) in H.
-  apply app_inv_tail in H.
-  discriminate H.
-Qed.
 
 Definition simple_ctx_frame Γ τo τh := (FRAME Γ ⊢ [Γ ⊢ τh] : τo).
 Definition simple_ctx Γ := chain (simple_ctx_frame Γ).
