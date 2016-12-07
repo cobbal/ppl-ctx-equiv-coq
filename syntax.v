@@ -254,6 +254,18 @@ Arguments mk_val {τ} e H.
 Coercion expr_of_val {τ} : val τ -> expr · τ :=
   fun v => let (e, _) := v in e.
 
+Lemma val_eq {τ} {v0 v1 : val τ} :
+  @eq (expr · τ) v0 v1 ->
+  @eq (val τ) v0 v1.
+Proof.
+  intros.
+  destruct v0, v1.
+  cbn in *.
+  subst.
+  rewrite (is_val_unique H0 H1).
+  auto.
+Qed.
+
 Definition v_real r : val ℝ :=
   mk_val (e_real r) I.
 
@@ -332,6 +344,8 @@ Ltac absurd_val :=
   match goal with
   | [ H : (expr_of_val _) = _ |- _ ] =>
     contradiction (for_absurd_val H)
+  | [ H : _ = (expr_of_val _) |- _ ] =>
+    contradiction (for_absurd_val (eq_sym H))
   end.
 
 Inductive dep_env {A} (v : A -> Type) : Env A -> Type :=
