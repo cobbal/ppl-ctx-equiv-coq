@@ -95,11 +95,11 @@ Qed.
 
 (* A subset of things that can be tonellied *)
 (* TODO: figure out exactly what's needed to make this not a whitelist *)
-Inductive tonelliable : forall {A}, Meas A -> Type :=
-| tonelliable_μ {τ} (e : expr · τ) : tonelliable (μ e)
-| tonelliable_sig_fi {A} (m : Meas A) : SigmaFinite m -> tonelliable m
+Inductive interchangable : forall {A}, Meas A -> Type :=
+| interchangable_μ {τ} (e : expr · τ) : interchangable (μ e)
+| interchangable_sig_fi {A} (m : Meas A) : SigmaFinite m -> interchangable m
 .
-Hint Constructors tonelliable.
+Hint Constructors interchangable.
 
 (* Lemma tonelli_μ {τ0 τ1 B} *)
 (*       (e0 : expr · τ0) *)
@@ -120,11 +120,12 @@ Lemma tonelli_μ_and_finite {τ B C}
 Proof.
   intros.
 
-  extensionality ev.
+  extensionality A.
 
   rewrite μe_eq_μEntropy.
   setoid_rewrite μe_eq_μEntropy.
   setoid_rewrite tonelli_sigma_finite; auto.
+  unfold ">>=".
   integrand_extensionality σ0.
   decide_eval as [v0 w0 ex0 u0]. {
     simpl.

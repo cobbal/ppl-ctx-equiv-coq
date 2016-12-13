@@ -253,6 +253,7 @@ Ltac what_equality_am_I_proving :=
   | _ => idtac "it doesn't look like your goal is an equality"
   end.
 
+(* TODO: rewrite as μEntropy(True) = 1 and linearity *)
 Axiom int_const_entropy :
   forall (v : R+)
          (f : Entropy -> R+),
@@ -494,7 +495,6 @@ Proof.
   setoid_rewrite int_const_entropy; auto.
 Qed.
 
-(* Theorem 1 *)
 Theorem μe_eq_μEntropy :
   forall {τ B} (e : expr · τ)
          (f : val τ -> Meas B),
@@ -519,9 +519,7 @@ Proof.
   f_equal.
 
   destruct (ev _ _); simpl. {
-    pose proof integration_of_indicator lebesgue_pos_measure.
-    unfold indicator in *.
-    rewrite H.
+    setoid_rewrite integration_of_indicator.
     apply lebesgue_pos_measure_interval.
   } {
     setoid_replace 0 with (0 * 0) by ring.
