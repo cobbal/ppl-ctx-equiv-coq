@@ -267,23 +267,36 @@ Section AbstractMachine.
       step_n (S n) s0 s2.
 
   Reserved Infix "-->*" (at level 84).
-  Inductive step_star : forall {τ τ'}, state τ -> state τ' -> Type :=
-  | step_refl : forall {τ} (s : state τ),
-      s -->* s
-  | step_one : forall {τ0 τ1 τ2} (s0 : state τ0) (s1 : state τ1) (s2 : state τ2),
-      s0 --> s1 ->
-      s1 -->* s2 ->
-      s0 -->* s2
-  where "s0 -->* s1" := (step_star s0 s1).
+  (* Inductive step_star : forall {τ τ'}, state τ -> state τ' -> Type := *)
+  (* | step_refl : forall {τ} (s : state τ), *)
+  (*     s -->* s *)
+  (* | step_one : forall {τ0 τ1 τ2} (s0 : state τ0) (s1 : state τ1) (s2 : state τ2), *)
+  (*     s0 --> s1 -> *)
+  (*     s1 -->* s2 -> *)
+  (*     s0 -->* s2 *)
+  (* where "s0 -->* s1" := (step_star s0 s1). *)
+
+  Definition step_star {τ τ'} (s0 : state τ) (s1 : state τ') : Type :=
+    {n : nat & step_n n s0 s1}.
+  Infix "-->*" := step_star.
+
+  Definition step_refl {τ} (s : state τ) : s -->* s := existT _ O (step_O s).
+  Definition step_one {τ0 τ1 τ2} (s0 : state τ0) (s1 : state τ1) (s2 : state τ2)
+             (H : s0 --> s1)
+             (H0 : s1 -->* s2)
+    : s0 -->* s2 :=
+    let (n, H1) := H0 in
+    existT _ (S n) (step_S n s0 s1 s2 H H1).
 
   Lemma step_star_trans {τ0 τ1 τ2} (s0 : state τ0) (s1 : state τ1) (s2 : state τ2) :
     s0 -->* s1 ->
     s1 -->* s2 ->
     s0 -->* s2.
   Proof.
-    intros.
-    induction H; auto.
-    eapply step_one; eauto.
+    intros [n0 H0] [n1 H1].
+    exists (n0 + n1)%nat.
+    induction H0; auto.
+    eapply step_S; eauto.
   Qed.
 
   Lemma big_implies_small {τ} (σ : Entropy) (e : expr · τ) (v : val τ) (w : R+) :
@@ -296,7 +309,8 @@ Section AbstractMachine.
     induction H; intros. {
       exists σ.
       replace (w0 * 1) with w0 by ring.
-      apply step_refl.
+      exists O.
+      constructor.
     } {
       cbn in *.
       specialize (IHeval1 w3 (kAppFn (πR σ) ea k)).
@@ -359,12 +373,37 @@ Section AbstractMachine.
     }
   Qed.
 
+  (* unabstract relates AM states back to terms (with some entropy manipulation.
+     This is needed to be the intermediate correspondance between big and small
+     step. *)
+  Fixpoint unabstract {τ} (e : expr · τ) (σ : Entropy) (k : kont τ)
+    : (expr · τP ⨉ Entropy) :=
+    match k in kont τ' return τ = τ' -> (expr · τP ⨉ Entropy) with
+    | kHalt => fun τeq => (rew τeq in e, σ)
+    | kAppFn σ' ea k' =>
+      fun τeq =>
+        unabstract (e_app (rew τeq in e) ea) (join σ σ') k'
+    | kAppArg σ' vf k' =>
+      fun τeq =>
+        unabstract (e_app vf (rew τeq in e)) (join σ σ') k'
+    | kFactor k' =>
+      fun τeq =>
+        unabstract (e_factor (rew τeq in e)) σ k'
+    | kPlusL σ' er k' =>
+      fun τeq =>
+        unabstract (e_plus (rew τeq in e) er) (join σ σ') k'
+    | kPlusR vl k' =>
+      fun τeq =>
+        unabstract (e_plus vl (rew τeq in e)) σ k'
+    end eq_refl.
+
 End AbstractMachine.
 Arguments mk_state {τP τ} c σ w k.
 
 Module AbstractMachineNotations.
   Infix "-->" := (step _) (at level 84).
   Infix "-->*" := (step_star _) (at level 84).
+  Notation "s -->^{ n } s'" := (step_n _ n s s') (at level 84).
 End AbstractMachineNotations.
 Import AbstractMachineNotations.
 
@@ -386,7 +425,6 @@ Proof.
   } {
     ennr.
     inject H1.
-    SearchAbout (_ * _ = _ * _)%R.
     eapply Rmult_eq_reg_l. {
       ring_simplify.
       exact (eq_sym H3).
@@ -422,20 +460,291 @@ Qed.
 Lemma extend_kont_step_star {τ τ' τP τP'} (e : expr · τ) (e' : expr · τ')
       (σ σ' : Entropy)
       (w w' : R+)
-      (k : kont τP τ) (k' : kont τP τ') (k'' : kont τP' τP) :
-  mk_state e σ w k -->* mk_state e' σ' w' k' ->
-  mk_state e σ w (kont_compose k k'') -->* mk_state e' σ' w' (kont_compose k' k'').
+      (k : kont τP τ) (k' : kont τP τ') (k'' : kont τP' τP)
+      (n : nat) :
+  mk_state e σ w k -->^{n} mk_state e' σ' w' k' ->
+  mk_state e σ w (kont_compose k k'') -->^{n} mk_state e' σ' w' (kont_compose k' k'').
 Proof.
   intros.
   dependent induction H. {
     constructor.
   } {
     destruct s1.
-    econstructor; eauto.
-    apply extend_kont_step.
-    auto.
+    econstructor; auto.
+    apply extend_kont_step; auto.
   }
 Qed.
+
+Lemma step_weight_1 {τ τ' τP} {e : expr · τ} {e' : expr · τ'} {σ σ' : Entropy}
+      {k : kont τP τ} {k' : kont τP τ'} {w w' : R+} :
+  mk_state e σ w k --> mk_state e' σ' w' k' ->
+  {wdiff : R+ | w' = w * wdiff /\ 0 < wdiff /\ wdiff < infinite}.
+Proof.
+  intros.
+  assert (0 < 1) by (cbn; exact Rlt_0_1).
+  assert (1 < infinite) by (cbn; trivial).
+  d_destruct H; try solve [exists 1; split; auto; ring].
+
+  repeat econstructor.
+Admitted.
+
+Lemma step_weights {τ τ' τP} {e : expr · τ} {e' : expr · τ'} {σ σ' : Entropy}
+      {k : kont τP τ} {k' : kont τP τ'} {w w' : R+} {n : nat} :
+  mk_state e σ w k -->^{n} mk_state e' σ' w' k' ->
+  {wdiff : R+ & w' = w * wdiff}.
+Proof.
+  intros.
+  move n after τ.
+  revert_until n.
+  induction n; intros. {
+    d_destruct H.
+    exists 1.
+    ring.
+  } {
+    d_destruct H.
+    destruct s1.
+    destruct (IHn _ _ _ _ _ _ _ _ _ _ _ H).
+    subst.
+    destruct (step_weight_1 s) as [? [? [? ?]]].
+    subst.
+    eexists.
+    rewrite <- ennr_mul_assoc.
+    reflexivity.
+  }
+Qed.
+
+Lemma multiply_step {τ τ' τP e e' σ σ' w w'} {k : kont τP τ} {k' : kont τP τ'} w0 :
+  mk_state e σ w k --> mk_state e' σ' w' k' ->
+  mk_state e σ (w0 * w) k --> mk_state e' σ' (w0 * w') k'.
+Proof.
+  intros.
+  d_destruct H; try econstructor.
+  rewrite ennr_mul_assoc.
+  constructor.
+Qed.
+
+Lemma multiply_trace {τ τ' τP e e' σ σ' w w' n}
+      {k : kont τP τ} {k' : kont τP τ'} w0 :
+  mk_state e σ w k -->^{n} mk_state e' σ' w' k' ->
+  mk_state e σ (w0 * w) k -->^{n} mk_state e' σ' (w0 * w') k'.
+Proof.
+  intros.
+  move n after τ.
+  revert_until n.
+  induction n; intros. {
+    d_destruct H.
+    constructor.
+  } {
+    d_destruct H.
+    destruct s1.
+    apply (multiply_step w0) in s.
+    econstructor; eauto.
+  }
+Qed.
+
+Lemma unmultiply_ennr w' {w0} :
+  0 < w0 ->
+  w0 < infinite ->
+  (forall w, w0 * w = w0 * w' -> w = w').
+Proof.
+  intros Hw0 Hw0' w H.
+  destruct w0; try contradiction; cbn in *.
+  destruct w, w'; auto. {
+    inject H.
+    ennr.
+    apply (Rmult_eq_reg_l r); auto.
+    exact (not_eq_sym (Rlt_not_eq _ _ Hw0)).
+  } {
+    exfalso.
+    unfold ennr_mult in H.
+    destruct Req_EM_T; try discriminate.
+    contradict e.
+    exact (Rlt_not_eq _ _ Hw0).
+  } {
+    exfalso.
+    unfold ennr_mult in H.
+    destruct Req_EM_T; try discriminate.
+    contradict e.
+    exact (Rlt_not_eq _ _ Hw0).
+  }
+Qed.
+
+Lemma unmultiply_step {τ τ' τP e e' σ σ' w w' w0}
+      {k : kont τP τ} {k' : kont τP τ'} :
+  0 < w0 ->
+  w0 < infinite ->
+  mk_state e σ (w0 * w) k --> mk_state e' σ' (w0 * w') k' ->
+  mk_state e σ w k --> mk_state e' σ' w' k'.
+Proof.
+  intros Hw0 Hw0' H.
+
+  pose proof (unmultiply_ennr w' Hw0 Hw0').
+
+  d_destruct H;
+    try solve [specialize (H0 _ x);
+               subst;
+               econstructor].
+  rewrite <- ennr_mul_assoc in x.
+  specialize (H0 _ x).
+  subst.
+  constructor.
+Qed.
+
+Lemma unmultiply_trace {τ τ' τP e e' σ σ' w w' w0 n}
+      {k : kont τP τ} {k' : kont τP τ'} :
+  0 < w0 ->
+  w0 < infinite ->
+  mk_state e σ (w0 * w) k -->^{n} mk_state e' σ' (w0 * w') k' ->
+  mk_state e σ w k -->^{n} mk_state e' σ' w' k'.
+Proof.
+  intros.
+  move n after τ.
+  revert_until n.
+  induction n; intros. {
+    d_destruct H1.
+    pose proof unmultiply_ennr _ H H0 _ x.
+    subst.
+    constructor.
+  } {
+    d_destruct H1.
+    destruct s1.
+    destruct (step_weight_1 s) as [? [? [? ?]]].
+    subst.
+    rewrite <- ennr_mul_assoc in *.
+    apply (unmultiply_step H H0) in s.
+    econstructor; eauto.
+  }
+Qed.
+
+Lemma small_implies_big {τ τP} (e : expr · τ) (σ σP : Entropy) (k : kont τP τ)
+      (v : val τP) (w : R+) (eP : expr · τP) :
+  (eP, σP) = unabstract _ e σ k ->
+  mk_state e σ 1 k -->* mk_state v σP w (kHalt _) ->
+  (EVAL σP ⊢ eP ⇓ v, w).
+Proof.
+  intros Hu [n H].
+  move n after τ.
+
+  enough ((forall w0,
+              mk_state e σ w0 k -->^{ n} mk_state v σP (w0 * w) (kHalt τP)) ->
+          EVAL σP ⊢ eP ⇓ v, w).
+  {
+    apply H0.
+    intros.
+    replace w0 with (w0 * 1) at 1 by ring.
+    apply multiply_trace; auto.
+  }
+
+  intros.
+  clear H.
+  rename H0 into H.
+
+  revert_until n.
+  induction n; intros. {
+    specialize (H 1).
+    d_destruct H.
+    enough (w = 1) by (subst; constructor).
+    destruct w. {
+      inject x.
+      ennr.
+      ring_simplify in H0.
+      auto.
+    } {
+      unfold ennr_mult in x.
+      destruct Req_EM_T; try discriminate.
+      contradict e.
+      apply not_eq_sym, R1_neq_R0.
+    }
+  } {
+    evar (ww : R+).
+    specialize (H ww).
+    d_destruct H.
+    destruct s1.
+    (* destruct (step_weight_1 s) as [? [? [? ?]]]. *)
+    (* subst. *)
+    pose proof (step_weights H).
+    destruct H0 as [w1 ?].
+    rewrite e0 in *.
+
+    replace w0 with (w0 * 1) in H at 1 by ring.
+    apply unmultiply_trace in H.
+    specialize (IHn τ1 τP c σ0 σP k0 v (w0 * w1) eP).
+
+    apply IHn; revgoals. {
+      intros.
+      replace w2 with (w2 * 1) at 1 by ring.
+      apply multiply_trace.
+    }
+
+    (* assert (0 < w0 * x). { *)
+    (*   destruct w0, x; try contradiction. *)
+    (*   unfold ennr_mult. *)
+    (*   cbn. *)
+    (*   apply Rmult_lt_0_compat; auto. *)
+    (* } *)
+    (* specialize (IHn H0); clear H0. *)
+    (* assert (w0 * x < infinite). { *)
+    (*   destruct w0, x; try contradiction. *)
+    (*   auto. *)
+    (* } *)
+    (* specialize (IHn H0); clear H0. *)
+
+    enough ((eP, σP) = unabstract τP c σ0 k0). {
+      replace w0 with (w0 * 1) in H at 1 by ring.
+      apply unmultiply_trace in H; auto.
+      (* rewrite ennr_mul_assoc in H. *)
+
+      specialize (IHn H0 H).
+      apply IHn.
+      assert (w = x * x0). {
+        revert Hw0 Hw1 H1 H2 e0.
+        clear.
+        intros.
+        destruct w0, x; try contradiction.
+        cbn in *.
+        unfold ennr_mult in *.
+        destruct w, x0; cbn in *. {
+          ennr.
+          inject e0.
+          apply (Rmult_eq_reg_l r). {
+            rewrite <- Rmult_assoc.
+            auto.
+          } {
+            apply not_eq_sym.
+            apply Rlt_not_eq.
+            auto.
+          }
+        } {
+          exfalso.
+          destruct Req_EM_T; try discriminate.
+          inject e0.
+          contradict e.
+          apply Rlt_not_eq.
+          apply Rmult_lt_0_compat; auto.
+        } {
+          exfalso.
+          destruct Req_EM_T; try discriminate.
+          contradict e.
+          apply Rlt_not_eq.
+          auto.
+        } {
+          destruct (Req_EM_T 0 r0); auto.
+          contradict e.
+          apply Rlt_not_eq.
+          auto.
+        }
+      }
+      subst.
+      enough (w = x * x0). {
+        subst.
+        apply IHn.
+      }
+    }
+
+
+
+    specialize (IHn _ _ _ _ _ _ _ _ _ _ _ _ Heqp H).
+  }
 
 
 Lemma small_implies_big {τ} (σ : Entropy) (e : expr · τ) (v : val τ) (w w0 : R+) :
@@ -445,12 +754,29 @@ Lemma small_implies_big {τ} (σ : Entropy) (e : expr · τ) (v : val τ) (w w0 
           mk_state e σ w0 (kHalt τ) -->* mk_state v σ' (w0 * w) (kHalt τ)} ->
   (EVAL σ ⊢ e ⇓ v, w).
 Proof.
-  intros Hw0 Hw0' [σ' H].
+  intros Hw0 Hw0' [σ' [n H]].
 
-  assert (forall τP (k : kont τP τ) , mk_state e σ w0 k -->* mk_state v σ' (w0 * w) k). {
+  assert (forall τP (k : kont τP τ) , mk_state e σ w0 k -->^{n} mk_state v σ' (w0 * w) k). {
     intros.
     apply extend_kont_step_star with (k0 := kHalt τ) (k' := kHalt τ).
     auto.
+  }
+  clear H.
+  rename H0 into H.
+
+
+
+  move n after τ.
+  revert_until n.
+  induction n; intros. {
+    specialize (H _ (kHalt _)).
+    d_destruct H.
+    replace w with 1 by (symmetry; eapply ennr_mul_must_be_1; eauto).
+    constructor.
+  } {
+    pose proof (H _ (kHalt _)).
+    d_destruct H0.
+    specialize (IHn _ _ _ _ _ _ _ _ _ H0).
   }
 
   refine
