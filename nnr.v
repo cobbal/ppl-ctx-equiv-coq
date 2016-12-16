@@ -190,3 +190,10 @@ Qed.
 Notation "a  '[>]'  b" := (ennr_gt_dec a b) (at level 70, no associativity).
 
 Add Ring ennr_semiring : ennr_semiring.
+
+Lemma ennr_mul_1_r : forall n, n * 1 = n.
+Proof.
+  intros.
+  rewrite ennr_mul_comm.
+  apply ennr_mul_1_l.
+Qed.
