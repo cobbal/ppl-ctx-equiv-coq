@@ -109,3 +109,18 @@ Proof.
   rewrite <- IHi.
   auto.
 Qed.
+
+Lemma π_O_join (σl σr : Entropy) : π 0 (join σl σr) = σl.
+Proof.
+  apply πL_join.
+Qed.
+
+Lemma π_S_join (n : nat) (σl σr : Entropy) : π (S n) (join σl σr) = π n σr.
+Proof.
+  unfold π.
+  fold π.
+  rewrite πR_join.
+  auto.
+Qed.
+
+Ltac π_join := repeat rewrite ?π_O_join, ?π_S_join in *.

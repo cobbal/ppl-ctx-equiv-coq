@@ -8,22 +8,13 @@ Require Import RelationClasses.
 
 Local Open Scope ennr.
 
-(* like a list, but with dependent types that must match between pairs *)
+(* a chain is like a list, but with dependent types that must link between
+   consequetive pairs. *)
 Inductive chain {X} {P : X -> X -> Type} : X -> X -> Type :=
 | chain_nil {A : X} : chain A A
 | chain_cons {A B C : X} :
     P A B -> chain B C -> chain A C
 .
-
-(* rev_list_ind *)
-(*      : forall (A : Type) (P : list A -> Prop), *)
-(*        P Datatypes.nil -> *)
-(*        (forall (a : A) (l : list A), P (rev l) -> P (rev (a :: l))) -> forall l : list A, P (rev l) *)
-(* chain_rect *)
-(*      : forall (X : Type) (P : X -> X -> Type) (P0 : forall x x0 : X, chain x x0 -> Type), *)
-(*        (forall A : X, P0 A A chain_nil) -> *)
-(*        (forall (A B C : X) (p : P A B) (c : chain B C), P0 B C c -> P0 A C (chain_cons p c)) -> *)
-(*        forall (y y0 : X) (c : chain y y0), P0 y y0 c *)
 
 Arguments chain {X} P _ _.
 Infix ":::" := chain_cons (at level 60, right associativity).
@@ -98,7 +89,7 @@ Proof.
   auto.
 Qed.
 
-Lemma rev_chain_rect {X} {P : X -> X -> Type}
+Lemma rev_chain_rect X (P : X -> X -> Type)
       (motive : forall A B, chain P A B -> Type)
       (case_nil : forall A, motive A A chain_nil)
       (case_snoc : forall A B C (x : P B C) (c : chain P A B),
@@ -129,74 +120,23 @@ Inductive kont_frame : Ty -> Ty -> Type :=
 Section AbstractMachine.
   (* τP is the type of the whole program *)
   Variables τP : Ty.
-  Definition result := option (val τP ⨉ R+).
 
+  (* a continuation is a stack of continuation frames. Sometimes it's convenient
+     to look at it as a top down stack, and other times it's a bottom-up stack.
+     The 'kont' type is intended as a innermost to outermost stack (head of the
+     list will be the next continuation that gets run). *)
   Definition kont τ := chain kont_frame τ τP.
   Definition kHalt : kont τP := chain_nil.
-  (* the explicit Type is needed here so that something doesn't get lowered to
-     set for some stupid reason I don't understand *)
-  Definition rev_kont τ := chain (@flip _ _ Type kont_frame) τP τ.
 
-  Lemma
-    kont_rect' (P : forall τ : Ty, kont τ -> Type)
-    (case_halt : P τP kHalt)
-    (case_app_fn :
-       forall (τa τr : Ty) (σ : Entropy) (ea : expr · τa) (k : kont τr),
-         P τr k -> P (τa ~> τr) (kAppFn σ ea ::: k))
-    (case_app_arg :
-       forall (τa τr : Ty) (σ : Entropy) (vf : val (τa ~> τr)) (k : kont τr),
-         P τr k -> P τa (kAppArg σ vf ::: k))
-    (case_factor :
-       forall k : kont ℝ,
-         P ℝ k -> P ℝ (kFactor ::: k))
-    (case_plus_l :
-       forall (σ : Entropy) (er : expr · ℝ) (k : kont ℝ),
-         P ℝ k -> P ℝ (kPlusL σ er ::: k))
-    (case_plus_r :
-       forall (vl : val ℝ) (k : kont ℝ),
-         P ℝ k -> P ℝ (kPlusR vl ::: k))
-    : forall {τ} k, P τ k.
-  Proof.
-    refine (fix F τ (k : kont τ) {struct k} : P τ k :=
-              match k as k' in (chain _ τ' τP')
-                    return (τ' = τ -> τP' = τP -> k' ~= k -> P τ k) with
-              | chain_nil => fun Hτ HτP Hk => _
-              | f ::: k'' => fun Hτ HτP Hk => _
-              end eq_refl eq_refl JMeq_refl).
-    {
-      repeat subst.
-      apply case_halt.
-    } {
-      repeat subst.
-      specialize (F _ k'').
-      destruct f; auto.
-    }
-  Qed.
+  (* rev_kont is the other way around (head of the list is the last continuation to run). *)
+  Definition rev_kont τ := chain (@flip _ _ Type kont_frame) τP τ.
+  (* the explicit Type is needed above so that something doesn't get lowered to
+     Set for some stupid reason I don't understand *)
 
   Inductive state τ :=
   | mk_state (c : expr · τ) (σ : Entropy) (k : kont τ)
   .
   Arguments mk_state {τ} c σ k.
-
-  Definition exstate := {τ : Ty & state τ}.
-  Definition mk_exstate {τ} c σ k :=
-    existT _ τ (mk_state c σ k).
-
-  Lemma dummy_entropy : Entropy.
-  Proof.
-    exists 0%R.
-    split. {
-      apply Rle_refl.
-    } {
-      apply Rlt_le.
-      apply Rlt_0_1.
-    }
-  Qed.
-
-  Lemma discriminate_option {A} {x : A} : (~ None = Some x).
-  Proof.
-    discriminate.
-  Qed.
 
   Reserved Infix "-->" (at level 84).
   Inductive step : forall {τ τ'}, state τ -> state τ' -> R+ -> Type :=
@@ -232,169 +172,6 @@ Section AbstractMachine.
        @mk_state ℝ (e_real (rl + rr)%R) σ k) 1
   where "s0 --> s1" := (step s0 s1).
 
-  Lemma decide_val {τ} (e : expr · τ) :
-    {is_val e} + {~ is_val e}.
-  Proof.
-    destruct e; cbn; solve [left; auto | right; auto].
-  Qed.
-
-  Lemma step_deterministic τ (s : state τ) :
-    {s'w : exstate ⨉ R+ &
-           let (s', w) := s'w in
-           (s --> projT2 s') w ⨉
-           forall s'' w', (s --> projT2 s'') w' -> s' = s'' /\ w = w'
-    } +
-    ({s'w : exstate ⨉ R+ &
-            let (s', w) := s'w in
-            (s --> projT2 s') w} -> False).
-  Proof.
-    destruct s.
-    destruct (decide_val c). {
-      destruct k using kont_rect'. {
-        right.
-        intros [[[τ' s'] w] H].
-        cbn in H.
-        inversion H; subst*. {
-          d_destruct H3.
-          contradiction i.
-        } {
-          revert H4 i; clear; intros.
-          d_destruct H4.
-          contradiction i.
-        } {
-          revert H4 i; clear; intros.
-          d_destruct H4.
-          contradiction i.
-        } {
-          revert H4 i; clear; intros.
-          d_destruct H4.
-          contradiction i.
-        }
-      } {
-        left.
-        pose (mk_val c i).
-        replace c with (v : expr · _) in * by auto.
-        clearbody v.
-        clear c i.
-
-        destruct_val v.
-
-        eexists (mk_exstate _ _ _, _) ; repeat constructor; [| inversion H; auto; fail].
-        destruct s'' as [τ' s''].
-        cbn in *.
-        d_destruct H.
-        destruct_val vf.
-        d_destruct x.
-        auto.
-      } {
-        left.
-        pose (mk_val c i).
-        replace c with (v : expr · _) in * by auto.
-        clearbody v.
-        clear c i.
-
-        destruct_val vf.
-
-        eexists (mk_exstate _ _ _, _); repeat constructor; [| inversion H; auto; fail].
-        destruct s'' as [τ' s''].
-        cbn in *.
-        d_destruct H; try absurd_val.
-
-        rewrite (val_eq x).
-        auto.
-      } {
-        pose (mk_val c i).
-        replace c with (v : expr · _) in * by auto.
-        clearbody v.
-        clear c i.
-
-        destruct_val v.
-        destruct (Rle_dec 0 r). {
-          left.
-
-          eexists (mk_exstate _ _ _, finite r r0); repeat constructor; [| inversion H; auto; fail].
-          destruct s'' as [τ' s''].
-          cbn in *.
-          d_destruct H.
-          auto.
-        } {
-          right.
-
-          intros [[[τ' s'] w] H].
-          cbn in *.
-
-          inversion H; subst.
-          contradiction.
-        }
-      } {
-        left.
-        pose (mk_val c i).
-        replace c with (v : expr · _) in * by auto.
-        clearbody v.
-        clear c i.
-
-        eexists (mk_exstate _ _ _, _); repeat constructor; [| inversion H; auto; fail].
-        destruct s'' as [τ' s''].
-        cbn in *.
-
-        d_destruct H; try absurd_val.
-
-        rewrite (val_eq x).
-        auto.
-      } {
-        left.
-        pose (mk_val c i).
-        replace c with (v : expr · _) in * by auto.
-        clearbody v.
-        clear c i.
-
-        destruct_val vl.
-        destruct_val v.
-
-        eexists (mk_exstate _ _ _, _); repeat constructor; [| inversion H; auto; fail].
-        destruct s'' as [τ' s''].
-        cbn in *.
-
-        d_destruct H; try absurd_val.
-        auto.
-      }
-    } {
-      left.
-      (* TODO: remove copy/paste *)
-      destruct c; cbn in n; try tauto. {
-        discriminate H.
-      } {
-        eexists (mk_exstate _ _ _, _); repeat constructor; [| inversion H; auto; fail].
-        destruct s'' as [τ' s''].
-        cbn in *.
-
-        d_destruct H; try absurd_val.
-        auto.
-      } {
-        eexists (mk_exstate _ _ _, _); repeat constructor; [| inversion H; auto; fail].
-        destruct s'' as [τ' s''].
-        cbn in *.
-
-        d_destruct H; try absurd_val.
-        auto.
-      } {
-        eexists (mk_exstate _ _ _, _); repeat constructor; [| inversion H; auto; fail].
-        destruct s'' as [τ' s''].
-        cbn in *.
-
-        d_destruct H; try absurd_val.
-        auto.
-      } {
-        eexists (mk_exstate _ _ _, _); repeat constructor; [| inversion H; auto; fail].
-        destruct s'' as [τ' s''].
-        cbn in *.
-
-        d_destruct H; try absurd_val.
-        auto.
-      }
-    }
-  Qed.
-
   Reserved Notation "s -->^[ n ] t" (at level 84).
   Inductive step_n : forall {τ τ'}, nat -> state τ -> state τ' -> R+ -> Type :=
   | step_O : forall {τ} (s : state τ),
@@ -406,14 +183,6 @@ Section AbstractMachine.
   where "s -->^[ n ] t" := (step_n n s t).
 
   Reserved Infix "-->*" (at level 84).
-  (* Inductive step_star : forall {τ τ'}, state τ -> state τ' -> Type := *)
-  (* | step_refl : forall {τ} (s : state τ), *)
-  (*     s -->* s *)
-  (* | step_one : forall {τ0 τ1 τ2} (s0 : state τ0) (s1 : state τ1) (s2 : state τ2), *)
-  (*     s0 --> s1 -> *)
-  (*     s1 -->* s2 -> *)
-  (*     s0 -->* s2 *)
-  (* where "s0 -->* s1" := (step_star s0 s1). *)
 
   Definition step_star {τ τ'} (s0 : state τ) (s1 : state τ') (w : R+) : Type :=
     {n : nat & (s0 -->^[n] s1) w}.
@@ -454,7 +223,6 @@ Section AbstractMachine.
       exists σ.
       apply step_refl.
     } {
-      cbn in *.
       specialize (IHeval1 (kAppFn (πR σ) ea ::: k)).
       specialize (IHeval2 (kAppArg (πR (πR σ)) (v_lam body) ::: k)).
       specialize (IHeval3 k).
@@ -469,7 +237,6 @@ Section AbstractMachine.
 
       eapply step_star_trans; eauto.
       eapply step_star_trans; eauto.
-      replace (e_lam body) with (v_lam body : expr · (τa ~> τr)) by auto.
       rewrite <- ennr_mul_1_l.
       eapply step_one; [constructor |].
 
@@ -479,8 +246,6 @@ Section AbstractMachine.
       eapply step_one; [constructor |].
       apply step_refl.
     } {
-      cbn in *.
-
       specialize (IHeval (kFactor ::: k)).
       destruct IHeval as [σ' IHeval].
 
@@ -510,8 +275,8 @@ Section AbstractMachine.
       rewrite <- ennr_mul_1_l.
       eapply step_one; [constructor |].
       eapply step_star_trans; eauto.
-      rewrite !rewrite_v_real in *.
       rewrite <- ennr_mul_1_l.
+      rewrite !rewrite_v_real.
       eapply step_one; [constructor |].
       rewrite <- ennr_mul_1_r.
       eapply step_star_trans; eauto.
@@ -522,6 +287,8 @@ Section AbstractMachine.
   Qed.
 End AbstractMachine.
 
+Arguments mk_state {τP τ} c σ k.
+
 Module AbstractMachineNotations.
   Infix "-->" := (step _) (at level 84).
   Infix "-->*" := (step_star _) (at level 84).
@@ -529,6 +296,30 @@ Module AbstractMachineNotations.
 End AbstractMachineNotations.
 Import AbstractMachineNotations.
 
+
+(* In order to get a big-step derivation from a small-step one, we're going to
+   need to be able to big-step the intermediate states. To do this, we simply
+   plug the expression back into the configuration and lie about entropy in ways
+   that the big step relation won't notice. *)
+
+(* Some arbitrary entropy will be needed when shoving values back into
+   expressions to be big-stepped. Since it won't be read, the value is
+   intentionally set to be opaque. *)
+Lemma dummy_entropy : Entropy.
+Proof.
+  exists 0%R.
+  split. {
+    apply Rle_refl.
+  } {
+    apply Rlt_le.
+    apply Rlt_0_1.
+  }
+Qed.
+
+(* First, we plug an expression/entropy into single frame. We will then lift it
+   two different ways to an entire continuation (forwards and reverse). Most of
+   the ugliness comes from fighting dependent types, the only really interesting
+   part is the `dummy_entropy` that gets thrown in. *)
 Definition unabstract_frame {τo τi} (eσ : expr · τi ⨉ Entropy) (f : kont_frame τi τo)
   : (expr · τo ⨉ Entropy) :=
   match f in (kont_frame τi' τo') return τi = τi' -> (expr · τo' ⨉ Entropy) with
@@ -544,9 +335,6 @@ Definition unabstract_frame {τo τi} (eσ : expr · τi ⨉ Entropy) (f : kont_
                              join dummy_entropy (join (snd eσ) dummy_entropy))
   end eq_refl.
 
-(* unabstract relates AM states back to terms (with some entropy manipulation.
-   This is needed to be the intermediate correspondance between big and small
-   step. unabstract_rev does the same, but inducts outside-in. *)
 Fixpoint unabstract_rev {τo τi} (eσ : expr · τi ⨉ Entropy) (rk : rev_kont τo τi)
   : (expr · τo ⨉ Entropy) :=
   match rk in chain _ τo' τi' return (τi = τi' -> expr · τo' ⨉ Entropy) with
@@ -556,9 +344,6 @@ Fixpoint unabstract_rev {τo τi} (eσ : expr · τi ⨉ Entropy) (rk : rev_kont
       unabstract_frame (unabstract_rev eσ (rew <- Hτi in rk') : expr · τm ⨉ Entropy) f
   end eq_refl.
 
-
-Check kont_frame.
-Check (flip kont_frame).
 Definition unabstract {τo τi} (eσ : expr · τi ⨉ Entropy) (k : kont τo τi)
   : (expr · τo ⨉ Entropy) := unabstract_rev eσ (chain_rev k).
 
@@ -574,24 +359,6 @@ Fixpoint unabstract' {τP τ} (eσ : expr · τ ⨉ Entropy) (k : kont τP τ)
       unabstract' (unabstract_frame eσ (rew <-[fun t => kont_frame t τ1] Hτ in f)) k'
   end eq_refl.
 
-Lemma unabstract_compose {τo τm τi} (eσ : expr · τi ⨉ Entropy)
-      (ko : kont τo τm) (ki : kont τm τi) :
-  unabstract eσ (ki +++ ko) = unabstract (unabstract eσ ki) ko.
-Proof.
-  induction ko using @rev_chain_rect; cbn in *; auto. {
-    f_equal.
-    apply chain_app_nil_r.
-  } {
-    specialize (IHko ki).
-    unfold unabstract, chain_snoc in *.
-    rewrite !chain_rev_app_distr.
-    rewrite chain_rev_app_distr in IHko.
-    cbn in *.
-    rewrite IHko.
-    auto.
-  }
-Qed.
-
 Lemma unabstract'_compose {τo τm τi} (eσ : expr · τi ⨉ Entropy)
       (ko : kont τo τm) (ki : kont τm τi) :
   unabstract' (unabstract' eσ ki) ko = unabstract' eσ (ki +++ ko).
@@ -603,185 +370,30 @@ Qed.
 Lemma unabstracts_eq {τo τi} eσ (k : kont τo τi) : unabstract eσ k = unabstract' eσ k.
 Proof.
   revert eσ.
-  induction k; intros; auto.
+  induction k using rev_chain_rect; intros; auto.
 
-  replace (p ::: k) with ((p ::: chain_nil) +++ k) by auto.
+  pose proof unabstract'_compose eσ (x ::: chain_nil) k.
+  unfold chain_snoc in *.
+  rewrite <- H.
+  rewrite <- IHk.
+  cbn.
 
-  pose proof unabstract_compose eσ k (p ::: chain_nil).
-  pose proof unabstract'_compose eσ k (p ::: chain_nil).
-  cbn in *.
-  rewrite H.
-  apply IHk.
-Qed.
-
-(* just like kont_rect', but inducts over τP inwards instead of τ outwards *)
-Lemma
-  kont_rect_rev {τ} (P : forall τP : Ty, kont τP τ -> Type)
-  (case_halt : P τ (kHalt _))
-  (case_app_fn :
-     forall (τa τr : Ty) (σ : Entropy) (ea : expr · τa) (k : kont (τa ~> τr) τ),
-       P (τa ~> τr) k -> P τr (chain_snoc k (kAppFn σ ea)))
-  (case_app_arg :
-     forall (τa τr : Ty) (σ : Entropy) (vf : val (τa ~> τr)) (k : kont τa τ),
-       P τa k -> P τr (chain_snoc k (kAppArg σ vf)))
-  (case_factor :
-     forall k : kont ℝ τ,
-       P ℝ k -> P ℝ (chain_snoc k kFactor))
-  (case_plus_l :
-     forall (σ : Entropy) (er : expr · ℝ) (k : kont ℝ τ),
-       P ℝ k -> P ℝ (chain_snoc k (kPlusL σ er)))
-  (case_plus_r :
-     forall (vl : val ℝ) (k : kont ℝ τ),
-       P ℝ k -> P ℝ (chain_snoc k (kPlusR vl)))
-  : forall τP k, P τP k.
-Proof.
-  intros.
-  induction k using @rev_chain_rect. {
-    apply case_halt.
-  } {
-    specialize (IHk P case_halt case_app_fn case_app_arg case_factor case_plus_l case_plus_r).
-    destruct x; auto.
-  }
-Qed.
-
-Arguments mk_state {τP τ} c σ k.
-
-Lemma ennr_mul_must_be_1 (r r1 : R+) :
-  0 < r ->
-  r < infinite ->
-  r = r * r1 ->
-  r1 = 1.
-Proof.
-  intros.
-  destruct r; try contradiction.
-  cbn in *.
-  destruct r1; revgoals. {
-    unfold ennr_mult in H1.
-    destruct Req_EM_T; try discriminate.
-    subst.
-    apply Rlt_irrefl in H.
-    contradiction.
-  } {
-    ennr.
-    inject H1.
-    eapply Rmult_eq_reg_l. {
-      ring_simplify.
-      exact (eq_sym H3).
-    } {
-      apply Rgt_not_eq.
-      auto.
-    }
-  }
-Qed.
-
-Lemma extend_kont_step {τ τ' τP τP'} (e : expr · τ) (e' : expr · τ')
-      (σ σ' : Entropy)
-      (w : R+)
-      (k : kont τP τ) (k' : kont τP τ') (k'' : kont τP' τP) :
-  (mk_state e σ k --> mk_state e' σ' k') w ->
-  (mk_state e σ (chain_app k k'')  --> mk_state e' σ' (chain_app k' k'')) w.
-Proof.
-  intros.
-  d_destruct H; constructor.
-Qed.
-
-Lemma extend_kont_step_star {τ τ' τP τP'} (e : expr · τ) (e' : expr · τ')
-      (σ σ' : Entropy)
-      (w : R+)
-      (k : kont τP τ) (k' : kont τP τ') (k'' : kont τP' τP)
-      (n : nat) :
-  (mk_state e σ k -->^[n] mk_state e' σ' k') w ->
-  (mk_state e σ (chain_app k k'') -->^[n] mk_state e' σ' (chain_app k' k'')) w.
-Proof.
-  intros.
-  dependent induction H. {
-    constructor.
-  } {
-    destruct s1.
-    econstructor; eauto.
-    apply extend_kont_step; auto.
-  }
-Qed.
-
-(* Lemma unabstract_val {τP τ σ} {v : val τ} {k : kont τP τ} : *)
-(*   is_val (fst (unabstract (v : expr · τ, σ) k)) -> *)
-(*   k ~= kHalt τP. *)
-(* Proof. *)
-(*   intros. *)
-(*   induction k using @rev_chain_rect. { *)
-(*     auto. *)
-(*   } { *)
-(*     exfalso. *)
-(*     cbn in *. *)
-(*     unfold chain_snoc, unabstract in *. *)
-(*     rewrite chain_rev_app_distr in H. *)
-(*     destruct x; cbn in *. destruct unabstract_rev; contradiction H. *)
-(*   } *)
-(* Qed. *)
-
-Lemma π_O_join (σl σr : Entropy) : π 0 (join σl σr) = σl.
-Proof.
-  apply πL_join.
-Qed.
-
-Lemma π_S_join (n : nat) (σl σr : Entropy) : π (S n) (join σl σr) = π n σr.
-Proof.
-  unfold π.
-  fold π.
-  rewrite πR_join.
+  unfold unabstract.
+  rewrite chain_rev_app_distr.
   auto.
 Qed.
 
-Ltac π_join := repeat rewrite ?π_O_join, ?π_S_join in *.
-
-Lemma irrelevance_of_unabstract_val_entropy
-      {τP τ} (vf : val τ) {σ σ'} {k : kont τP τ}
-      eP σP e'P σ'P :
-  (eP, σP) = unabstract (vf : expr · τ, σ) k ->
-  (e'P, σ'P) = unabstract (vf : expr · τ, σ') k ->
-  forall v w,
-    (EVAL σP ⊢ eP ⇓ v, w) ->
-    (EVAL σ'P ⊢ e'P ⇓ v, w).
+Lemma unabstract_compose {τo τm τi} (eσ : expr · τi ⨉ Entropy)
+      (ko : kont τo τm) (ki : kont τm τi) :
+  unabstract (unabstract eσ ki) ko = unabstract eσ (ki +++ ko).
 Proof.
-  revert σP σ'P.
-  induction k using @rev_chain_rect; cbn; intros. {
-    inject H.
-    inject H0.
-    destruct (invert_eval_val H1); subst.
-    constructor.
-  } {
-    specialize (IHk vf).
-    unfold chain_snoc in *.
-    rewrite unabstract_compose in H, H0.
-    cbn in *.
-
-    remember (unabstract (_, σ) _).
-    remember (unabstract (_, σ') _).
-    destruct p as [eP' σP'], p0 as [e'P' σ'P'].
-
-    specialize (IHk _ _ _ _ eq_refl eq_refl).
-
-    destruct x; cbn in *; inject H; inject H0; intros. {
-      d_destruct H1; try absurd_val.
-      econstructor; π_join; eauto.
-    } {
-      d_destruct H1; try absurd_val.
-      destruct (invert_eval_val H1_); subst.
-      econstructor; π_join; eauto.
-    } {
-      d_destruct H1; try absurd_val.
-      econstructor; eauto.
-    } {
-      d_destruct H1; try absurd_val.
-      econstructor; π_join; eauto.
-    } {
-      d_destruct H1; try absurd_val.
-      destruct (invert_eval_val H1_); subst.
-      econstructor; π_join; eauto.
-    }
-  }
+  rewrite !unabstracts_eq.
+  apply unabstract'_compose.
 Qed.
 
+
+(* guts of an assert that got migrated to a lemma.
+   TODO: clean up and figure out what it really does. *)
 Lemma small_big_lemma_lemma {τP τ}
       {e e' : expr · τ}
       {σ σ' : Entropy}
@@ -800,13 +412,13 @@ Lemma small_big_lemma_lemma {τP τ}
   : EVAL σP ⊢ eP ⇓ vP, w0.
 Proof.
   subst.
-  dependent induction k' using @rev_chain_rect. {
+  dependent induction k' using rev_chain_rect. {
     cbn in *.
     autoinjections.
     auto.
   } {
     unfold chain_snoc in *.
-    rewrite unabstract_compose in Heqp, Heqp0.
+    rewrite <- unabstract_compose in Heqp, Heqp0.
     cbn in *.
 
     specialize (IHk' e e').
@@ -840,6 +452,9 @@ Proof.
   }
 Qed.
 
+
+(* essentially, if a state big-steps to something, after a single small step it
+   should big-step to the same value it originally did. *)
 Lemma small_big_lemma {τP}
       {τ} (e : expr · τ) (σ : Entropy) (k : kont τP τ)
       {τ'} (e' : expr · τ') (σ' : Entropy) (k' : kont τP τ') :
@@ -857,6 +472,7 @@ Proof.
   destruct p as [eP σP], p0 as [e'P σ'P].
   intros.
 
+  (* ugh *)
   d_destruct H;
     cbn in *;
     rewrite ?join_πL_πR, ?ennr_mul_1_l, ?rewrite_v_real in *;
@@ -929,7 +545,7 @@ Lemma small_implies_big {τ} (σ : Entropy) (e : expr · τ) (v : val τ) (w : R
 Proof.
   intros [σ' ?].
   apply (small_implies_big' e σ σ' (kHalt τ)).
-  auto.
+  assumption.
 Qed.
 
 Lemma big_implies_small {τ} (σ : Entropy) (e : expr · τ) (v : val τ) (w : R+) :
@@ -938,5 +554,5 @@ Lemma big_implies_small {τ} (σ : Entropy) (e : expr · τ) (v : val τ) (w : R
 Proof.
   intros.
   apply big_implies_small'.
-  auto.
+  assumption.
 Qed.

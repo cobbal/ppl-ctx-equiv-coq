@@ -140,8 +140,8 @@ Qed.
 Lemma tonelli
       {A B C} (μ0 : Meas A) (μ1 : Meas B)
       (f : A -> B -> Meas C) :
-  tonelliable μ0 ->
-  tonelliable μ1 ->
+  interchangable μ0 ->
+  interchangable μ1 ->
   μ0 >>= (fun x0 => μ1 >>= (fun x1 => f x0 x1)) =
   μ1 >>= (fun x1 => μ0 >>= (fun x0 => f x0 x1)).
 Proof.
