@@ -272,6 +272,9 @@ Definition v_real r : val ℝ :=
 Definition v_lam {τa τr} body : val (τa ~> τr) :=
   mk_val (e_lam body) I.
 
+Definition rewrite_v_real r : e_real r = v_real r := eq_refl.
+Definition rewrite_v_lam {τa τr} body : e_lam body = @v_lam τa τr body := eq_refl.
+
 Lemma val_arrow_rect {τa τr}
       (P : val (τa ~> τr) -> Type)
       (case_lam : forall body, P (v_lam body)) :

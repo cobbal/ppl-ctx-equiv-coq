@@ -443,7 +443,7 @@ Section AbstractMachine.
     }
   Qed.
 
-  Lemma big_implies_small {τ} (σ : Entropy) (e : expr · τ) (v : val τ) (w : R+) :
+  Lemma big_implies_small' {τ} (σ : Entropy) (e : expr · τ) (v : val τ) (w : R+) :
     (EVAL σ ⊢ e ⇓ v, w) ->
     forall k,
     {σ' : Entropy &
@@ -510,7 +510,7 @@ Section AbstractMachine.
       rewrite <- ennr_mul_1_l.
       eapply step_one; [constructor |].
       eapply step_star_trans; eauto.
-      replace (e_real r0) with (v_real r0 : expr · ℝ) by auto.
+      rewrite !rewrite_v_real in *.
       rewrite <- ennr_mul_1_l.
       eapply step_one; [constructor |].
       rewrite <- ennr_mul_1_r.
@@ -782,9 +782,8 @@ Proof.
   }
 Qed.
 
-Lemma small_big_val_lemma {τP τ}
-      {e v : expr · τ}
-      (is_v : is_val v)
+Lemma small_big_lemma_lemma {τP τ}
+      {e e' : expr · τ}
       {σ σ' : Entropy}
       {k' : kont τP τ}
       {eP : expr · τP}
@@ -792,57 +791,52 @@ Lemma small_big_val_lemma {τP τ}
       (Heqp : (eP, σP) = unabstract (e, σ) k')
       {e'P : expr · τP}
       {σ'P : Entropy}
-      (Heqp0 : (e'P, σ'P) = unabstract (v : expr · τ, σ') k')
+      (Heqp0 : (e'P, σ'P) = unabstract (e', σ') k')
       {vP : val τP}
-      {we wP weP : R+}
-      (Hw : weP = we * wP)
-      (He : EVAL σ ⊢ e ⇓ mk_val v is_v, we)
-      (HP : EVAL σ'P ⊢ e'P ⇓ vP, wP)
-  : EVAL σP ⊢ eP ⇓ vP, weP.
+      {w0 w1 wdiff : R+}
+      (Hw : w0 = wdiff * w1)
+      (e_e'_match : forall v w, EVAL σ' ⊢ e' ⇓ v, w -> EVAL σ ⊢ e ⇓ v, wdiff * w)
+      (HP : EVAL σ'P ⊢ e'P ⇓ vP, w1)
+  : EVAL σP ⊢ eP ⇓ vP, w0.
 Proof.
+  subst.
   dependent induction k' using @rev_chain_rect. {
     cbn in *.
     autoinjections.
-
-    set (mk_val _ _) in *.
-    replace v with (v0 : expr _ _) in * by auto.
-    clearbody v0.
-    destruct (invert_eval_val HP); subst.
-    rewrite ennr_mul_1_r.
     auto.
   } {
-      unfold chain_snoc in *.
-      rewrite unabstract_compose in Heqp, Heqp0.
-      cbn in *.
+    unfold chain_snoc in *.
+    rewrite unabstract_compose in Heqp, Heqp0.
+    cbn in *.
 
-      specialize (IHk' e v is_v).
+    specialize (IHk' e e').
 
-      d_destruct x;
-        cbn in *;
-        inject Heqp;
-        inject Heqp0;
-        remember (unabstract (e, _) _) in *;
-        remember (unabstract (v, _) _) in *;
-        destruct p as [eP σP], p0 as [e'P σ'P];
-        cbn in *;
-        specialize (IHk' _ _ eq_refl _ _ eq_refl);
-        d_destruct HP; try absurd_val.
-      {
-        replace (_ * (_ * _ * _)) with ((we * w0) * w1 * w2) by ring.
-        econstructor; π_join; eauto.
-      } {
-        replace (_ * (_ * _ * _)) with (w0 * (we * w1) * w2) by ring.
-        econstructor; π_join; eauto.
-      } {
-        replace (_ * _) with (finite r rpos * (we * w)) by ring.
-        econstructor; π_join; eauto.
-      } {
-        replace (_ * (_ * _)) with ((we * w0) * w1) by ring.
-        econstructor; π_join; eauto.
-      } {
-        replace (_ * (_ * _)) with (w0 * (we * w1)) by ring.
-        econstructor; π_join; eauto.
-      }
+    d_destruct x;
+      cbn in *;
+      inject Heqp;
+      inject Heqp0;
+      remember (unabstract (e, _) _) in *;
+      remember (unabstract (e', _) _) in *;
+      destruct p as [eP σP], p0 as [e'P σ'P];
+      cbn in *;
+      specialize (IHk' _ _ eq_refl _ _ eq_refl);
+      d_destruct HP; try absurd_val.
+    {
+      replace (_ * _) with ((wdiff * w0) * w1 * w2) by ring.
+      econstructor; π_join; eauto.
+    } {
+      replace (_ * _) with (w0 * (wdiff * w1) * w2) by ring.
+      econstructor; π_join; eauto.
+    } {
+      replace (_ * _) with (finite r rpos * (wdiff * w)) by ring.
+      econstructor; π_join; eauto.
+    } {
+      replace (_ * _) with ((wdiff * w0) * w1) by ring.
+      econstructor; π_join; eauto.
+    } {
+      replace (_ * _) with (w0 * (wdiff * w1)) by ring.
+      econstructor; π_join; eauto.
+    }
   }
 Qed.
 
@@ -865,451 +859,84 @@ Proof.
 
   d_destruct H;
     cbn in *;
-    rewrite ?join_πL_πR in *;
+    rewrite ?join_πL_πR, ?ennr_mul_1_l, ?rewrite_v_real in *;
     try solve [
           rewrite ?ennr_mul_1_l in *;
           rewrite <- Heqp in Heqp0;
           inject Heqp0;
           auto];
-    try rewrite <- unabstracts_eq in Heqp, Heqp0.
+    try rewrite <- unabstracts_eq in Heqp, Heqp0;
+    eapply small_big_lemma_lemma; eauto;
+      try solve [symmetry; apply ennr_mul_1_l];
+      intros;
+      rewrite ?ennr_mul_1_l;
+      try (destruct (invert_eval_val H); subst).
   {
-    eapply small_big_val_lemma; eauto.
     constructor.
   } {
-    rewrite ennr_mul_1_l.
-
-    dependent induction k0 using @rev_chain_rect. {
-      cbn in *.
-      autoinjections.
-
-      d_destruct H0; try absurd_val.
-      destruct (invert_eval_val H0_); subst.
-      repeat econstructor; π_join; eauto.
-    } {
-      unfold chain_snoc in *.
-      rewrite unabstract_compose in Heqp, Heqp0.
-      cbn in *.
-
-      specialize (IHk0 vf).
-
-      d_destruct x;
-        cbn in *;
-        inject Heqp;
-        inject Heqp0;
-        remember (unabstract (_, join dummy_entropy _) _) in *;
-        remember (unabstract (_, join σ _) _) in *;
-        destruct p as [eP σP], p0 as [e'P σ'P];
-        cbn in *;
-        specialize (IHk0 _ _ eq_refl _ _ eq_refl);
-        d_destruct H0;
-        try absurd_val;
-        econstructor;
-        π_join.
-        eauto.
-    }
+    d_destruct H; try absurd_val.
+    destruct (invert_eval_val H); subst.
+    repeat econstructor; π_join; eauto.
   } {
-    admit.
+    replace w with (1 * 1 * w) by ring.
+    rewrite rewrite_v_lam.
+    repeat econstructor; π_join; eauto.
   } {
-    eapply small_big_val_lemma; eauto.
-    instantiate (1 := I).
-
-    rewrite <- ennr_mul_1_r.
-    replace (e_real r) with (v_real r : expr _ _) by auto.
-    econstructor.
-    instantiate (1 := I).
-    apply EPure'; auto.
+    econstructor; eauto.
   } {
-    admit.
+    d_destruct H; try absurd_val.
+    destruct (invert_eval_val H); subst.
+    repeat econstructor; π_join; eauto.
   } {
-    eapply small_big_val_lemma; eauto.
-    instantiate (1 := I).
-
-    replace (mk_val _ _) with (v_real (rl + rr)) by auto.
     replace 1 with (1 * 1) by ring.
-    econstructor; apply EPure'.
-    instantiate (1 := I).
-    auto.
-    instantiate (1 := I).
-    auto.
+    repeat econstructor; eauto.
   }
 Qed.
 
-Lemma small_implies_big {τ τP} (e : expr · τ) (σ σ_unused : Entropy) (k : kont τP τ)
+Lemma small_implies_big' {τ τP} (e : expr · τ) (σ σ_unused : Entropy) (k : kont τP τ)
       (v : val τP) (w : R+) :
-  let (eP, σP) := unabstract _ e σ k in
+  let (eP, σP) := unabstract (e, σ) k in
   (mk_state e σ k -->* mk_state v σ_unused (kHalt _)) w ->
   (EVAL σP ⊢ eP ⇓ v, w).
 Proof.
-  remember (unabstract _ _ _ _).
-  destruct p.
+  remember (unabstract _ _).
+  destruct p as [eP σP].
+
   intros [n ?].
   move n after τ.
-  revert_until n.
-  induction n; intros; d_destruct s. {
+  reverse.
+  induction n; intros. {
+    d_destruct s.
     constructor.
   } {
+    d_destruct s.
     destruct s1 as [e' σ' k'].
-    pose proof small_big_lemma e σ k e' σ' k' v w0 w1.
-    rewrite <- Heqp in H.
-    remember (unabstract _ _ _ _) in H.
-    destruct p.
+    pose proof small_big_lemma e σ k e' σ' k'.
+    rewrite <- Heqp in *.
+    remember (unabstract _ k').
+    destruct p as [e'P σ'P].
     apply H; auto.
     eapply IHn; eauto.
   }
 Qed.
 
+Definition evals_to {τ} σ (e : expr · τ) (v : val τ) (w : R+) :=
+  {σ' : Entropy & (mk_state e σ (kHalt τ) -->* mk_state v σ' (kHalt τ)) w}.
 
-
-  intros Hu [n H].
-  move n after τ.
-
-  enough ((forall w0,
-              mk_state e σ w0 k -->^{ n} mk_state v σP (w0 * w) (kHalt τP)) ->
-          EVAL σP ⊢ eP ⇓ v, w).
-  {
-    apply H0.
-    intros.
-    replace w0 with (w0 * 1) at 1 by ring.
-    apply multiply_trace; auto.
-  }
-
-  intros.
-  clear H.
-  rename H0 into H.
-
-  revert_until n.
-  induction n; intros. {
-    specialize (H 1).
-    d_destruct H.
-    enough (w = 1) by (subst; constructor).
-    destruct w. {
-      inject x.
-      ennr.
-      ring_simplify in H0.
-      auto.
-    } {
-      unfold ennr_mult in x.
-      destruct Req_EM_T; try discriminate.
-      contradict e.
-      apply not_eq_sym, R1_neq_R0.
-    }
-  } {
-    evar (ww : R+).
-    specialize (H ww).
-    d_destruct H.
-    destruct s1.
-    (* destruct (step_weight_1 s) as [? [? [? ?]]]. *)
-    (* subst. *)
-    pose proof (step_weights H).
-    destruct H0 as [w1 ?].
-    rewrite e0 in *.
-
-    replace w0 with (w0 * 1) in H at 1 by ring.
-    apply unmultiply_trace in H.
-    specialize (IHn τ1 τP c σ0 σP k0 v (w0 * w1) eP).
-
-    apply IHn; revgoals. {
-      intros.
-      replace w2 with (w2 * 1) at 1 by ring.
-      apply multiply_trace.
-    }
-
-    (* assert (0 < w0 * x). { *)
-    (*   destruct w0, x; try contradiction. *)
-    (*   unfold ennr_mult. *)
-    (*   cbn. *)
-    (*   apply Rmult_lt_0_compat; auto. *)
-    (* } *)
-    (* specialize (IHn H0); clear H0. *)
-    (* assert (w0 * x < infinite). { *)
-    (*   destruct w0, x; try contradiction. *)
-    (*   auto. *)
-    (* } *)
-    (* specialize (IHn H0); clear H0. *)
-
-    enough ((eP, σP) = unabstract τP c σ0 k0). {
-      replace w0 with (w0 * 1) in H at 1 by ring.
-      apply unmultiply_trace in H; auto.
-      (* rewrite ennr_mul_assoc in H. *)
-
-      specialize (IHn H0 H).
-      apply IHn.
-      assert (w = x * x0). {
-        revert Hw0 Hw1 H1 H2 e0.
-        clear.
-        intros.
-        destruct w0, x; try contradiction.
-        cbn in *.
-        unfold ennr_mult in *.
-        destruct w, x0; cbn in *. {
-          ennr.
-          inject e0.
-          apply (Rmult_eq_reg_l r). {
-            rewrite <- Rmult_assoc.
-            auto.
-          } {
-            apply not_eq_sym.
-            apply Rlt_not_eq.
-            auto.
-          }
-        } {
-          exfalso.
-          destruct Req_EM_T; try discriminate.
-          inject e0.
-          contradict e.
-          apply Rlt_not_eq.
-          apply Rmult_lt_0_compat; auto.
-        } {
-          exfalso.
-          destruct Req_EM_T; try discriminate.
-          contradict e.
-          apply Rlt_not_eq.
-          auto.
-        } {
-          destruct (Req_EM_T 0 r0); auto.
-          contradict e.
-          apply Rlt_not_eq.
-          auto.
-        }
-      }
-      subst.
-      enough (w = x * x0). {
-        subst.
-        apply IHn.
-      }
-    }
-
-
-
-    specialize (IHn _ _ _ _ _ _ _ _ _ _ _ _ Heqp H).
-  }
-
-
-Lemma small_implies_big {τ} (σ : Entropy) (e : expr · τ) (v : val τ) (w w0 : R+) :
-    0 < w0 ->
-    w0 < infinite ->
-    {σ' : Entropy &
-          mk_state e σ w0 (kHalt τ) -->* mk_state v σ' (w0 * w) (kHalt τ)} ->
+Lemma small_implies_big {τ} (σ : Entropy) (e : expr · τ) (v : val τ) (w : R+) :
+  evals_to σ e v w ->
   (EVAL σ ⊢ e ⇓ v, w).
 Proof.
-  intros Hw0 Hw0' [σ' [n H]].
-
-  assert (forall τP (k : kont τP τ) , mk_state e σ w0 k -->^{n} mk_state v σ' (w0 * w) k). {
-    intros.
-    apply extend_kont_step_star with (k0 := kHalt τ) (k' := kHalt τ).
-    auto.
-  }
-  clear H.
-  rename H0 into H.
-
-
-
-  move n after τ.
-  revert_until n.
-  induction n; intros. {
-    specialize (H _ (kHalt _)).
-    d_destruct H.
-    replace w with 1 by (symmetry; eapply ennr_mul_must_be_1; eauto).
-    constructor.
-  } {
-    pose proof (H _ (kHalt _)).
-    d_destruct H0.
-    specialize (IHn _ _ _ _ _ _ _ _ _ H0).
-  }
-
-  refine
-    (match H with
-     | step_refl _ _ => _
-     | step_one _ _ _ _ _ _ => _
-     end).
-
-
-
-
-
-
-  set (τP := τ).
-  set (k := kHalt τP).
-  replace (kHalt τ) with (chain_app (kHalt τ) k) in H by auto.
-  clearbody k τP.
-
-  dependent induction H. {
-    replace w with 1 by (symmetry; eapply ennr_mul_must_be_1; eauto).
-    constructor.
-  } {
-    destruct s1.
-    specialize (IHstep_star σ0 e).
-  }
+  intros [σ' ?].
+  apply (small_implies_big' e σ σ' (kHalt τ)).
+  auto.
 Qed.
 
-
-
-
-
-  (* unabstract relates AM states back to terms (with some entropy manipulation.
-     This is needed to be the intermediate correspondance between big and small
-     step. *)
-  Fixpoint unabstract {τ} (e : expr · τ) (σ : Entropy) (k : kont τ)
-    : (expr · τP ⨉ Entropy) :=
-    match k in kont τ' return τ = τ' -> (expr · τP ⨉ Entropy) with
-    | kHalt => fun τeq => (rew τeq in e, σ)
-    | kAppFn σ' ea k' =>
-      fun τeq =>
-        unabstract (e_app (rew τeq in e) ea) (join σ σ') k'
-    | kAppArg σ' vf k' =>
-      fun τeq =>
-        unabstract (e_app vf (rew τeq in e)) (join σ σ') k'
-    | kFactor k' =>
-      fun τeq =>
-        unabstract (e_factor (rew τeq in e)) σ k'
-    | kPlusL σ' er k' =>
-      fun τeq =>
-        unabstract (e_plus (rew τeq in e) er) (join σ σ') k'
-    | kPlusR vl k' =>
-      fun τeq =>
-        unabstract (e_plus vl (rew τeq in e)) σ k'
-    end eq_refl.
-
-  Definition evals_to' {τ} (s : state τ) (res : result) :=
-    {n : nat & step_n n s = inr res}.
-End AbstractMachine.
-
-Lemma split_the_machine {τP τ}
-      (e : expr · τ)
-      (σ : Entropy)
-      (k : kont τP τ)
-      (w : R+) :
-  forall vP wP,
-    evals_to' _ (mk_state _ _ e σ w k) (Some (vP, wP)) ->
-    { vwI : (val τ ⨉ R+) &
-            (evals_to' _ (mk_state _ _ e σ w (kHalt _)) (Some vwI))
-              ⨉ (evals_to'
-                   _
-                   (mk_state _ _ (fst vwI) dummy_entropy (snd vwI) k)
-                   (Some (vP, wP)))}.
+Lemma big_implies_small {τ} (σ : Entropy) (e : expr · τ) (v : val τ) (w : R+) :
+  (EVAL σ ⊢ e ⇓ v, w) ->
+  evals_to σ e v w.
 Proof.
   intros.
-  destruct H as [n H].
-  revert_until e.
-  revert τP.
-  dependent induction e; intros. {
-    exists (v_real r, w).
-    split. {
-      exists 1%nat.
-      auto.
-    } {
-      cbn.
-      exists n.
-      destruct n; try discriminate.
-      apply H.
-    }
-  } {
-    exists (v_lam e, w).
-    split. {
-      exists 1%nat.
-      auto.
-    } {
-      cbn.
-      exists n.
-      destruct n; try discriminate.
-      apply H.
-    }
-  } {
-
-  }
-Qed.
-
-
-Lemma compose_small {τP τ}
-      (e : expr · τ)
-      (σ0 σdummy : Entropy)
-      (k : kont τP τ)
-      (w0 : R+) :
-  forall v w v' w',
-    evals_to' _ (mk_state _ _ e σ0 w0 (kHalt _)) (Some (v, w)) ->
-    evals_to' _ (mk_state _ _ v σdummy w k) (Some (v', w')) ->
-    evals_to' _ (mk_state _ _ e σ0 w0 k) (Some (v', w')).
-Proof.
-  intros.
-  revert_until e.
-  dependent induction e; intros. {
-    destruct H0 as [n1 H1], H as [n0 H0].
-    destruct n0, n1; try discriminate.
-    exists (S n1)%nat.
-    destruct_val v.
-    cbn in *.
-    inject H0.
-    auto.
-  } {
-    destruct H0 as [n1 H1], H as [n0 H0].
-    destruct n0, n1; try discriminate.
-    exists (S n1)%nat.
-    destruct_val v.
-    cbn in *.
-    d_destruct H0.
-    auto.
-  } {
-    specialize (IHe1 (πL σ0) σdummy (kAppFn _ (πR σ0) e2 k) w0).
-    specialize (IHe2 (πL (πR σ0)) σdummy (kAppArg _ (πR (πR σ0)) _ k)).
-    cbn in H0.
-    cbn.
-  }
-Qed.
-
-
-Lemma small_implies_big {τ} (s : state τ) (v : val τP) (w : R+) :
-  let (e, σ, w, k) := s in
-  let (eP, σP) := unabstract e σ k in
-  evals_to' s (Some (v, w)) ->
-  (EVAL σP ⊢ eP ⇓ v, w).
-Proof.
-  destruct s.
-  revert k σ w0 v w.
-  dependent induction c; intros. {
-    cbn.
-  } {
-  }
-Qed.
-
-Lemma big_implies_small {τ} (s : state τ) (v : val τP) (w : R+) :
-  let (e, σ, w, k) := s in
-  let (eP, σP) := unabstract e σ k in
-  (EVAL σP ⊢ eP ⇓ v, w) ->
-  evals_to' s (Some (v, w)).
-Proof.
-  destruct s.
-  remember (unabstract _ _ _).
-  destruct p.
-  intros.
-  dependent induction H.
-  exists 1%nat.
-  }
-Qed.
-
-End AbstractMachine.
-
-Definition inject {τ} (e : expr · τ) (σ : Entropy) : state τ τ :=
-  mk_state τ τ e σ 1 (kHalt _).
-
-Definition evals_to {τ} (e : expr · τ) (σ : Entropy) (v : val τ) (w : R+) :=
-  evals_to' _ (inject e σ) (Some (v, w)).
-
-intros.
-
-induction H. {
-  destruct_val v;
-    subst;
-    cbn;
-    exists 1%nat;
-    auto.
-} {
-  admit.
-} {
-  admit.
-} {
-  exists 1%nat; auto.
-} {
-  destruct IHeval1 as [n_1 ev_1].
-  destruct IHeval2 as [n_2 ev_2].
-}
+  apply big_implies_small'.
+  auto.
 Qed.
