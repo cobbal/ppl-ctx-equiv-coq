@@ -1,11 +1,12 @@
--R ./auto-subst/theories Autosubst -R . OpSemProofs
-nnr.v
-relations.v
-using_relations.v
-determinism.v
-syntax.v
-utils.v
-Entropy.v
-ctxequiv.v
-properties_of_relations.v
-abstract_machine.v
+-R ./auto-subst/theories Autosubst -R ./src OpSemProofs
+src/nnr.v
+src/relations.v
+src/using_relations.v
+src/determinism.v
+src/syntax.v
+src/chain.v
+src/utils.v
+src/Entropy.v
+src/ctxequiv.v
+src/properties_of_relations.v
+src/abstract_machine.v

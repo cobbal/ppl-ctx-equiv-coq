@@ -8,7 +8,7 @@ auto-subst:
 coq: Makefile.coq
 	$(MAKE) -f Makefile.coq
 
-Makefile.coq: auto-subst Makefile _CoqProject *.v
+Makefile.coq: auto-subst Makefile _CoqProject src/*.v
 	coq_makefile -f _CoqProject -o Makefile.coq
 
 clean:: Makefile.coq
@@ -16,6 +16,7 @@ clean:: Makefile.coq
 	rm -f Makefile.coq
 	rm -f lia.cache
 	rm -rf dep-graph
+	rm -f dep.vo dep.glob
 
 graph: dep-graph/graph.pdf
 

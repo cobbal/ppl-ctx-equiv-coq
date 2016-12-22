@@ -128,8 +128,7 @@ Proof.
     eapply apply_dG_rel; eauto.
   } {
     intros.
-    destruct (invert_eval_val H0); subst.
-    simpl.
+    destruct (invert_eval_val H); subst.
     auto.
   }
 Qed.

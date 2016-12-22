@@ -5,104 +5,9 @@ Require Import Coq.Logic.JMeq.
 Require Import utils.
 Require Import syntax.
 Require Import RelationClasses.
+Require Import chain.
 
 Local Open Scope ennr.
-
-(* a chain is like a list, but with dependent types that must link between
-   consequetive pairs. *)
-Inductive chain {X} {P : X -> X -> Type} : X -> X -> Type :=
-| chain_nil {A : X} : chain A A
-| chain_cons {A B C : X} :
-    P A B -> chain B C -> chain A C
-.
-
-Arguments chain {X} P _ _.
-Infix ":::" := chain_cons (at level 60, right associativity).
-
-Fixpoint chain_app {X} {P : X -> X -> Type} {A B C}
-         (c : chain P A B) (c' : chain P B C) : chain P A C :=
-  match c in (chain _ A' B') return (B = B' -> chain P A' C) with
-  | chain_nil => fun HB => rew[fun B => chain P B C] HB in c'
-  | chain_cons x xs =>
-    fun HB =>
-    chain_cons x (chain_app xs (rew[fun B => chain P B C] HB in c'))
-  end eq_refl.
-Infix "+++" := chain_app (right associativity, at level 60).
-
-Theorem chain_app_nil_r {X} {P : X -> X -> Type} {A B}
-      (c : chain P A B) :
-  c +++ chain_nil = c.
-Proof.
-  induction c; auto.
-  cbn.
-  rewrite IHc.
-  auto.
-Qed.
-
-Theorem chain_app_assoc {X} {P : X -> X -> Type} {A B C D : X}
-      (c0 : chain P A B) (c1 : chain P B C) (c2 : chain P C D) :
-  c0 +++ (c1 +++ c2) = (c0 +++ c1) +++ c2.
-Proof.
-  induction c0; auto.
-  cbn.
-  rewrite IHc0.
-  auto.
-Qed.
-
-Definition chain_snoc {X} {P : X -> X -> Type} {A B C : X} :
-  chain P A B -> P B C -> chain P A C :=
-  fun c x => c +++ x ::: chain_nil.
-
-Fixpoint chain_rev {X} {P : X -> X -> Type} {A B}
-         (c : chain P A B) : chain (flip P) B A :=
-  match c with
-  | chain_nil => chain_nil
-  | chain_cons x xs => chain_snoc (chain_rev xs) x
-  end.
-
-Lemma chain_rev_app_distr {X} {P : X -> X -> Type} {A B C}
-      (c0 : chain P A B) (c1 : chain P B C)
-  : chain_rev (c0 +++ c1) = chain_rev c1 +++ chain_rev c0.
-Proof.
-  induction c0. {
-    cbn.
-    rewrite chain_app_nil_r.
-    auto.
-  } {
-    cbn in *.
-    rewrite IHc0.
-    setoid_rewrite chain_app_assoc.
-    auto.
-  }
-Qed.
-
-Lemma chain_rev_involutive {X} {P : X -> X -> Type} {A B}
-      (c : chain P A B)
-  : c = chain_rev (chain_rev c).
-Proof.
-  induction c; auto.
-  cbn.
-  unfold chain_snoc.
-  rewrite chain_rev_app_distr.
-  cbn in *.
-  rewrite <- IHc.
-  auto.
-Qed.
-
-Lemma rev_chain_rect X (P : X -> X -> Type)
-      (motive : forall A B, chain P A B -> Type)
-      (case_nil : forall A, motive A A chain_nil)
-      (case_snoc : forall A B C (x : P B C) (c : chain P A B),
-          motive A B c -> motive A C (chain_snoc c x))
-  : forall {A B} (c : chain P A B), motive A B c.
-Proof.
-  intros.
-  rewrite (chain_rev_involutive c).
-  set (chain_rev c).
-  clearbody c0.
-  clear c.
-  induction c0; cbn; auto.
-Qed.
 
 Inductive kont_frame : Ty -> Ty -> Type :=
 | kAppFn {τa τr} (σ : Entropy) (ea : expr · τa)
@@ -555,4 +460,62 @@ Proof.
   intros.
   apply big_implies_small'.
   assumption.
+Qed.
+
+
+
+Require Import determinism.
+Import determinism.eval_dec.
+
+Inductive evals_to_dec_result {τ} (e : expr · τ) (σ : Entropy) :=
+| evals_to_dec_yes v w (steps : evals_to σ e v w)
+| evals_to_dec_no (H : forall v w, evals_to σ e v w -> False).
+Arguments evals_to_dec_yes {_ _ _} _ _ _.
+Arguments evals_to_dec_no {_ _ _} _.
+
+Lemma evals_to_dec {τ} (e : expr · τ) (σ : Entropy) : evals_to_dec_result e σ.
+Proof.
+  destruct (eval_dec e σ). {
+    apply (evals_to_dec_yes v w).
+    apply big_implies_small.
+    apply ev.
+  } {
+    apply evals_to_dec_no.
+    intros.
+    specialize (not_ex v w).
+    contradict not_ex.
+    apply small_implies_big.
+    apply X.
+  }
+Qed.
+
+Definition ev' {τ} (e : expr · τ) σ : option (val τ) :=
+  match evals_to_dec e σ with
+  | evals_to_dec_yes v w _ => Some v
+  | evals_to_dec_no _ => None
+  end.
+
+Definition ew' {τ} (e : expr · τ) σ : R+ :=
+  match evals_to_dec e σ with
+  | evals_to_dec_yes v w _ => w
+  | evals_to_dec_no _ => 0
+  end.
+
+(* just to see how stepping through ev' and ew' looks... *)
+Lemma ew'_is_finite {τ} (e : expr · τ) σ :
+  ew' e σ <> infinite.
+Proof.
+  intros.
+  unfold ew'.
+  destruct evals_to_dec; auto. {
+    destruct steps as [σ' [n steps]].
+    induction steps. {
+      discriminate.
+    } {
+      destruct w1; [| contradiction (IHsteps eq_refl)].
+      destruct s; unfold ennr_mult; cbn; discriminate.
+    }
+  } {
+    discriminate.
+  }
 Qed.

@@ -234,7 +234,7 @@ Ltac elim_sig_exprs :=
            | [ H : context [ @proj1_sig (expr ?Γ ?τ) _ ?pair ] |- _ ] =>
              doit Γ τ pair ltac:(simpl in H)
            | [ |- context [ @proj1_sig (expr ?Γ ?τ) _ ?pair ] ] =>
-             doit Γ τ pair ltac:simpl
+             doit Γ τ pair ltac:(simpl)
            end.
 Definition is_val (e : u_expr) : Prop :=
   match e with
