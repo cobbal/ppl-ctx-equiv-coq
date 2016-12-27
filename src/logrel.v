@@ -7,8 +7,12 @@ Require Import syntax.
 
 Local Open Scope ennr.
 
-(* sketches of binary and unary logical relations for our language as a ML-like
+(* Sketches of binary and unary logical relations for our language as a ML-like
    functor. *)
+
+(* The unary relations are all in Type, while the binary ones are in Prop. This
+   is simply because that's how they're used. It would be nice to make it
+   user-selectable, but I'm not sure how without lots of copy/paste. *)
 
 Module Log_rel1.
   Definition rel X := X -> Type.

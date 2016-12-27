@@ -27,8 +27,8 @@ Notation "R+" := ennr : type_scope.
 (*   end. *)
 (* Infix "==" := ennr_eq. *)
 
-Program Definition ennr_0 := finite 0 (Rle_refl _).
-Program Definition ennr_1 := finite 1 Rle_0_1.
+Definition ennr_0 := finite 0 (Rle_refl _).
+Definition ennr_1 := finite 1 Rle_0_1.
 Notation "0" := ennr_0.
 Notation "1" := ennr_1.
 

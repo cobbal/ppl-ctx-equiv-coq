@@ -195,18 +195,19 @@ Proof.
   auto.
 Qed.
 
-Program Fixpoint dep_ids' (Γ0 Γ1 : Env Ty) : dep_env (expr (Γ0 ++ Γ1)) Γ1 :=
-  match Γ1 return dep_env (expr (Γ0 ++ Γ1)) Γ1 with
-  | nil => dep_nil
-  | τ :: Γ1' =>
-    dep_cons
-      (e_var (length Γ0) _)
-      (rew <- [fun z => dep_env (expr z) _] (app_assoc Γ0 (τ :: nil) Γ1') in
-          dep_ids' (Γ0 ++ τ :: nil) Γ1')
-  end.
-Next Obligation.
-  induction Γ0; auto.
-Qed.
+Fixpoint dep_ids' (Γ0 Γ1 : Env Ty) : dep_env (expr (Γ0 ++ Γ1)) Γ1.
+Proof.
+  refine
+    (match Γ1 return dep_env (expr (Γ0 ++ Γ1)) Γ1 with
+     | nil => dep_nil
+     | τ :: Γ1' =>
+       dep_cons
+         (e_var (length Γ0) _)
+         (rew <- [fun z => dep_env (expr z) _] (app_assoc Γ0 (τ :: nil) Γ1') in
+             dep_ids' (Γ0 ++ τ :: nil) Γ1')
+     end).
+  abstract (induction Γ0; auto).
+Defined.
 
 Definition dep_ids := dep_ids' ·.
 
@@ -214,8 +215,7 @@ Lemma erase_eq (Γ Γ0 Γ1 : Env Ty)
       (d0 : dep_env (expr Γ0) Γ)
       (d1 : dep_env (expr Γ1) Γ)
       (HΓ : Γ0 = Γ1)
-  :
-    (d0 ~= d1) ->
+  : (d0 ~= d1) ->
     @erase_wt_expr_env Γ Γ0 d0 =
     @erase_wt_expr_env Γ Γ1 d1.
 Proof.
@@ -514,11 +514,6 @@ Fixpoint up_simple_ctx' {Γ τe τo} τ0
 
 Instance up_simple_ctx Γ τe τo : Lift.type (SIMPLE Γ ⊢ [τe] : τo) :=
   Lift.mk up_simple_ctx'.
-
-Lemma pure_of_val {τ} (v : val τ) : is_pure v.
-Proof.
-  destruct v using wt_val_rect; subst; simpl; trivial.
-Qed.
 
 Lemma single_frame_case_app_l {Γ τe τa τo}
       (ea : expr Γ τa)

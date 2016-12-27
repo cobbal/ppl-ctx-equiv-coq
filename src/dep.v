@@ -1,15 +1,20 @@
 Require dpdgraph.dpdgraph.
 
-Require nnr.
-Require relations.
-Require using_relations.
-Require determinism.
-Require syntax.
-Require utils.
-Require Entropy.
-Require ctxequiv.
-Require properties_of_relations.
-Require abstract_machine.
+Require
+  nnr
+  relations
+  using_relations
+  determinism
+  syntax
+  chain
+  utils
+  Entropy
+  ctxequiv
+  properties_of_relations
+  abstract_machine
+  logrel
+  integration
+.
 
 Set DependGraph File "dep-graph/graph.dpd".
 Print FileDependGraph
@@ -18,9 +23,12 @@ Print FileDependGraph
       using_relations
       determinism
       syntax
+      chain
       utils
       Entropy
       ctxequiv
       properties_of_relations
       abstract_machine
+      logrel
+      integration
 .

@@ -26,8 +26,8 @@ dep-graph/graph.pdf: dep-graph/graph.dot
 dep-graph/graph.dot: dep-graph/graph.dpd
 	dpd2dot -o $@ $^
 
-dep-graph/graph.dpd: dep.v coq
+dep-graph/graph.dpd: src/dep.v coq
 	mkdir -p dep-graph
-	coqc -R ./auto-subst/theories Autosubst -R . OpSemProofs dep.v
+	coqc -R ./auto-subst/theories Autosubst -R ./src OpSemProofs src/dep.v
 
 .PHONY: all coq graph

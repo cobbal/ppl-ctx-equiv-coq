@@ -378,15 +378,6 @@ Fixpoint dep_env_map {A} {v0 v1 : A -> Type} {Γ}
   | dep_cons e ρ' => dep_cons (f _ e) (dep_env_map f ρ')
   end.
 
-Fixpoint dep_env_all {A} {v : A -> Type} {Γ}
-         (P : forall a, v a -> Prop)
-         (ρ : dep_env v Γ) : Prop
-  :=
-    match ρ with
-    | dep_nil => True
-    | dep_cons e ρ' => P _ e /\ dep_env_all P ρ'
-    end.
-
 Fixpoint dep_env_allT {A} {v : A -> Type} {Γ}
          (P : forall a, v a -> Type)
          (ρ : dep_env v Γ) : Type
@@ -419,12 +410,6 @@ Proof.
   f_equal.
   auto.
 Qed.
-
-(* borrowed from a comment in autosubst, hope it's right *)
-Fixpoint sapp {X : Type} (l : list X) (sigma : nat -> X) : nat -> X :=
-  match l with nil => sigma | cons s l' => s .: sapp l' sigma end.
-Infix ".++" := sapp (at level 55, right associativity) : subst_scope.
-Arguments sapp {_} !l sigma / _.
 
 (* Definition subst_of_WT_Env {Γ} (ρ : WT_Env Γ) : nat -> Expr := *)
 (*   sapp (downgrade_env ρ) ids. *)
@@ -729,24 +714,6 @@ Definition ty_subst1 {τa τr}
     erase e' = (erase e).[erase v /] }
   := ty_subst e · (dep_cons (v : expr · τa) dep_nil).
 
-Lemma body_subst {Γ τa τr} (ρ : wt_env Γ)
-      (body : expr (τa :: Γ) τr) :
-  { body' : expr (τa :: ·) τr |
-    erase body' = (erase body).[up (erase_wt_env ρ)] }.
-Proof.
-  pose proof ty_subst body (τa :: ·).
-
-  destruct (up_expr_env (dep_env_map (@expr_of_val) ρ) τa).
-  destruct (X x).
-  exists x0.
-  rewrite e0.
-  apply subst_only_matters_up_to_env.
-  intros.
-  erewrite e; eauto.
-  rewrite erase_envs_equiv.
-  auto.
-Qed.
-
 Reserved Notation "'EVAL' σ ⊢ e ⇓ v , w" (at level 69, e at level 99, no associativity).
 Inductive eval (σ : Entropy) : forall {τ} (e : expr · τ) (v : val τ) (w : R+), Type :=
 | EPure {τ} (v : val τ) :
@@ -773,15 +740,6 @@ Inductive eval (σ : Entropy) : forall {τ} (e : expr · τ) (v : val τ) (w : R
     (EVAL σ ⊢ e_plus e0 e1 ⇓ v_real (r0 + r1), w0 * w1)
 where "'EVAL' σ ⊢ e ⇓ v , w" := (@eval σ _ e v w)
 .
-
-Definition EPure' (σ : Entropy) {τ} (e : expr · τ) (v : val τ) :
-  e = v ->
-  (EVAL σ ⊢ e ⇓ v, 1).
-Proof.
-  intros.
-  rewrite H.
-  constructor.
-Qed.
 
 Lemma invert_eval_val {σ τ} {v v' : val τ} {w} :
   (EVAL σ ⊢ v ⇓ v', w) ->

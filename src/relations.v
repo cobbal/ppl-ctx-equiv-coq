@@ -164,15 +164,6 @@ Module CtxEquivCases <: CASES CtxEquivBase.
     (expr_rel Γ τ e0 e1)
       (at level 69, e0 at level 99, e1 at level 99, no associativity).
 
-  Lemma is_val_of_is_pure {τ} (e : expr · τ) :
-    is_pure e ->
-    is_val e.
-  Proof.
-    intros.
-    destruct e; try contradiction H; trivial.
-    discriminate H0.
-  Qed.
-
   Lemma val_is_atomic {τ} (v : val τ) A σ :
     eval_in v σ A =
     indicator A v.

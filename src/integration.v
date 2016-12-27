@@ -22,6 +22,7 @@ Definition ifte {X} (a : bool) (b c : X) := if a then b else c.
 Definition indicator {X} (b : Event X) : X -> R+ := fun x => ifte (b x) 1 0.
 
 Axiom μEntropy : Meas Entropy.
+Axiom μEntropy_is_a_probability_measure : μEntropy (fun _ => true) = 1.
 
 Axiom integration : forall {A}, (A -> R+) -> Meas A -> R+.
 
@@ -208,12 +209,21 @@ Proof.
   auto.
 Qed.
 
-(* TODO: rewrite as μEntropy(True) = 1 and linearity *)
-Axiom int_const_entropy :
+Lemma int_const_entropy :
   forall (v : R+)
          (f : Entropy -> R+),
     (forall x, f x = v) ->
     integration f μEntropy = v.
+Proof.
+  intros.
+  replace f with (fun x => f x * 1) by (extensionality x; ring).
+  setoid_rewrite H.
+  rewrite <- integration_linear_mult_l.
+  replace (fun _ => _) with (indicator (fun _ : Entropy => true)) by auto.
+  rewrite integration_of_indicator.
+  rewrite μEntropy_is_a_probability_measure.
+  ring.
+Qed.
 
 Lemma pick_3_entropies {B}
       (g : Entropy -> Entropy -> Entropy -> Meas B) :

@@ -462,8 +462,6 @@ Proof.
   assumption.
 Qed.
 
-
-
 Require Import determinism.
 
 Inductive evals_to_dec_result {τ} (e : expr · τ) (σ : Entropy) :=
