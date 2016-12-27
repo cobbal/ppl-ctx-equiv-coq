@@ -27,6 +27,13 @@ Notation "'λ,' e" := (e_lam e) (at level 69, right associativity).
 Notation "e0 @ e1" := (e_app e0 e1) (at level 68, left associativity).
 Notation "e0 +! e1" := (e_plus e0 e1).
 
+Lemma lam_is_dirac {τa τr} (body : expr (τa :: ·) τr) :
+  μ (λ, body) = dirac (v_lam body).
+Proof.
+  rewrite rewrite_v_lam.
+  apply val_is_dirac.
+Qed.
+
 Definition var_0 {τ Γ} : expr (τ :: Γ) τ :=
   e_var O (eq_refl : lookup (τ :: Γ) O = Some τ).
 
@@ -545,7 +552,7 @@ Proof.
 
   repeat fold_μ.
   rewrite !by_μe_eq_μEntropy_app.
-  rewrite lam_is_dirac.
+  rewrite !lam_is_dirac.
   rewrite val_is_dirac.
   rewrite !meas_id_left.
 

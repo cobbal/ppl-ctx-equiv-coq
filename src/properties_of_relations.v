@@ -64,7 +64,7 @@ Proof.
   }
 Qed.
 
-Instance rel_expr_symmetric {Γ τ} : Symmetric (related_exprs Γ τ).
+Instance rel_expr_symmetric {Γ τ} : Symmetric (expr_rel Γ τ).
 Proof.
   intros e0 e1 He ? ? ?.
   symmetry.
@@ -150,16 +150,16 @@ Proof.
   }
 Qed.
 
-Instance rel_expr_transitive {Γ τ} : Transitive (related_exprs Γ τ).
+Instance rel_expr_transitive {Γ τ} : Transitive (expr_rel Γ τ).
 Proof.
   intros x y z Hxy Hyz ? ? ?.
 
   transitivity (proj1_sig (close ρ0 y)). {
     apply Hxy.
-    transitivity ρ1; [| symmetry]; exact Hρ.
+    transitivity ρ1; [| symmetry]; exact H.
   } {
     apply Hyz.
-    exact Hρ.
+    exact H.
   }
 Qed.
 
@@ -180,7 +180,7 @@ Qed.
 Instance E_rel_reflexive {τ} : Reflexive (E_rel τ).
 Proof.
   intro e.
-  pose proof (fundamental_property e _ _ G_rel_nil).
+  pose proof (fundamental_property _ _ e _ _ G_rel_nil).
   elim_sig_exprs.
   elim_erase_eqs.
   auto.
@@ -203,8 +203,8 @@ Proof.
   }
 Qed.
 
-Instance rel_expr_reflexive {Γ τ} : Reflexive (related_exprs Γ τ)
-  := fundamental_property.
+Instance rel_expr_reflexive {Γ τ} : Reflexive (expr_rel Γ τ)
+  := fundamental_property _ _.
 
 Lemma same_substitution_suffices {Γ τ} (e0 e1 : expr Γ τ) :
   (forall (ρ : wt_env Γ),

@@ -465,7 +465,6 @@ Qed.
 
 
 Require Import determinism.
-Import determinism.eval_dec.
 
 Inductive evals_to_dec_result {τ} (e : expr · τ) (σ : Entropy) :=
 | evals_to_dec_yes v w (steps : evals_to σ e v w)

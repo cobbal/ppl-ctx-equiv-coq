@@ -10,3 +10,4 @@ src/Entropy.v
 src/ctxequiv.v
 src/properties_of_relations.v
 src/abstract_machine.v
+src/logrel.v

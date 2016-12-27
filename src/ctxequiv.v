@@ -269,48 +269,48 @@ Proof.
     specialize (IHC _ _ re).
     rewrite !plug_cons.
     destruct x; try specialize (IHC _ _ Hρ). {
-      pose proof (fundamental_property e _ _ Hρ).
+      pose proof (fundamental_property _ _ e _ _ Hρ).
 
       elim_sig_exprs.
       d_destruct (e6, He6).
       d_destruct (e7, He7).
       elim_erase_eqs.
 
-      apply work_of_app; auto.
+      apply case_app; auto.
     } {
-      pose proof (fundamental_property e _ _ Hρ).
+      pose proof (fundamental_property _ _ e _ _ Hρ).
 
       elim_sig_exprs.
       d_destruct (e6, He6).
       d_destruct (e7, He7).
       elim_erase_eqs.
 
-      apply work_of_app; auto.
+      apply case_app; auto.
     } {
       elim_sig_exprs.
       d_destruct (e3, He3).
       d_destruct (e4, He4).
       elim_erase_eqs.
 
-      apply work_of_factor; auto.
+      apply case_factor; auto.
     } {
-      pose proof (fundamental_property e _ _ Hρ).
+      pose proof (fundamental_property _ _ e _ _ Hρ).
 
       elim_sig_exprs.
       d_destruct (e6, He6).
       d_destruct (e7, He7).
       elim_erase_eqs.
 
-      apply work_of_plus; auto.
+      apply case_plus; auto.
     } {
-      pose proof (fundamental_property e _ _ Hρ).
+      pose proof (fundamental_property _ _ e _ _ Hρ).
 
       elim_sig_exprs.
       d_destruct (e6, He6).
       d_destruct (e7, He7).
       elim_erase_eqs.
 
-      apply work_of_plus; auto.
+      apply case_plus; auto.
     } {
       elim_sig_exprs.
       d_destruct (e, He).

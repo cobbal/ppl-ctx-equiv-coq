@@ -207,7 +207,7 @@ Ltac inject_erased :=
   in match goal with
      | [ H : erase ?e = u_app _ _ |- _ ] => go e H
      | [ H : erase ?e = u_factor _ |- _ ] => go e H
-     | [ H : erase ?e = u_sample |- _ ] => go e H
+     | [ H : erase ?e = u_sample |- _ ] => expr_destruct e; try inject H
      | [ H : erase ?e = u_plus _ _ |- _ ] => go e H
      | [ H : erase ?e = u_real _ |- _ ] => go e H
      | [ H : erase ?e = u_lam _ _ |- _ ] => go e H

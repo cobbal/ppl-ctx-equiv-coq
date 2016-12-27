@@ -11,334 +11,232 @@ Require Import nnr.
 Require Import syntax.
 Require Import utils.
 Require Import micromega.Lia.
+Require Import logrel.
 
 Import EqNotations.
 
 Local Open Scope ennr.
 
-Definition dE_rel' τ (dV_rel_τ : val τ -> Type) (e : expr · τ) : Type :=
-  forall σ,
-    {vw : (val τ * R+) &
-          let (v, w) := vw in
-          (dV_rel_τ v)
-            ⨉ (EVAL σ ⊢ e ⇓ v, w)
-            ⨉ (forall v' w', (EVAL σ ⊢ e ⇓ v', w') -> v' = v /\ w' = w)
-    } +
-    ({vw : (val τ * R+) &
-           let (v, w) := vw in EVAL σ ⊢ e ⇓ v, w}
-     -> False).
+Import Log_rel1.
+Module DeterminismBase <: BASE.
 
-Definition dV_rel_real (v : val ℝ) : Type := True.
+  Definition V_rel_real : rel (val ℝ) :=
+    fun v => True.
 
-Inductive dV_rel_arrow {τa τr}
-          (dV_rel_a : val τa -> Type)
-          (dV_rel_r : val τr -> Type)
-  : val (τa ~> τr) -> Type :=
-| mk_dV_rel_arrow
-    (body : expr (τa :: ·) τr) :
-    (forall va,
-        dV_rel_a va ->
-        dE_rel' τr dV_rel_r (proj1_sig (ty_subst1 body va))) ->
-    dV_rel_arrow dV_rel_a dV_rel_r (v_lam body).
+  Definition E_rel' τ (V_rel_τ : rel (val τ)) : rel (expr · τ) :=
+    fun e =>
+      forall σ,
+        {vw : (val τ * R+) &
+              let (v, w) := vw in
+              (V_rel_τ v)
+                ⨉ (EVAL σ ⊢ e ⇓ v, w)
+                ⨉ (forall v' w', (EVAL σ ⊢ e ⇓ v', w') -> v' = v /\ w' = w)
+        } +
+        ({vw : (val τ * R+) &
+               let (v, w) := vw in EVAL σ ⊢ e ⇓ v, w}
+         -> False).
+End DeterminismBase.
 
-Fixpoint dV_rel τ : val τ -> Type :=
-  match τ with
-  | ℝ => dV_rel_real
-  | (τa ~> τr) => @dV_rel_arrow _ _ (dV_rel τa) (dV_rel τr)
-  end.
+Module DeterminismCases : CASES DeterminismBase.
+  Module Defs := Defs DeterminismBase.
+  Export Defs.
 
-Hint Unfold dV_rel dV_rel_real.
-Hint Constructors dV_rel_arrow.
+  Lemma case_val : forall τ v,
+      V_rel τ v -> E_rel τ v.
+  Proof.
+    left.
+    exists (v, 1).
 
-Definition dE_rel τ := dE_rel' τ (dV_rel τ).
+    split; [split|]; auto. {
+      constructor.
+    } {
+      intros.
+      destruct (invert_eval_val H); auto.
+    }
+  Qed.
 
-Definition dG_rel Γ (ρ : wt_env Γ) : Type :=
-  dep_env_allT dV_rel ρ.
-
-Lemma apply_dG_rel {Γ ρ} :
-  dG_rel Γ ρ ->
-  forall x τ (v : val τ),
-    lookup Γ x = Some τ ->
-    dep_lookup ρ x = Some (existT _ τ v) ->
-    dV_rel τ v.
-Proof.
-  intros.
-  revert Γ ρ H H0 X.
-  induction x; intros. {
-    destruct ρ; inversion H; subst.
-    simpl in *.
-    dependent destruction H0.
-    destruct X.
-    auto.
-  } {
-    destruct ρ; inversion H; subst.
-    simpl in *.
-    eapply IHx; eauto.
-    destruct X.
-    auto.
-  }
-Qed.
-
-Lemma extend_dgrel {Γ τ ρ v} :
-  (dV_rel τ v) ->
-  (dG_rel Γ ρ) ->
-  (dG_rel (τ :: Γ) (dep_cons v ρ)).
-Proof.
-  constructor; auto.
-Qed.
-
-Definition related_expr Γ τ (e : expr Γ τ) : Type :=
-  forall ρ (Hρ : dG_rel Γ ρ),
-    dE_rel τ (proj1_sig (close ρ e)).
-
-Lemma compat_real Γ r :
-  related_expr Γ ℝ (e_real r).
-Proof.
-  left.
-  exists (v_real r, 1).
-
-  elim_sig_exprs.
-
-  split; [repeat constructor |]. {
-    apply EPure'.
-    apply erase_injective.
-    auto.
-  } {
+  Lemma case_real : forall r,
+      E_rel ℝ (e_real r).
+  Proof.
     intros.
-    destruct_val v'.
-    d_destruct H.
-    simpl.
-    auto.
-  }
-Qed.
+    rewrite rewrite_v_real.
+    apply case_val.
+    exact I.
+  Qed.
 
-Lemma compat_var Γ x τ Hx :
-  related_expr Γ τ (e_var x Hx).
-Proof.
-  left.
-
-  destruct (env_search ρ Hx) as [v ρv].
-
-  elim_sig_exprs.
-  pose proof (lookup_subst _ ρv).
-  elim_erase_eqs.
-
-  exists (v, 1).
-  split; [repeat constructor |]; auto. {
-    eapply apply_dG_rel; eauto.
-  } {
+  Lemma case_lam : forall τa τr body,
+      (forall v,
+          V_rel τa v ->
+          E_rel τr (proj1_sig (ty_subst1 body v))) ->
+      E_rel (τa ~> τr) (e_lam body).
+  Proof.
     intros.
-    destruct (invert_eval_val H); subst.
-    auto.
-  }
-Qed.
+    rewrite rewrite_v_lam.
+    apply case_val.
+    constructor; auto.
+  Qed.
 
-Lemma compat_lam Γ τa τr body :
-  related_expr (τa :: Γ) τr body ->
-  related_expr Γ (τa ~> τr) (e_lam body).
-Proof.
-  intros Hbody.
-  left.
+  Lemma case_app : forall τa τr ef ea,
+      E_rel (τa ~> τr) ef ->
+      E_rel τa ea ->
+      E_rel τr (e_app ef ea).
+  Proof.
+    repeat intro.
+    specialize (X (π 0 σ)).
+    specialize (X0 (π 1 σ)).
+    destruct X as [[[vf wf] [[Hf Ef] uf]] | not_ex]. {
+      destruct X0 as [[[va wa] [[Ha Ea] ua]] | not_ex]. {
+        destruct Hf as [body Hbody].
+        specialize (Hbody va Ha (π 2 σ)).
+        destruct Hbody as [[[vr wr] [[Hr Er] ur]] | not_ex]. {
+          left.
+          exists (vr, wf * wa * wr).
+          split; [split |]; auto. {
+            econstructor; eauto.
+          } {
+            intros.
+            d_destruct H; try absurd_val.
+            specialize (uf _ _ H).
+            specialize (ua _ _ H0).
+            inject ua.
+            inject uf.
+            d_destruct H0.
+            elim_sig_exprs.
+            elim_erase_eqs.
+            specialize (ur _ _ H1).
+            inject ur.
+            auto.
+          }
+        } {
+          right.
+          contradict not_ex.
+          destruct not_ex as [[v w] E].
+          d_destruct E; try absurd_val.
 
-  elim_sig_exprs.
-  d_destruct (e, He).
+          specialize (uf _ _ E1).
+          inject uf.
+          d_destruct H.
 
-  exists (v_lam e, 1).
-  constructor; [constructor |]. {
-    constructor.
-    intros.
+          specialize (ua _ _ E2).
+          inject ua.
 
-    specialize (Hbody _ (extend_dgrel X Hρ)).
-    elim_sig_exprs.
-    rewrite x in He1.
-    asimpl in He1.
-    elim_erase_eqs.
+          eexists (_, _); eauto.
+        }
+      } {
+        right.
+        contradict not_ex.
+        destruct not_ex as [[v w] E].
+        d_destruct E; try absurd_val.
+        eexists (_, _); eauto.
+      }
+    } {
+      right.
+      contradict not_ex.
+      destruct not_ex as [[v w] E].
+      d_destruct E; try absurd_val.
+      eexists (_, _); eauto.
+    }
+  Qed.
 
-    exact Hbody.
-  } {
-    apply EPure'.
-    auto.
-  } {
-    intros.
-    change (EVAL σ ⊢ v_lam e ⇓ v', w') in H.
-    destruct (invert_eval_val H); subst.
-    simpl.
-    auto.
-  }
-Qed.
-
-Lemma compat_app Γ τa τr ef ea :
-  related_expr Γ (τa ~> τr) ef ->
-  related_expr Γ τa ea ->
-  related_expr Γ τr (e_app ef ea).
-Proof.
-  intros Hef Hea ? ? ?.
-
-  specialize (Hef ρ Hρ (π 0 σ)).
-  specialize (Hea ρ Hρ (π 1 σ)).
-
-  elim_sig_exprs.
-  d_destruct (e1, He1).
-  elim_erase_eqs.
-
-  destruct Hef as [[[vf wf] [[Hvf EVAL_f] uf]] | not_ex]. {
-    destruct Hea as [[[va wa] [[Hva EVAL_a] ua]] | not_ex]. {
-      destruct_val vf.
-      destruct Hvf as [body0 Hvf].
-      clear body.
-
-      destruct (Hvf va Hva (π 2 σ)) as [[[vr wr] [[Hvr EVAL_r] ur]] | not_ex]. {
+  Lemma case_factor : forall e,
+      E_rel ℝ e ->
+      E_rel ℝ (e_factor e).
+  Proof.
+    repeat intro.
+    specialize (X σ).
+    destruct X as [[[v w] [[H E] u]] | not_ex]. {
+      destruct_val v.
+      destruct (Rle_dec 0 r). {
         left.
-        exists (vr, wf * wa * wr).
+        exists (v_real r, finite r r0 * w).
+        split; [split |]; auto. {
+          exact (EFactor σ r0 E).
+        } {
+          intros.
+          d_destruct H0; try absurd_val.
+          specialize (u _ _ H0).
+          inject u.
+          inject H1.
+          split; repeat f_equal.
+          apply proof_irrelevance.
+        }
+      } {
+        right.
+        contradict n.
+        destruct n as [[v w'] E'].
+        d_destruct E'; try absurd_val.
+        specialize (u _ _ E').
+        inject u.
+        d_destruct H0.
+        auto.
+      }
+    } {
+      right.
+      contradict not_ex.
+      destruct not_ex as [[v w] E].
+      d_destruct E; try absurd_val.
+      eexists (_, _); eauto.
+    }
+  Qed.
 
+  Lemma case_sample :
+    E_rel ℝ e_sample.
+  Proof.
+    repeat intro.
+    left.
+    eexists (_, _).
+    split; [split |]; swap 1 2. {
+      constructor.
+    } {
+      exact I.
+    } {
+      intros.
+      d_destruct H; try absurd_val.
+      auto.
+    }
+  Qed.
+
+  Lemma case_plus : forall el er,
+      E_rel ℝ el ->
+      E_rel ℝ er ->
+      E_rel ℝ (e_plus el er).
+  Proof.
+    repeat intro.
+    specialize (X (π 0 σ)).
+    specialize (X0 (π 1 σ)).
+
+    destruct X as [[[vl wl] [[Hvl EVAL_l] ul]] | not_ex]. {
+      destruct X0 as [[[vr wr] [[Hvr EVAL_r] ur]] | not_ex]. {
+        left.
+        destruct_val vl.
+        destruct_val vr.
+
+        exists (v_real (r + r0), wl * wr).
         constructor; [repeat econstructor |]; eauto.
         intros.
+
         d_destruct H; try absurd_val.
 
-        destruct (uf _ _ H).
-        destruct (ua _ _ H0); subst.
-        d_destruct H2.
+        destruct (ul _ _ H); subst.
+        destruct (ur _ _ H0); subst.
+        inject H1.
+        inject H2.
 
-        destruct (ur _ _ H1); subst.
-        auto.
+        split; auto.
       } {
         right.
         intros.
+
         contradict not_ex.
+
         destruct X as [[? ?] ?].
-
         d_destruct y; try absurd_val.
-
-        destruct (uf _ _ y1).
-        destruct (ua _ _ y2); subst.
-        d_destruct H.
 
         eexists (_, _); eauto.
       }
     } {
       right.
       intros.
-      contradict not_ex.
-      destruct X as [[? ?] ?].
-
-      d_destruct y; try absurd_val.
-
-      eexists (_, _); eauto.
-    }
-  } {
-    right.
-    intros.
-    contradict not_ex.
-    destruct X as [[? ?] ?].
-
-    d_destruct y; try absurd_val.
-
-    eexists (_, _); eauto.
-  }
-Qed.
-
-Lemma compat_factor Γ e :
-  related_expr Γ ℝ e ->
-  related_expr Γ ℝ (e_factor e).
-Proof.
-  intros He ? ? ?.
-
-  specialize (He ρ Hρ σ).
-
-  elim_sig_exprs.
-  d_destruct (e1, He1).
-  elim_erase_eqs.
-
-  destruct He as [[[v w] [[Hv EVAL_e] u]] | not_ex]. {
-    destruct_val v.
-
-    destruct (Rle_dec 0 r). {
-      left.
-      exists (v_real r, finite r r0 * w).
-      constructor; [repeat econstructor |]; eauto.
-      intros.
-      d_destruct H; try absurd_val.
-
-      destruct (u _ _ H); subst.
-      d_destruct H0.
-      split; auto.
-      f_equal.
-      ennr.
-    } {
-      right.
-      intros.
-
-      destruct X as [[? ?] ?].
-
-      d_destruct y; try absurd_val.
-      destruct (u _ _ y); subst.
-      d_destruct H.
-      contradiction rpos.
-    }
-  } {
-    right.
-    intros.
-    contradict not_ex.
-
-    destruct X as [[? ?] ?].
-    d_destruct y; try absurd_val.
-    eexists (_, _); eauto.
-  }
-Qed.
-
-Lemma compat_sample Γ :
-  related_expr Γ ℝ e_sample.
-Proof.
-  intros ? ? ?.
-  left.
-
-  elim_sig_exprs.
-  d_destruct (e, He).
-
-  eexists (_, _).
-  constructor; [repeat econstructor |]; eauto.
-  intros.
-
-  d_destruct H; try absurd_val.
-  simpl.
-  auto.
-Qed.
-
-Lemma compat_plus Γ el er :
-  related_expr Γ ℝ el ->
-  related_expr Γ ℝ er ->
-  related_expr Γ ℝ (e_plus el er).
-Proof.
-  intros Hel Her ? ? ?.
-
-  specialize (Hel ρ Hρ (π 0 σ)).
-  specialize (Her ρ Hρ (π 1 σ)).
-
-  elim_sig_exprs.
-  d_destruct (e1, He1).
-  elim_erase_eqs.
-
-  destruct Hel as [[[vl wl] [[Hvl EVAL_l] ul]] | not_ex]. {
-    destruct Her as [[[vr wr] [[Hvr EVAL_r] ur]] | not_ex]. {
-      left.
-      destruct_val vl.
-      destruct_val vr.
-
-      exists (v_real (r + r0), wl * wr).
-      constructor; [repeat econstructor |]; eauto.
-      intros.
-
-      d_destruct H; try absurd_val.
-
-      destruct (ul _ _ H); subst.
-      destruct (ur _ _ H0); subst.
-      inject H1.
-      inject H2.
-
-      split; auto.
-    } {
-      right.
-      intros.
 
       contradict not_ex.
 
@@ -346,65 +244,42 @@ Proof.
       d_destruct y; try absurd_val.
 
       eexists (_, _); eauto.
-    }
-  } {
-    right.
-    intros.
-
-    contradict not_ex.
-
-    destruct X as [[? ?] ?].
-    d_destruct y; try absurd_val.
-
-    eexists (_, _); eauto.
-  }
-Qed.
-
-Lemma fundamental_property {Γ τ} e :
-  related_expr Γ τ e.
-Proof.
-  induction e.
-  - apply compat_real.
-  - apply compat_var; auto.
-  - apply compat_lam; auto.
-  - eapply compat_app; eauto.
-  - eapply compat_factor; eauto.
-  - apply compat_sample; auto.
-  - eapply compat_plus; eauto.
-Qed.
-
-Module eval_dec.
-
-  Inductive eval_dec_result {τ} (e : expr · τ) (σ : Entropy) :=
-  | eval_dec_ex_unique
-      (v : val τ) (w : R+) (ev : EVAL σ ⊢ e ⇓ v, w)
-      (u : forall v' w',
-          (EVAL σ ⊢ e ⇓ v', w') ->
-          v' = v /\ w' = w)
-  | eval_dec_not_ex
-      (not_ex : forall v w,
-          (EVAL σ ⊢ e ⇓ v, w) ->
-          False)
-  .
-  Arguments eval_dec_ex_unique {_ _ _} v w _ _.
-  Arguments eval_dec_not_ex {_ _ _} not_ex.
-
-  Theorem eval_dec {τ} (e : expr · τ) σ : eval_dec_result e σ.
-  Proof.
-    pose proof (fundamental_property e dep_nil I) as fp.
-
-    elim_sig_exprs.
-    elim_erase_eqs.
-
-    destruct (fp σ). {
-      destruct s as [[v w] [[? ?] ?]].
-      eapply eval_dec_ex_unique; eauto.
-    } {
-      apply eval_dec_not_ex.
-      intros.
-      contradict f.
-      exists (v, w).
-      auto.
     }
   Qed.
-End eval_dec.
+End DeterminismCases.
+
+Module Determinism := Compatibility DeterminismBase DeterminismCases.
+Export Determinism.
+
+Inductive eval_dec_result {τ} (e : expr · τ) (σ : Entropy) :=
+| eval_dec_ex_unique
+    (v : val τ) (w : R+) (ev : EVAL σ ⊢ e ⇓ v, w)
+    (u : forall v' w',
+        (EVAL σ ⊢ e ⇓ v', w') ->
+        v' = v /\ w' = w)
+| eval_dec_not_ex
+    (not_ex : forall v w,
+        (EVAL σ ⊢ e ⇓ v, w) ->
+        False)
+.
+Arguments eval_dec_ex_unique {_ _ _} v w _ _.
+Arguments eval_dec_not_ex {_ _ _} not_ex.
+
+Theorem eval_dec {τ} (e : expr · τ) σ : eval_dec_result e σ.
+Proof.
+  pose proof (fundamental_property · τ e dep_nil I) as fp.
+
+  elim_sig_exprs.
+  elim_erase_eqs.
+
+  destruct (fp σ). {
+    destruct s as [[v w] [[? ?] ?]].
+    eapply eval_dec_ex_unique; eauto.
+  } {
+    apply eval_dec_not_ex.
+    intros.
+    contradict f.
+    exists (v, w).
+    auto.
+  }
+Qed.
