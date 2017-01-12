@@ -1,4 +1,5 @@
-(* Tested with coq 8.5pl1 *)
+(** This file defines the extended non-negative real type [ennr] representing a
+    number in the interval #[0, ∞]#. *)
 
 Require Import Basics.
 Require Import Reals.
@@ -18,14 +19,6 @@ Inductive ennr :=
 | infinite
 .
 Notation "R+" := ennr : type_scope.
-
-(* equivalence modulo proofs of positivity *)
-(* Definition ennr_eq (a b : R+) : Prop := *)
-(*   match a, b with *)
-(*   | finite ra _, finite rb _ => ra = rb *)
-(*   | _, _ => a = b *)
-(*   end. *)
-(* Infix "==" := ennr_eq. *)
 
 Program Definition ennr_0 := finite 0 (Rle_refl _).
 Program Definition ennr_1 := finite 1 Rle_0_1.

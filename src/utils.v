@@ -1,4 +1,4 @@
-Require Export nnr.
+Require Export ennr.
 Require Export Coq.Logic.FunctionalExtensionality.
 Require Export Coq.Logic.Eqdep_dec.
 Require Export Coq.Program.Basics.

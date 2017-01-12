@@ -1,5 +1,3 @@
-(* Tested with coq 8.5pl1 *)
-
 Require Import Basics.
 Require Import Reals.
 Require Import List.
@@ -9,7 +7,6 @@ Require Import Coq.Logic.ProofIrrelevance.
 Require Import Coq.Program.Basics.
 Require Import Coq.Program.Equality.
 Require Import Coq.Setoids.Setoid.
-Require Import nnr.
 Require Import syntax.
 Require Import utils.
 Require Import Coq.Classes.Morphisms.

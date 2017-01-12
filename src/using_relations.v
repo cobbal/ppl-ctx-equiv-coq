@@ -7,7 +7,6 @@ Require Import Coq.Logic.ProofIrrelevance.
 Require Import Coq.Program.Basics.
 Require Import Coq.Program.Equality.
 Require Import Coq.Setoids.Setoid.
-Require Import nnr.
 Require Import syntax.
 Require Import utils.
 Require Import Coq.Classes.Morphisms.

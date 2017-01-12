@@ -8,6 +8,9 @@ auto-subst:
 coq: Makefile.coq
 	$(MAKE) -f Makefile.coq
 
+live-html: Makefile.coq html/live.js
+	$(MAKE) -f Makefile.coq COQDOCFLAGS="-interpolate -utf8 --no-lib-name" html
+
 Makefile.coq: auto-subst Makefile _CoqProject src/*.v
 	coq_makefile -f _CoqProject -o Makefile.coq
 
@@ -16,7 +19,8 @@ clean:: Makefile.coq
 	rm -f Makefile.coq
 	rm -f lia.cache
 	rm -rf dep-graph
-	rm -f dep.vo dep.glob
+	rm -f src/dep.vo src/dep.glob
+	rm -f html all.pdf
 
 graph: dep-graph/graph.pdf
 
