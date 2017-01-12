@@ -224,6 +224,48 @@ Proof.
   }
 Qed.
 
+Lemma compat_plug1 {Γo τo Γh τh}
+      (f : FRAME Γo ⊢ [Γh ⊢ τh] : τo)
+      e0 e1 :
+  (EXP Γh ⊢ e0 ≈ e1 : τh) ->
+  (EXP Γo ⊢ f⟨e0⟩ ≈ f⟨e1⟩ : τo).
+Proof.
+  intros.
+  d_destruct f; cbn. {
+    eapply compat_app; auto.
+    reflexivity.
+  } {
+    eapply compat_app; auto.
+    reflexivity.
+  } {
+    apply compat_factor; auto.
+  } {
+    apply compat_plus; auto.
+    reflexivity.
+  } {
+    apply compat_plus; auto.
+    reflexivity.
+  } {
+    apply compat_lam; auto.
+  }
+Qed.
+
+Lemma compat_plug {Γo τo Γh τh}
+      (C : CTX Γo ⊢ [Γh ⊢ τh] : τo)
+      e0 e1 :
+  (EXP Γh ⊢ e0 ≈ e1 : τh) ->
+  (EXP Γo ⊢ C⟨e0⟩ ≈ C⟨e1⟩ : τo).
+Proof.
+  intros He.
+  dependent induction C using bichain_rect. {
+    exact He.
+  } {
+    rewrite !plug_cons.
+    apply compat_plug1.
+    auto.
+  }
+Qed.
+
 Definition ctx_equiv {Γ τ} (e0 e1 : expr Γ τ) :=
   forall (C : (CTX · ⊢ [Γ ⊢ τ] : ℝ)) A,
     μ C⟨e0⟩ A = μ C⟨e1⟩ A.
@@ -236,107 +278,13 @@ Proof.
 
   repeat intro.
 
-  set (A0 := A) at 1.
-  set (A1 := A).
+  pose proof compat_plug C e0 e1 re.
+  specialize (H _ _ G_rel_nil).
+  elim_sig_exprs.
+  elim_erase_eqs.
 
-  assert (HA : A_rel ℝ A0 A1). {
-    intros ? ? ?.
-    rewrite Hv.
-    auto.
-  }
-  clearbody A0 A1.
-  clear A.
-
-  revert C.
-  enough (forall Γo ρC0 ρC1 (Hρ : G_rel Γo ρC0 ρC1)
-                 (C : (CTX Γo ⊢ [Γ ⊢ τ] : ℝ)),
-             μ (proj1_sig (close ρC0 C⟨e0⟩)) A0 =
-             μ (proj1_sig (close ρC1 C⟨e1⟩)) A1); intros.
-  {
-    specialize (H _ _ _ G_rel_nil C).
-
-    elim_sig_exprs.
-    apply erase_injective in He.
-    apply erase_injective in He2.
-    subst.
-    auto.
-  }
-
-  move Hρ after A0.
-  induction C using bichain_rect. {
-    apply re; auto.
-  } {
-    specialize (IHC _ _ re).
-    rewrite !plug_cons.
-    destruct x; try specialize (IHC _ _ Hρ). {
-      pose proof (fundamental_property e _ _ Hρ).
-
-      elim_sig_exprs.
-      d_destruct (e6, He6).
-      d_destruct (e7, He7).
-      elim_erase_eqs.
-
-      apply work_of_app; auto.
-    } {
-      pose proof (fundamental_property e _ _ Hρ).
-
-      elim_sig_exprs.
-      d_destruct (e6, He6).
-      d_destruct (e7, He7).
-      elim_erase_eqs.
-
-      apply work_of_app; auto.
-    } {
-      elim_sig_exprs.
-      d_destruct (e3, He3).
-      d_destruct (e4, He4).
-      elim_erase_eqs.
-
-      apply work_of_factor; auto.
-    } {
-      pose proof (fundamental_property e _ _ Hρ).
-
-      elim_sig_exprs.
-      d_destruct (e6, He6).
-      d_destruct (e7, He7).
-      elim_erase_eqs.
-
-      apply work_of_plus; auto.
-    } {
-      pose proof (fundamental_property e _ _ Hρ).
-
-      elim_sig_exprs.
-      d_destruct (e6, He6).
-      d_destruct (e7, He7).
-      elim_erase_eqs.
-
-      apply work_of_plus; auto.
-    } {
-      elim_sig_exprs.
-      d_destruct (e, He).
-      d_destruct (e2, He2).
-
-      rewrite !rewrite_v_lam.
-      rewrite 2 val_is_dirac.
-      unfold dirac, indicator.
-      f_equal.
-      apply HA.
-
-      constructor.
-      intros.
-
-      specialize (IHC _ _ (G_rel_cons H Hρ)).
-
-      elim_sig_exprs.
-      rewrite x0 in He5.
-      rewrite x in He6.
-      asimpl in He5.
-      asimpl in He6.
-      elim_erase_eqs.
-
-      repeat intro.
-      apply IHC.
-      auto.
-    }
-  }
+  apply H.
+  repeat intro.
+  inject Hv.
+  trivial.
 Qed.

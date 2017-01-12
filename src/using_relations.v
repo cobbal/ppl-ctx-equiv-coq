@@ -767,46 +767,6 @@ Proof.
   reflexivity.
 Qed.
 
-Lemma compat_plug1 {Γo τo Γh τh} e0 e1
-      (f : FRAME Γo ⊢ [Γh ⊢ τh] : τo) :
-  (EXP Γh ⊢ e0 ≈ e1 : τh) ->
-  (EXP Γo ⊢ f⟨e0⟩ ≈ f⟨e1⟩ : τo).
-Proof.
-  intros.
-  d_destruct f; cbn. {
-    eapply compat_app; auto.
-    reflexivity.
-  } {
-    eapply compat_app; auto.
-    reflexivity.
-  } {
-    apply compat_factor; auto.
-  } {
-    apply compat_plus; auto.
-    reflexivity.
-  } {
-    apply compat_plus; auto.
-    reflexivity.
-  } {
-    apply compat_lam; auto.
-  }
-Qed.
-
-Lemma compat_plug {Γo τo Γh τh} e0 e1
-      (C : CTX Γo ⊢ [Γh ⊢ τh] : τo) :
-  (EXP Γh ⊢ e0 ≈ e1 : τh) ->
-  (EXP Γo ⊢ C⟨e0⟩ ≈ C⟨e1⟩ : τo).
-Proof.
-  intros He.
-  dependent induction C using bichain_rect. {
-    exact He.
-  } {
-    rewrite !plug_cons.
-    apply compat_plug1.
-    auto.
-  }
-Qed.
-
 Lemma erase_plug {Γo Γi τi τo} (C : (CTX Γo ⊢ [Γi ⊢ τi] : τo)) e :
   erase C⟨e⟩ = (erase_ctx C)⟨erase e⟩.
 Proof.
