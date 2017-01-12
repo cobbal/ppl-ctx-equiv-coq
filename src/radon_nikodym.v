@@ -23,12 +23,23 @@ Axiom lebesgue_measure : Meas R.
 Definition lebesgue_val_measure : Meas (val ℝ) :=
  fun A => lebesgue_measure (fun r => A (v_real r)).
 
+
+Goal forall e,
+    is_RN_deriv (μ e) lebesgue_val_measure (fun v => obs_μ e v full_event).
+  unfold is_RN_deriv.
+  intros.
+  unfold obs_μ.
+  cbn.
+  setoid_rewrite ennr_mul_1_l.
+Abort.
+
+
 Require Import logrel.
 Import Log_rel1_prop.
 Module RadonNikodymBase <: BASE.
   Definition V_rel_real : rel (val ℝ) := fun _ => True.
 
-  Inductive E_rel'' : forall τ ϕ (v_rel_τ : rel (val τ)), rel (expr · τ ϕ) :=
+  Inductive E_rel'' : forall (τ : Ty) (ϕ : Effect) (v_rel_τ : rel (val τ)), rel (expr · τ ϕ) :=
   | E_rel'_obsR (v_rel_τ : rel (val ℝ)) e :
       is_RN_deriv (μ e) lebesgue_val_measure (fun v => obs_μ e v full_event) ->
       @E_rel'' ℝ ObsR v_rel_τ e

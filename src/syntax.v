@@ -812,6 +812,15 @@ Proof.
   apply ty_subst.
 Qed.
 
+Lemma close_nil (ρ : wt_env ·) {τ ϕ} (e : expr · τ ϕ) :
+  proj1_sig (close ρ e) = e.
+Proof.
+  d_destruct ρ.
+  elim_sig_exprs.
+  elim_erase_eqs.
+  trivial.
+Qed.
+
 Definition ty_subst1 {τa τr ϕ}
       (e : expr (τa :: ·) τr ϕ)
       (v : val τa) :

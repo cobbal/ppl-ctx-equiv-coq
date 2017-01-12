@@ -22,13 +22,13 @@ Definition Meas A := (Event A -> R+).
 Definition ifte {X} (a : bool) (b c : X) := if a then b else c.
 Definition indicator {X} (b : Event X) : X -> R+ := fun x => ifte (b x) 1 0.
 
+Definition full_event {X} : Event X := const true.
+
 Axiom μEntropy : Meas Entropy.
-Axiom μEntropy_is_a_probability_measure : μEntropy (fun _ => true) = 1.
+Axiom μEntropy_is_a_probability_measure : μEntropy full_event = 1.
 
 Axiom integration : forall {A}, (A -> R+) -> Meas A -> R+.
 
-
-Definition full_event {X} : Event X := const true.
 
 (* show (∫ f dμ = ∫ g dμ) by showing pointwise equality *)
 Ltac integrand_extensionality x :=
@@ -223,7 +223,7 @@ Proof.
   replace f with (fun x => f x * 1) by (extensionality x; ring).
   setoid_rewrite H.
   rewrite <- integration_linear_mult_l.
-  replace (fun _ => _) with (indicator (fun _ : Entropy => true)) by auto.
+  replace (fun _ => _) with (@indicator Entropy full_event) by auto.
   rewrite integration_of_indicator.
   rewrite μEntropy_is_a_probability_measure.
   ring.

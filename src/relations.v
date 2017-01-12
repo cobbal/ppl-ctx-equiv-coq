@@ -39,14 +39,14 @@ Definition eval_in {τ ϕ} (e : expr · τ ϕ) σ : Meas (val τ) :=
 Definition μ {τ ϕ} (e : expr · τ ϕ) : Meas (val τ) :=
   μEntropy >>= eval_in e.
 
-Definition obs_ew (e : expr · ℝ ObsR) (v : val ℝ) σ : R+ :=
+Definition obs (e : expr · ℝ ObsR) (v : val ℝ) σ : R+ :=
   match obs_eval_dec e σ v with
   | obs_eval_dec_ex_unique w _ _ => w
   | obs_eval_dec_not_ex _ => 0
   end.
 
 Definition obs_μ (e : expr · ℝ ObsR) (v : val ℝ) : Meas unit :=
-  fun A => integration (fun σ => indicator A tt * obs_ew e v σ) μEntropy.
+  fun A => integration (fun σ => indicator A tt * obs e v σ) μEntropy.
 
 Ltac fold_μ :=
   match goal with
@@ -429,13 +429,13 @@ Module CtxEquivCases <: CASES CtxEquivBase.
     : Meas unit :=
     val_arrow_rect
       (const (Meas unit))
-      (fun body A => indicator A tt * obs_ew (proj1_sig (ty_subst1 body va)) v σ)
+      (fun body A => indicator A tt * obs (proj1_sig (ty_subst1 body va)) v σ)
       vf.
 
   (* ugly, ugly proof, relies on internals of WT_Val_arrow_rect *)
   Lemma elim_obs_apply_in {τa} (body : expr (τa :: ·) ℝ ObsR) :
       obs_apply_in (v_lam body) =
-      fun va v σ A => indicator A tt * obs_ew (proj1_sig (ty_subst1 body va)) v σ.
+      fun va v σ A => indicator A tt * obs (proj1_sig (ty_subst1 body va)) v σ.
   Proof.
     intros.
 
@@ -479,7 +479,7 @@ Module CtxEquivCases <: CASES CtxEquivBase.
 
       integrand_extensionality σ.
 
-      unfold obs_ew.
+      unfold obs.
       destruct obs_eval_dec as [wr exr ur | not_ex]. {
         d_destruct exr; try absurd_val.
         rename va into va'.
@@ -496,7 +496,7 @@ Module CtxEquivCases <: CASES CtxEquivBase.
         ring_simplify.
         f_equal.
 
-        unfold obs_ew.
+        unfold obs.
         destruct obs_eval_dec as [wr' exr' ur' | not_ex]. {
           destruct (ur' _ exr); subst.
           auto.
@@ -511,7 +511,7 @@ Module CtxEquivCases <: CASES CtxEquivBase.
         destruct_val vf.
         rewrite elim_obs_apply_in.
 
-        unfold obs_ew.
+        unfold obs.
         destruct obs_eval_dec; try ring.
         econtradict not_ex.
       }
@@ -688,7 +688,7 @@ Module CtxEquivCases <: CASES CtxEquivBase.
     rewrite μe_eq_μEntropy.
 
     set (f σ0 σ1 A :=
-           option0 ((fun vl => indicator A vl * obs_ew er vl σ1) <$> ev el σ0) * ew el σ0).
+           option0 ((fun vl => indicator A vl * obs er vl σ1) <$> ev el σ0) * ew el σ0).
     transitivity ((μEntropy >>= (fun σ => f (π 0 σ) (π 1 σ))) A). {
       subst f.
       cbn.
@@ -702,7 +702,7 @@ Module CtxEquivCases <: CASES CtxEquivBase.
         inject ul.
 
         cbn.
-        unfold obs_ew.
+        unfold obs.
         destruct obs_eval_dec. {
           specialize (u0 _ e).
           subst.
@@ -713,7 +713,7 @@ Module CtxEquivCases <: CASES CtxEquivBase.
       } {
         decide_eval as [vl wl El ul].
         cbn.
-        unfold obs_ew.
+        unfold obs.
         destruct obs_eval_dec; try ring.
         econtradict not_ex.
       }
@@ -828,7 +828,7 @@ Module CtxEquivCases <: CASES CtxEquivBase.
       | Some ri =>
         fun A =>
           indicator A tt
-          * obs_ew er (v_real ri) σ
+          * obs er (v_real ri) σ
           / ennr_abs (δ_partial_deriv_2 op rl ri)
       | None => const 0
       end
@@ -855,7 +855,7 @@ Module CtxEquivCases <: CASES CtxEquivBase.
 
       integrand_extensionality σ.
 
-      unfold obs_ew.
+      unfold obs.
       destruct obs_eval_dec as [w E u | not_ex]. {
         d_destruct E; try absurd_val.
         decide_eval el (π 0 σ) as [vl wl exl ul].
@@ -868,9 +868,9 @@ Module CtxEquivCases <: CASES CtxEquivBase.
         d_destruct H.
 
         rewrite e2.
-        enough (w1 = obs_ew er (v_real r1) (π 1 σ)) by (subst; ring).
+        enough (w1 = obs er (v_real r1) (π 1 σ)) by (subst; ring).
 
-        unfold obs_ew.
+        unfold obs.
         destruct is_v1.
         destruct obs_eval_dec as [wr' exr' ur' | not_ex]. {
           destruct (ur' _ E); subst.
@@ -888,7 +888,7 @@ Module CtxEquivCases <: CASES CtxEquivBase.
         remember (δ_unique_inv _ _ _).
         destruct o; unfold const; try ring.
 
-        unfold obs_ew, ennr_div.
+        unfold obs, ennr_div.
         destruct obs_eval_dec; try ring.
         econtradict not_ex.
       }
