@@ -21,20 +21,57 @@ Local Open Scope nat.
 
 Transparent π.
 
-Notation "x ~> y" := (Arrow x y) (at level 69, right associativity, y at level 70).
 (* Notation "` x" := (e_var x) (at level 1). *)
 Notation "'λ,' e" := (e_lam e) (at level 69, right associativity).
 Notation "e0 @ e1" := (e_app e0 e1) (at level 68, left associativity).
-Notation "e0 +! e1" := (e_plus e0 e1).
+Notation "e0 +! e1" := (e_binop Add e0 e1).
 
-Lemma lam_is_dirac {τa τr} (body : expr (τa :: ·) τr) :
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Lemma lam_is_dirac {τa τr ϕ} (body : expr (τa :: ·) τr ϕ) :
   μ (λ, body) = dirac (v_lam body).
 Proof.
   rewrite rewrite_v_lam.
   apply val_is_dirac.
 Qed.
 
-Definition var_0 {τ Γ} : expr (τ :: Γ) τ :=
+Definition var_0 {τ Γ} : expr (τ :: Γ) τ  ObsNone :=
   e_var O (eq_refl : lookup (τ :: Γ) O = Some τ).
 
 Lemma πL_same_integral f :
@@ -73,8 +110,8 @@ Proof.
   }
 Qed.
 
-Lemma add_zero_related (e : expr · ℝ) :
-  (EXP · ⊢ e_real 0 +! e ≈ e : ℝ).
+Lemma add_zero_related {ϕ} (e : expr · ℝ ϕ) :
+  (EXP · ⊢ e_real 0 +! e ≈ e : ℝ, ϕ).
 Proof.
   apply relate_exprs.
   intros.

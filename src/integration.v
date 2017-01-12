@@ -17,6 +17,7 @@ Definition Event X := X -> bool.
 
 Definition Meas A := (Event A -> R+).
 
+
 (* ifte is a function version of "if then else" so that f_equal can deal with it *)
 Definition ifte {X} (a : bool) (b c : X) := if a then b else c.
 Definition indicator {X} (b : Event X) : X -> R+ := fun x => ifte (b x) 1 0.
@@ -25,6 +26,9 @@ Axiom μEntropy : Meas Entropy.
 Axiom μEntropy_is_a_probability_measure : μEntropy (fun _ => true) = 1.
 
 Axiom integration : forall {A}, (A -> R+) -> Meas A -> R+.
+
+
+Definition full_event {X} : Event X := const true.
 
 (* show (∫ f dμ = ∫ g dμ) by showing pointwise equality *)
 Ltac integrand_extensionality x :=

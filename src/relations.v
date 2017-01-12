@@ -681,7 +681,7 @@ Module CtxEquivCases <: CASES CtxEquivBase.
         (el : expr · ℝ ϕl)
         (er : expr · ℝ ObsR) :
     μ (e_observe el er) =
-    μ el >>= (fun v A => indicator A v * obs_μ er v (const true)).
+    μ el >>= (fun v A => indicator A v * obs_μ er v full_event).
   Proof.
     extensionality A.
 
@@ -1048,7 +1048,7 @@ Proof.
 Qed.
 
 Lemma μ_of_obs_μ e v A :
-  obs_μ e v A = indicator A tt * μ (e_observe v e) (const true).
+  obs_μ e v A = indicator A tt * μ (e_observe v e) full_event.
 Proof.
   rewrite by_μe_eq_μEntropy_observe.
   rewrite val_is_dirac.

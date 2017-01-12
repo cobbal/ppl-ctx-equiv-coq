@@ -236,6 +236,229 @@ Module Log_rel1.
   End Compatibility.
 End Log_rel1.
 
+(* Literally copy paste with one word changed *)
+Module Log_rel1_prop.
+  Definition rel X := X -> Prop.
+
+  Module Type BASE.
+    Parameter (V_rel_real : rel (val ℝ)).
+    Parameter (E_rel' : forall τ ϕ (v_rel_τ : rel (val τ)), rel (expr · τ ϕ)).
+  End BASE.
+
+  Module Defs (Base : BASE).
+    Export Base.
+
+    Inductive V_rel_arrow {τa ϕ τr}
+              (V_rel_a : rel (val τa))
+              (V_rel_r : rel (val τr))
+      : rel (val (τa ~~ ϕ ~> τr)) :=
+    | mk_V_rel_arrow
+        (body : expr (τa :: ·) τr ϕ) :
+        (forall va,
+            V_rel_a va ->
+            E_rel' τr _ V_rel_r (proj1_sig (ty_subst1 body va))) ->
+        V_rel_arrow V_rel_a V_rel_r (v_lam body).
+
+    Fixpoint V_rel τ : rel (val τ) :=
+      match τ with
+      | ℝ => V_rel_real
+      | (τa ~~ ϕ ~> τr) => V_rel_arrow (V_rel τa) (V_rel τr)
+      end.
+
+    Definition E_rel : forall τ ϕ, rel (expr · τ ϕ) :=
+      fun τ ϕ => E_rel' τ ϕ (V_rel τ).
+
+    Definition G_rel Γ (ρ : wt_env Γ) :=
+      dep_env_allT V_rel ρ.
+
+    Definition expr_rel Γ τ ϕ (e : expr Γ τ ϕ) : Type :=
+      forall ρ,
+        G_rel Γ ρ ->
+        E_rel τ _ (proj1_sig (close ρ e)).
+  End Defs.
+
+  Module Type CASES (Base : BASE).
+    Module Defs := Defs Base.
+    Export Defs.
+
+    Parameters
+      (* seems redundant to have all 3 of these... *)
+      (case_val : forall τ v,
+          V_rel τ v -> E_rel τ _ v)
+      (case_real : forall r,
+          E_rel ℝ _ (e_real r))
+      (case_lam : forall τa ϕ τr body,
+          (forall v,
+              V_rel τa v ->
+              E_rel τr _ (proj1_sig (ty_subst1 body v))) ->
+          E_rel (τa ~~ ϕ ~> τr) _ (e_lam body))
+      (case_app : forall τa ϕ τr ϕf ϕa ef ea,
+          E_rel (τa ~~ ϕ ~> τr) ϕf ef ->
+          E_rel τa ϕa ea ->
+          E_rel τr _ (e_app ef ea))
+      (case_factor : forall ϕ e,
+          E_rel ℝ ϕ e ->
+          E_rel ℝ _ (e_factor e))
+      (case_sample :
+         E_rel ℝ _ e_sample)
+      (case_observe : forall ϕ0 e0 e1,
+         E_rel ℝ ϕ0 e0 ->
+         E_rel ℝ _ e1 ->
+         E_rel ℝ _ (e_observe e0 e1))
+      (case_binop : forall ϕl ϕr op el er,
+          E_rel ℝ ϕl el ->
+          E_rel ℝ ϕr er ->
+          E_rel ℝ _ (e_binop op el er))
+      (case_hide : forall e,
+          E_rel ℝ ObsR e ->
+          E_rel ℝ ObsNone (e_hide_observable e)).
+  End CASES.
+
+  Module Compatibility (Base : BASE) (Cases : CASES Base).
+    Import Cases.
+
+    Lemma apply_G_rel {Γ ρ} :
+      G_rel Γ ρ ->
+      forall {x τ v},
+        lookup Γ x = Some τ ->
+        dep_lookup ρ x = Some (existT _ τ v) ->
+        V_rel τ v.
+    Proof.
+      intros.
+      revert Γ ρ H H0 X.
+      induction x; intros. {
+        destruct ρ; inversion H; subst.
+        simpl in *.
+        dependent destruction H0.
+        destruct X.
+        auto.
+      } {
+        destruct ρ; inversion H; subst.
+        simpl in *.
+        eapply IHx; eauto.
+        destruct X.
+        auto.
+      }
+    Qed.
+
+    Local Ltac common :=
+      intros;
+      intros ρ Hρ;
+      repeat match goal with
+             | [ H : expr_rel _ _ _ _ |- _ ] =>
+               specialize (H ρ Hρ)
+             end;
+      elim_sig_exprs;
+      try elim_erase_eqs.
+
+    Lemma compat_real Γ r :
+      expr_rel Γ ℝ _ (e_real r).
+    Proof.
+      common.
+      apply case_real.
+    Qed.
+
+    Lemma compat_var Γ τ x H :
+      expr_rel Γ τ _ (e_var x H).
+    Proof.
+      common.
+
+      destruct (env_search ρ H) as [v ρv].
+      pose proof (lookup_subst _ ρv).
+      elim_erase_eqs.
+
+      apply case_val.
+      eapply apply_G_rel; eauto.
+    Qed.
+
+    Lemma compat_lam Γ τa ϕ τr body :
+      expr_rel (τa :: Γ) τr _ body ->
+      expr_rel Γ (τa ~~ ϕ ~> τr) _ (e_lam body).
+    Proof.
+      common.
+      rewrite rewrite_v_lam.
+      apply case_val.
+      constructor.
+      intros.
+      elim_sig_exprs.
+      rewrite H0 in He0; clear e H0.
+
+      specialize (X (dep_cons va ρ)).
+      elim_sig_exprs.
+      asimpl in He0.
+      elim_erase_eqs.
+      apply X.
+      exact (H, Hρ).
+    Qed.
+
+    Lemma compat_app Γ τa ϕ τr ϕf ef ϕa ea :
+      expr_rel Γ (τa ~~ ϕ ~> τr) ϕf ef ->
+      expr_rel Γ τa ϕa ea ->
+      expr_rel Γ τr _ (e_app ef ea).
+    Proof.
+      common.
+      apply case_app; auto.
+    Qed.
+
+
+    Lemma compat_factor Γ ϕ e :
+      expr_rel Γ ℝ ϕ e ->
+      expr_rel Γ ℝ _ (e_factor e).
+    Proof.
+      common.
+      apply case_factor; auto.
+    Qed.
+
+    Lemma compat_sample Γ :
+      expr_rel Γ ℝ _ e_sample.
+    Proof.
+      common.
+      apply case_sample.
+    Qed.
+
+    Lemma compat_observe Γ ϕ0 e0 e1 :
+      expr_rel Γ ℝ ϕ0 e0 ->
+      expr_rel Γ ℝ _ e1 ->
+      expr_rel Γ ℝ _ (e_observe e0 e1).
+    Proof.
+      common.
+      apply case_observe; auto.
+    Qed.
+
+    Lemma compat_binop Γ op ϕl el ϕr er :
+      expr_rel Γ ℝ ϕl el ->
+      expr_rel Γ ℝ ϕr er ->
+      expr_rel Γ ℝ _ (e_binop op el er).
+    Proof.
+      common.
+      apply case_binop; auto.
+    Qed.
+
+    Lemma compat_hide Γ e :
+      expr_rel Γ ℝ ObsR e ->
+      expr_rel Γ ℝ ObsNone (e_hide_observable e).
+    Proof.
+      common.
+      apply case_hide; auto.
+    Qed.
+
+    Lemma fundamental_property {Γ τ ϕ} e :
+      expr_rel Γ τ ϕ e.
+    Proof.
+      induction e.
+      - apply compat_real.
+      - apply compat_var.
+      - apply compat_lam; auto.
+      - apply compat_app; auto.
+      - apply compat_factor; auto.
+      - apply compat_sample.
+      - apply compat_observe; auto.
+      - apply compat_binop; auto.
+      - apply compat_hide; auto.
+    Qed.
+  End Compatibility.
+End Log_rel1_prop.
+
 Module Log_rel2.
   Definition rel X := X -> X -> Prop.
 
