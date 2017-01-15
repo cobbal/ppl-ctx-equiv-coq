@@ -1,7 +1,9 @@
+Require Import Coq.Classes.RelationClasses.
+
 Require Import utils.
 Require Import syntax.
 Require Import relations.
-Require Import RelationClasses.
+Require Import integration.
 
 (* Symmetry *)
 
@@ -50,17 +52,13 @@ Instance A_rel_symmetric {τ} : Symmetric (A_rel τ)
 Instance G_rel_symmetric {Γ} : Symmetric (G_rel Γ).
 Proof.
   repeat intro.
-  induction Γ; d_destruct (x, y). {
+  induction Γ; dep_destruct (x, y). {
     constructor.
   } {
-    d_destruct H.
-    constructor. {
-      apply V_rel_symmetric.
-      auto.
-    } {
-      apply IHΓ.
-      auto.
-    }
+    dep_destruct H.
+    constructor; auto.
+    apply V_rel_symmetric.
+    auto.
   }
 Qed.
 
@@ -117,8 +115,7 @@ Proof.
     remember (v_lam body3).
     remember (v_lam body1).
     destruct H0.
-    d_destruct (Heqv, Heqv0, Heqv1).
-    clear body0.
+    dep_destruct (Heqv, Heqv0, Heqv1).
 
     eapply (E_rel_transitive' IHτ2 _ (proj1_sig (ty_subst1 body3 va0))); [| apply H0; auto].
     apply H.
@@ -137,11 +134,11 @@ Instance A_rel_transitive {τ} : Transitive (A_rel τ)
 Instance G_rel_transitive {Γ} : Transitive (G_rel Γ).
 Proof.
   repeat intro.
-  induction Γ; d_destruct (x, y, z). {
+  induction Γ; dep_destruct (x, y, z). {
     constructor.
   } {
-    d_destruct H.
-    d_destruct H1.
+    dep_destruct H.
+    dep_destruct H1.
     constructor. {
       etransitivity; eauto.
     } {
@@ -195,11 +192,11 @@ Qed.
 Instance G_rel_reflexive {Γ} : Reflexive (G_rel Γ).
 Proof.
   repeat intro.
-  induction Γ; d_destruct x. {
+  induction Γ; dep_destruct x. {
     constructor.
   } {
     constructor; auto.
-    apply V_rel_reflexive.
+    reflexivity.
   }
 Qed.
 

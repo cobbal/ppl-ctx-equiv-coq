@@ -47,60 +47,6 @@ Definition chain_snoc {X} {P : X -> X -> Type} {A B C : X} :
   chain P A B -> P B C -> chain P A C :=
   fun c x => c +++ x ::: chain_nil.
 
-Fixpoint chain_rev {X} {P : X -> X -> Type} {A B}
-         (c : chain P A B) : chain (flip P) B A :=
-  match c with
-  | chain_nil => chain_nil
-  | x ::: xs => chain_snoc (chain_rev xs) x
-  end.
-
-Lemma chain_rev_app_distr {X} {P : X -> X -> Type} {A B C}
-      (c0 : chain P A B) (c1 : chain P B C)
-  : chain_rev (c0 +++ c1) = chain_rev c1 +++ chain_rev c0.
-Proof.
-  induction c0. {
-    cbn.
-    rewrite chain_app_nil_r.
-    auto.
-  } {
-    cbn in *.
-    rewrite IHc0.
-    unfold chain_snoc.
-    rewrite chain_app_assoc.
-    reflexivity.
-  }
-Qed.
-
-Lemma chain_rev_involutive {X} {P : X -> X -> Type} {A B}
-      (c : chain P A B)
-  : c = chain_rev (chain_rev c).
-Proof.
-  induction c; auto.
-  cbn.
-  unfold chain_snoc.
-  rewrite chain_rev_app_distr.
-  cbn in *.
-  rewrite <- IHc.
-  auto.
-Qed.
-
-(* elimination predicate for a reverse chain, i.e. pretending it was defined by
-   nil and snoc instead of nil and cons. *)
-Lemma rev_chain_rect X (P : X -> X -> Type)
-      (motive : forall A B, chain P A B -> Type)
-      (case_nil : forall A, motive A A chain_nil)
-      (case_snoc : forall A B C (x : P B C) (c : chain P A B),
-          motive A B c -> motive A C (chain_snoc c x))
-  : forall {A B} (c : chain P A B), motive A B c.
-Proof.
-  intros.
-  rewrite (chain_rev_involutive c).
-  set (chain_rev c).
-  clearbody c0.
-  clear c.
-  induction c0; cbn; auto.
-Qed.
-
 Definition chain_fold_right {X} {P : X -> X -> Type}
          {F : X -> Type}
          (f : forall {A B : X}, P A B -> F B -> F A)
@@ -163,16 +109,6 @@ Definition bichain {X Y} (P : X -> Y -> X -> Y -> Type)
               (bicurry P)
               (xA, yA)
               (xB, yB).
-(* Inductive chain (X : Type) (P : X -> X -> Type) : X -> X -> Type := *)
-(*     chain_nil : forall A : X, chain P A A *)
-(*   | chain_cons : forall A B C : X, P A B -> chain P B C -> chain P A C *)
-
-(* For chain: Argument X is implicit and maximally inserted *)
-(* For chain_nil: Arguments X, P, A are implicit and maximally inserted *)
-(* For chain_cons: Arguments X, P, A, B, C are implicit and maximally inserted *)
-(* For chain: Argument scopes are [type_scope _ _ _] *)
-(* For chain_nil: Argument scopes are [type_scope _ _] *)
-(* For chain_cons: Argument scopes are [type_scope _ _ _ _ _ _] *)
 
 Definition bichain_cons {X Y} {P : X -> Y -> X -> Y -> Type} {xA yA xB yB xC yC} :
   P xA yA xB yB -> bichain P xB yB xC yC -> bichain P xA yA xC yC

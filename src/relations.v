@@ -88,8 +88,8 @@ Lemma apply_G_rel {Γ ρ0 ρ1} :
   G_rel Γ ρ0 ρ1 ->
   forall {x τ} {v0 v1 : val τ},
     lookup Γ x = Some τ ->
-    dep_lookup ρ0 x = Some (existT _ τ v0) ->
-    dep_lookup ρ1 x = Some (existT _ τ v1) ->
+    erase v0 = erase_wt_env ρ0 x ->
+    erase v1 = erase_wt_env ρ1 x ->
     V_rel τ v0 v1.
 Proof.
   intros.
@@ -98,6 +98,12 @@ Proof.
     dep_destruct (Γ, H0).
     dep_destruct (ρ0, ρ1, H1, H2).
     dep_destruct H.
+
+    cbn in *.
+    elim_erase_eqs.
+    apply val_eq in x0.
+    apply val_eq in x.
+    subst.
     auto.
   } {
     dep_destruct (Γ, H0).
@@ -171,26 +177,20 @@ Proof.
   reflexivity.
 Qed.
 
-Lemma lam_is_dirac {τa τ} (e : expr (τa :: ·) τ) :
-  μ (e_lam e) = dirac (v_lam e).
-Proof.
-  rewrite <- val_is_dirac.
-  auto.
-Qed.
-
 Lemma compat_real Γ r :
   (EXP Γ ⊢ e_real r ≈ e_real r : ℝ).
 Proof.
   repeat intro.
   elim_sig_exprs.
-  dep_destruct (e, He).
-  dep_destruct (e0, He0).
+  elim_erase_eqs.
 
-  change (μ (v_real r) A0 = μ (v_real r) A1).
+  rewrite rewrite_v_real.
   rewrite val_is_dirac.
-  unfold dirac, indicator; simpl.
+  unfold dirac, indicator.
   f_equal.
   apply HA.
+
+  hnf.
   reflexivity.
 Qed.
 
@@ -201,20 +201,16 @@ Proof.
   repeat intro.
   elim_sig_exprs.
 
-  destruct (env_search ρ0 Hx) as [v0 ρ0x].
-  destruct (env_search ρ1 Hx) as [v1 ρ1x].
+  destruct (env_search_subst ρ0 Hx) as [v0 ρ0x].
+  destruct (env_search_subst ρ1 Hx) as [v1 ρ1x].
 
   pose proof (apply_G_rel Hρ Hx ρ0x ρ1x).
-
-  apply lookup_subst in ρ0x.
-  apply lookup_subst in ρ1x.
   elim_erase_eqs.
 
   rewrite 2 val_is_dirac.
   unfold dirac, indicator.
   f_equal.
-  apply HA.
-  auto.
+  exact (HA _ _ H).
 Qed.
 
 Lemma compat_lam Γ τa τr body0 body1 :
@@ -223,12 +219,12 @@ Lemma compat_lam Γ τa τr body0 body1 :
 Proof.
   repeat intro.
   elim_sig_exprs.
-  dep_destruct (e, He).
-  dep_destruct (e0, He0).
+  elim_erase_eqs.
 
-  rewrite 2 lam_is_dirac.
+  rewrite 2 rewrite_v_lam.
+  rewrite 2 val_is_dirac.
 
-  unfold dirac, indicator; simpl.
+  unfold dirac, indicator.
   f_equal.
   apply HA.
 
@@ -238,11 +234,9 @@ Proof.
   specialize (H (dep_cons va0 ρ0) (dep_cons va1 ρ1) (G_rel_cons H0 Hρ)).
 
   elim_sig_exprs.
-  rewrite x0 in He3.
-  rewrite x in He4.
+  elim_erase_eqs.
   asimpl in He3.
   asimpl in He4.
-
   elim_erase_eqs.
 
   apply H.
@@ -265,7 +259,7 @@ Proof.
   destruct ev; auto.
 Qed.
 
-Lemma μ_interchangable τ0 τ1 (e0 : expr · τ0) (e1 : expr · τ1) : interchangable (μ e0) (μ e1).
+Lemma μ_interchangable {τ0 τ1} (e0 : expr · τ0) (e1 : expr · τ1) : interchangable (μ e0) (μ e1).
 Proof.
   repeat intro.
   rewrite 2 μe_as_pushforard.
@@ -445,17 +439,14 @@ Proof.
   apply work_of_plus; auto.
 Qed.
 
-Definition apply_in {τa τr}
-        (vf : val (τa ~> τr))
-        (va : val τa)
-        (σ : Entropy)
-  : Meas (val τr) :=
+Definition apply_in {τa τr} (vf : val (τa ~> τr)) (va : val τa) :
+  Entropy -> Meas (val τr) :=
   match (vf : expr _ _) in (expr _ τ)
-        return (τ = τa ~> τr -> Meas (val τr))
+        return (τ = τa ~> τr -> Entropy -> Meas (val τr))
   with
-  | e_lam body => fun H => ltac:(inject H; refine (eval_in (proj1_sig (ty_subst1 body va)) σ))
-  | _ => (* this will never happen, but "0" is easier to use than ex_falso here *)
-    fun _ => empty_meas _
+  | e_lam body => fun H => ltac:(inject H; refine (eval_in (proj1_sig (ty_subst1 body va))))
+  | _ => (* this will never happen, but "0" is easier to use than False_rect here *)
+    fun _ _ => empty_meas _
   end eq_refl.
 
 Lemma by_μe_eq_μEntropy_app {τa τr}
@@ -561,9 +552,7 @@ Proof.
   destruct Hvf as [? ? Hvf].
   clear body body0.
 
-  specialize (Hvf va0 va1 Hva A0 A1 HA).
-  rewrite 2 elim_apply_in.
-
+  specialize (Hvf _ _ Hva _ _ HA).
   apply Hvf.
 Qed.
 
@@ -580,8 +569,6 @@ Proof.
   specialize (Ha _ _ Hρ).
 
   elim_sig_exprs.
-  dep_destruct (e3, He3).
-  dep_destruct (e4, He4).
   elim_erase_eqs.
 
   apply work_of_app; auto.
@@ -686,8 +673,6 @@ Proof.
   specialize (H _ _ Hρ).
 
   elim_sig_exprs.
-  dep_destruct (e3, He3).
-  dep_destruct (e4, He4).
   elim_erase_eqs.
 
   apply work_of_factor; auto.

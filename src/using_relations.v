@@ -13,6 +13,7 @@ Require Import Coq.Classes.Morphisms.
 Require Import relations.
 Require Import ctxequiv.
 Require Import properties_of_relations.
+Require Import integration.
 
 Require Import micromega.Lia.
 
@@ -20,8 +21,6 @@ Local Open Scope nat.
 
 Transparent π.
 
-Notation "x ~> y" := (Arrow x y) (at level 69, right associativity, y at level 70).
-(* Notation "` x" := (e_var x) (at level 1). *)
 Notation "'λ,' e" := (e_lam e) (at level 69, right associativity).
 Notation "e0 @ e1" := (e_app e0 e1) (at level 68, left associativity).
 Notation "e0 +! e1" := (e_plus e0 e1).
@@ -38,7 +37,7 @@ Proof.
   simpl.
   f_equal.
   extensionality σ.
-  erewrite int_const_entropy; eauto.
+  apply integration_const_entropy; auto.
 Qed.
 
 Lemma πR_same_integral f :
@@ -48,7 +47,7 @@ Proof.
   rewrite integration_πL_πR.
   unfold block.
   simpl.
-  erewrite int_const_entropy; eauto.
+  apply integration_const_entropy; auto.
 Qed.
 
 Lemma project_same_integral f n :
@@ -92,80 +91,6 @@ Proof.
   reflexivity.
 Qed.
 
-(* A subset of things that can be tonellied *)
-(* TODO: figure out exactly what's needed to make this not a whitelist *)
-Inductive interchangable : forall {A}, Meas A -> Type :=
-| interchangable_μ {τ} (e : expr · τ) : interchangable (μ e)
-| interchangable_sig_fi {A} (m : Meas A) : SigmaFinite m -> interchangable m
-.
-Hint Constructors interchangable.
-
-(* Lemma tonelli_μ {τ0 τ1 B} *)
-(*       (e0 : expr · τ0) *)
-(*       (e1 : expr · τ1) *)
-(*       (f : val τ0 -> val τ1 -> Meas B) : *)
-(*   μ e0 >>= (fun x => μ e1 >>= (fun y => f x y)) = *)
-(*   μ e1 >>= (fun y => μ e0 >>= (fun x => f x y)). *)
-(* Proof. *)
-(* Abort. *)
-
-Lemma tonelli_μ_and_finite {τ B C}
-      (μFin : Meas B)
-      (f : val τ -> B -> Meas C)
-      (e : expr · τ) :
-  SigmaFinite μFin ->
-  μ e >>= (fun x => μFin >>= (fun y => f x y)) =
-  μFin >>= (fun y => μ e >>= (fun x => f x y)).
-Proof.
-  intros.
-
-  extensionality A.
-
-  rewrite μe_eq_μEntropy.
-  setoid_rewrite μe_eq_μEntropy.
-  setoid_rewrite tonelli_sigma_finite; auto.
-  unfold ">>=".
-  integrand_extensionality σ0.
-  decide_eval as [v0 w0 ex0 u0]. {
-    simpl.
-    apply integration_linear_mult_r.
-  } {
-    simpl.
-    rewrite <- integration_linear_mult_r.
-    ring.
-  }
-Qed.
-
-Lemma tonelli
-      {A B C} (μ0 : Meas A) (μ1 : Meas B)
-      (f : A -> B -> Meas C) :
-  interchangable μ0 ->
-  interchangable μ1 ->
-  μ0 >>= (fun x0 => μ1 >>= (fun x1 => f x0 x1)) =
-  μ1 >>= (fun x1 => μ0 >>= (fun x0 => f x0 x1)).
-Proof.
-  intros.
-
-  extensionality ev.
-  d_destruct (X, X0). {
-    rewrite !μe_eq_μEntropy2.
-    setoid_rewrite tonelli_sigma_finite at 1; auto.
-    integrand_extensionality σ0.
-    integrand_extensionality σ1.
-
-    decide_eval as [v0 w0 ex0 u0].
-    decide_eval as [v1 w1 ex1 u1].
-    simpl.
-    ring.
-  } {
-    rewrite tonelli_μ_and_finite; auto.
-  } {
-    rewrite tonelli_μ_and_finite; auto.
-  } {
-    apply tonelli_sigma_finite; auto.
-  }
-Qed.
-
 Lemma add_comm_related Γ (e0 e1 : expr Γ ℝ) :
   (EXP Γ ⊢ e0 +! e1 ≈ e1 +! e0 : ℝ).
 Proof.
@@ -176,24 +101,24 @@ Proof.
   elim_erase_eqs.
 
   rewrite 2 by_μe_eq_μEntropy_plus.
-  rewrite tonelli; auto.
+  rewrite μ_interchangable.
   integrand_extensionality v1.
   integrand_extensionality v0.
 
   destruct_val v0.
   destruct_val v1.
-  unfold plus_in; simpl.
+  cbn.
   rewrite Rplus_comm.
   auto.
 Qed.
 
-Program Fixpoint dep_ids' (Γ0 Γ1 : Env Ty) : dep_env (expr (Γ0 ++ Γ1)) Γ1 :=
-  match Γ1 return dep_env (expr (Γ0 ++ Γ1)) Γ1 with
+Program Fixpoint dep_ids' (Γ0 Γ1 : Env Ty) : dep_list (expr (Γ0 ++ Γ1)) Γ1 :=
+  match Γ1 return dep_list (expr (Γ0 ++ Γ1)) Γ1 with
   | nil => dep_nil
   | τ :: Γ1' =>
     dep_cons
       (e_var (length Γ0) _)
-      (rew <- [fun z => dep_env (expr z) _] (app_assoc Γ0 (τ :: nil) Γ1') in
+      (rew <- [fun z => dep_list (expr z) _] (app_assoc Γ0 (τ :: nil) Γ1') in
           dep_ids' (Γ0 ++ τ :: nil) Γ1')
   end.
 Next Obligation.
@@ -203,8 +128,8 @@ Qed.
 Definition dep_ids := dep_ids' ·.
 
 Lemma erase_eq (Γ Γ0 Γ1 : Env Ty)
-      (d0 : dep_env (expr Γ0) Γ)
-      (d1 : dep_env (expr Γ1) Γ)
+      (d0 : dep_list (expr Γ0) Γ)
+      (d1 : dep_list (expr Γ1) Γ)
       (HΓ : Γ0 = Γ1)
   :
     (d0 ~= d1) ->
@@ -253,7 +178,7 @@ Proof.
     unfold eq_rect_r.
     set (eq_sym _).
     clearbody e.
-    d_destruct e.
+    dep_destruct e.
     auto.
   }
 Qed.
@@ -291,6 +216,12 @@ Definition is_pure (e : u_expr) : Prop :=
   | _ => False
   end.
 
+Lemma lam_is_dirac {τa τr} (e : expr (τa :: ·) τr) : μ (λ, e) = dirac (v_lam e).
+Proof.
+  rewrite <- val_is_dirac.
+  reflexivity.
+Qed.
+
 Lemma beta_value {Γ τ τv}
       (e : expr (τv :: Γ) τ)
       (v : expr Γ τv) :
@@ -308,17 +239,17 @@ Proof.
   rewrite by_μe_eq_μEntropy_app.
   rewrite lam_is_dirac.
   rewrite meas_id_left.
+  cbn.
 
   assert (is_val e0_2). {
     revert H1 v_val; clear; intros.
+
     destruct v;
       try contradiction v_val;
       try solve [destruct e0_2; try discriminate; auto].
 
-    destruct (env_search ρ H) as [v Hv].
-    pose proof lookup_subst ρ Hv.
-
-    simpl in *.
+    destruct (env_search_subst ρ H) as [v Hv].
+    cbn in *.
     elim_erase_eqs.
 
     destruct v.
@@ -328,14 +259,11 @@ Proof.
   setoid_rewrite (val_is_dirac (mk_val _ H)).
   rewrite meas_id_left.
 
-  rewrite elim_apply_in.
   elim_sig_exprs.
   elim_erase_eqs.
 
-  fold_μ.
-  f_equal.
+  enough (e0 = e1) by (subst; auto).
   apply erase_injective.
-
   rewrite He1, He0.
   asimpl.
   apply subst_only_matters_up_to_env.
@@ -371,11 +299,12 @@ Proof.
   subst m.
 
   extensionality v.
-  rewrite elim_apply_in.
-  elim_sig_exprs.
-  fold (μ e0).
+  cbn.
+  fold_μ.
 
+  elim_sig_exprs.
   elim_erase_eqs.
+
   asimpl in He0.
   elim_erase_eqs.
 
@@ -406,7 +335,7 @@ Lemma simple_ctx_frame_rect
 Proof.
   intros.
   unfold simple_ctx_frame in *.
-  d_destruct f; auto.
+  dep_destruct f; auto.
   contradict (the_infinite_cons_doesnt_exist x0).
 Qed.
 
@@ -533,7 +462,7 @@ Proof.
   intros.
   elim_sig_exprs.
 
-  d_destruct f; inversion_clear f_val.
+  dep_destruct f; inversion_clear f_val.
   simpl in *.
   elim_erase_eqs.
 
@@ -544,20 +473,18 @@ Proof.
   rewrite meas_bind_assoc.
   integrand_extensionality va.
 
-  rewrite !elim_apply_in.
+  cbn.
   elim_sig_exprs.
   elim_erase_eqs.
 
   repeat fold_μ.
   rewrite !by_μe_eq_μEntropy_app.
-  rewrite lam_is_dirac.
-  rewrite val_is_dirac.
+  rewrite lam_is_dirac, val_is_dirac.
   rewrite !meas_id_left.
+  cbn.
 
-  rewrite elim_apply_in.
   elim_sig_exprs.
   elim_erase_eqs.
-
   fold_μ.
 
   asimpl in He0.
@@ -592,23 +519,22 @@ Proof.
   rewrite !meas_id_left.
 
   setoid_rewrite meas_bind_assoc.
-  rewrite (tonelli (μ e3_1)); auto.
+  rewrite (μ_interchangable e3_1).
   integrand_extensionality va.
 
-  rewrite !elim_apply_in.
+  cbn.
   elim_sig_exprs.
   elim_erase_eqs.
-
   repeat fold_μ.
+
   rewrite !by_μe_eq_μEntropy_app.
   rewrite lam_is_dirac.
   rewrite val_is_dirac.
   rewrite !meas_id_left.
 
-  rewrite elim_apply_in.
+  cbn.
   elim_sig_exprs.
   elim_erase_eqs.
-
   fold_μ.
 
   asimpl in He0.
@@ -645,20 +571,21 @@ Proof.
   rewrite meas_bind_assoc.
   integrand_extensionality va.
 
-  rewrite !elim_apply_in.
+  cbn.
   elim_sig_exprs.
   elim_erase_eqs.
-
   repeat fold_μ.
+
   rewrite by_μe_eq_μEntropy_factor.
   rewrite !by_μe_eq_μEntropy_app.
   rewrite lam_is_dirac.
   rewrite val_is_dirac.
   rewrite !meas_id_left.
 
-  rewrite elim_apply_in.
+  cbn.
   elim_sig_exprs.
   elim_erase_eqs.
+  fold_μ.
 
   asimpl in He0.
   asimpl in He1.
@@ -694,21 +621,20 @@ Proof.
   rewrite meas_bind_assoc.
   integrand_extensionality va.
 
-  rewrite !elim_apply_in.
+  cbn.
   elim_sig_exprs.
   elim_erase_eqs.
-
   repeat fold_μ.
+
   rewrite by_μe_eq_μEntropy_plus.
   rewrite !by_μe_eq_μEntropy_app.
   rewrite lam_is_dirac.
   rewrite val_is_dirac.
   rewrite !meas_id_left.
 
-  rewrite elim_apply_in.
+  cbn.
   elim_sig_exprs.
   elim_erase_eqs.
-
   fold_μ.
 
   asimpl in He0.
@@ -744,24 +670,23 @@ Proof.
   rewrite !meas_id_left.
 
   setoid_rewrite meas_bind_assoc.
-  rewrite (tonelli (μ e3_1)); auto.
+  rewrite (μ_interchangable e3_1); auto.
   integrand_extensionality va.
 
-  rewrite !elim_apply_in.
+  cbn.
   elim_sig_exprs.
   elim_erase_eqs.
-
   repeat fold_μ.
+
   rewrite by_μe_eq_μEntropy_plus.
   rewrite !by_μe_eq_μEntropy_app.
   rewrite lam_is_dirac.
   rewrite val_is_dirac.
   rewrite !meas_id_left.
 
-  rewrite elim_apply_in.
+  cbn.
   elim_sig_exprs.
   elim_erase_eqs.
-
   fold_μ.
 
   asimpl in He0.

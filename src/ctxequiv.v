@@ -171,7 +171,7 @@ Proof.
     rewrite !erase_cons in H.
     inject H.
 
-    d_destruct (x, x1);
+    dep_destruct (x, x1);
       try discriminate H1;
       f_equal;
       auto;
@@ -210,7 +210,7 @@ Proof.
     auto.
   change (erase_ctx C = erase_ctx C') in H1.
 
-  d_destruct (x, x0);
+  dep_destruct (x, x0);
     try inject Heq;
     try solve [eapply IHC; eauto].
   {
@@ -231,7 +231,7 @@ Lemma compat_plug1 {Γo τo Γh τh}
   (EXP Γo ⊢ f⟨e0⟩ ≈ f⟨e1⟩ : τo).
 Proof.
   intros.
-  d_destruct f; cbn. {
+  dep_destruct f; cbn. {
     eapply compat_app; auto.
     reflexivity.
   } {
