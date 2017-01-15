@@ -1,0 +1,288 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+
+<head>
+<meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
+<link href="coqdoc.css" rel="stylesheet" type="text/css" />
+<link href="coqdocjs.css" rel="stylesheet" type="text/css"/>
+<script type="text/javascript" src="config.js"></script>
+<script type="text/javascript" src="coqdocjs.js"></script>
+</head>
+
+<body onload="document.getElementById('content').focus()">
+  <div id="header">
+    <span class="left">
+      <span class="modulename"> <script> document.write(document.title) </script> </span>
+    </span>
+
+    <span class="button" id="toggle-proofs"></span>
+
+    <span class="right">
+      <a href="../">Project Page</a>
+      <a href="./indexpage.html"> Index </a>
+      <a href="./toc.html"> Table of Contents </a>
+    </span>
+</div>
+    <div id="content" tabindex="-1" onblur="document.getElementById('content').focus()">
+    <div id="main">
+<h1 class="libtitle">OpSemProofs.ennr</h1>
+
+<div class="code">
+
+<br/>
+</div>
+
+<div class="doc">
+This file defines the extended non-negative real type <span class="inlinecode"><a class="idref" href="OpSemProofs.ennr.html#ennr"><span class="id" title="inductive">R<sup><small>+</small></sup></span></a></span> representing a
+    number in the interval [0, ∞]. We will define integrals to be over <span class="inlinecode"><a class="idref" href="OpSemProofs.ennr.html#ennr"><span class="id" title="inductive">R<sup><small>+</small></sup></span></a></span>
+    as we are only interested in integrating measures and markov kernels.
+
+<div class="paragraph"> </div>
+
+    This file lifts several useful definitions and theorems from <span class="inlinecode"><a class="idref" href="http://coq.inria.fr/distrib/8.6/stdlib/Coq.Reals.Rdefinitions.html#R"><span class="id" title="axiom">R</span></a></span>, and proves
+    that <span class="inlinecode"><a class="idref" href="OpSemProofs.ennr.html#ennr"><span class="id" title="inductive">R<sup><small>+</small></sup></span></a></span> forms a semiring so that the <span class="inlinecode"><span class="id" title="tactic">ring</span></span> tactic will apply. 
+</div>
+<div class="code">
+
+<br/>
+<span class="id" title="keyword">Require</span> <span class="id" title="keyword">Import</span> <a class="idref" href="http://coq.inria.fr/distrib/8.6/stdlib/Coq.Program.Basics.html#"><span class="id" title="library">Coq.Program.Basics</span></a>.<br/>
+<span class="id" title="keyword">Require</span> <span class="id" title="keyword">Import</span> <a class="idref" href="http://coq.inria.fr/distrib/8.6/stdlib/Coq.Reals.Reals.html#"><span class="id" title="library">Coq.Reals.Reals</span></a>.<br/>
+<span class="id" title="keyword">Require</span> <span class="id" title="keyword">Import</span> <a class="idref" href="http://coq.inria.fr/distrib/8.6/stdlib/Coq.fourier.Fourier.html#"><span class="id" title="library">Coq.fourier.Fourier</span></a>.<br/>
+<span class="id" title="keyword">Require</span> <span class="id" title="keyword">Import</span> <a class="idref" href="http://coq.inria.fr/distrib/8.6/stdlib/Coq.setoid_ring.Ring_theory.html#"><span class="id" title="library">Coq.setoid_ring.Ring_theory</span></a>.<br/>
+<span class="id" title="keyword">Require</span> <span class="id" title="keyword">Import</span> <a class="idref" href="http://coq.inria.fr/distrib/8.6/stdlib/Coq.Logic.ProofIrrelevance.html#"><span class="id" title="library">Coq.Logic.ProofIrrelevance</span></a>.<br/>
+
+<br/>
+<span class="id" title="keyword">Delimit</span> <span class="id" title="keyword">Scope</span> <span class="id" title="var">ennr_scope</span> <span class="id" title="keyword">with</span> <span class="id" title="var">R<sup><small>+</small></sup></span>.<br/>
+
+<br/>
+<span class="id" title="keyword">Local Open</span> <span class="id" title="keyword">Scope</span> <span class="id" title="var">R</span>.<br/>
+<span class="id" title="keyword">Local Open</span> <span class="id" title="keyword">Scope</span> <span class="id" title="var">ennr_scope</span>.<br/>
+<span class="id" title="keyword">Export</span> <span class="id" title="var">RingSyntax</span>.<br/>
+
+<br/>
+<span class="id" title="keyword">Inductive</span> <a name="ennr"><span class="id" title="inductive">R<sup><small>+</small></sup></span></a> :=<br/>
+| <a name="finite"><span class="id" title="constructor">finite</span></a> (<span class="id" title="var">r</span> : <a class="idref" href="http://coq.inria.fr/distrib/8.6/stdlib/Coq.Reals.Rdefinitions.html#R"><span class="id" title="axiom">R</span></a>) (<span class="id" title="var">r_pos</span> : 0 <a class="idref" href="http://coq.inria.fr/distrib/8.6/stdlib/Coq.Reals.Rdefinitions.html#39ab57f76c1eb2e6d107f9799a31545a"><span class="id" title="notation">&lt;=</span></a> <a class="idref" href="OpSemProofs.ennr.html#r"><span class="id" title="variable">r</span></a>)<br/>
+| <a name="infinite"><span class="id" title="constructor">infinite</span></a>.<br/>
+<span class="id" title="keyword">Notation</span> <a name="4b5a53b513abe55876de4397b6a258fb"><span class="id" title="notation">&quot;</span></a>R+" := <a class="idref" href="OpSemProofs.ennr.html#ennr"><span class="id" title="inductive">R<sup><small>+</small></sup></span></a> : <span class="id" title="var">type_scope</span>.<br/>
+
+<br/>
+</div>
+
+<div class="doc">
+<a name="lab1"></a><h1 class="section">Equality</h1>
+
+<div class="paragraph"> </div>
+
+ Equality between finite <span class="inlinecode"><a class="idref" href="OpSemProofs.ennr.html#ennr"><span class="id" title="inductive">R<sup><small>+</small></sup></span></a></span>s is shown to be exactly equality on <span class="inlinecode"><a class="idref" href="http://coq.inria.fr/distrib/8.6/stdlib/Coq.Reals.Rdefinitions.html#R"><span class="id" title="axiom">R</span></a></span>
+    through the genererous help of <span class="inlinecode"><a class="idref" href="http://coq.inria.fr/distrib/8.6/stdlib/Coq.Logic.ProofIrrelevance.html#proof_irrelevance"><span class="id" title="axiom">proof_irrelevance</span></a></span>. It would probably be
+    possible to prove the important results without relying on proof
+    irrelevance, but it simplifies things greatly here. 
+</div>
+<div class="code">
+<span class="id" title="keyword">Lemma</span> <a name="finite_inj"><span class="id" title="lemma">finite_inj</span></a> <span class="id" title="var">r0</span> <span class="id" title="var">r0_pos</span> <span class="id" title="var">r1</span> <span class="id" title="var">r1_pos</span> :<br/>
+&nbsp;&nbsp;<a class="idref" href="OpSemProofs.ennr.html#r0"><span class="id" title="variable">r0</span></a> <a class="idref" href="http://coq.inria.fr/distrib/8.6/stdlib/Coq.Init.Logic.html#1c39bf18749e5cc609e83c0a0ba5a372"><span class="id" title="notation">=</span></a> <a class="idref" href="OpSemProofs.ennr.html#r1"><span class="id" title="variable">r1</span></a> <a class="idref" href="http://coq.inria.fr/distrib/8.6/stdlib/Coq.Init.Logic.html#d43e996736952df71ebeeae74d10a287"><span class="id" title="notation">-&gt;</span></a><br/>
+&nbsp;&nbsp;<a class="idref" href="OpSemProofs.ennr.html#finite"><span class="id" title="constructor">finite</span></a> <a class="idref" href="OpSemProofs.ennr.html#r0"><span class="id" title="variable">r0</span></a> <a class="idref" href="OpSemProofs.ennr.html#r0_pos"><span class="id" title="variable">r0_pos</span></a> <a class="idref" href="http://coq.inria.fr/distrib/8.6/stdlib/Coq.Init.Logic.html#1c39bf18749e5cc609e83c0a0ba5a372"><span class="id" title="notation">=</span></a> <a class="idref" href="OpSemProofs.ennr.html#finite"><span class="id" title="constructor">finite</span></a> <a class="idref" href="OpSemProofs.ennr.html#r1"><span class="id" title="variable">r1</span></a> <a class="idref" href="OpSemProofs.ennr.html#r1_pos"><span class="id" title="variable">r1_pos</span></a>.<br/>
+<span class="id" title="keyword">Proof</span>.<br/>
+&nbsp;&nbsp;<span class="id" title="tactic">intros</span>.<br/>
+&nbsp;&nbsp;<span class="id" title="tactic">subst</span>.<br/>
+&nbsp;&nbsp;<span class="id" title="tactic">f_equal</span>.<br/>
+&nbsp;&nbsp;<span class="id" title="tactic">apply</span> <a class="idref" href="http://coq.inria.fr/distrib/8.6/stdlib/Coq.Logic.ProofIrrelevance.html#proof_irrelevance"><span class="id" title="axiom">proof_irrelevance</span></a>.<br/>
+<span class="id" title="keyword">Qed</span>.<br/>
+<span class="id" title="keyword">Hint Immediate</span> <span class="id" title="var">finite_inj</span>.<br/>
+<span class="id" title="keyword">Ltac</span> <span class="id" title="var">Finite</span> := <span class="id" title="tactic">apply</span> <a class="idref" href="OpSemProofs.ennr.html#finite_inj"><span class="id" title="lemma">finite_inj</span></a>; <span class="id" title="tactic">try</span> <span class="id" title="tactic">solve</span> [<span class="id" title="var">cbn</span>; <span class="id" title="tactic">ring</span>].<br/>
+
+<br/>
+</div>
+
+<div class="doc">
+<a name="lab2"></a><h1 class="section"><span class="inlinecode"><a class="idref" href="OpSemProofs.ennr.html#ennr"><span class="id" title="inductive">R<sup><small>+</small></sup></span></a></span> is a semiring</h1>
+
+</div>
+<div class="code">
+<span class="id" title="keyword">Program Definition</span> <a name="ennr_0"><span class="id" title="definition">ennr_0</span></a> := <a class="idref" href="OpSemProofs.ennr.html#finite"><span class="id" title="constructor">finite</span></a> 0 (<a class="idref" href="http://coq.inria.fr/distrib/8.6/stdlib/Coq.Reals.RIneq.html#Rle_refl"><span class="id" title="lemma">Rle_refl</span></a> <span class="id" title="var">_</span>).<br/>
+<span class="id" title="keyword">Program Definition</span> <a name="ennr_1"><span class="id" title="definition">ennr_1</span></a> := <a class="idref" href="OpSemProofs.ennr.html#finite"><span class="id" title="constructor">finite</span></a> 1 <a class="idref" href="http://coq.inria.fr/distrib/8.6/stdlib/Coq.Reals.RIneq.html#Rle_0_1"><span class="id" title="lemma">Rle_0_1</span></a>.<br/>
+<span class="id" title="keyword">Notation</span> <a name="9b8e7c0becfb9a3a7d9ae3c5ba9f104b"><span class="id" title="notation">&quot;</span></a>0" := <a class="idref" href="OpSemProofs.ennr.html#ennr_0"><span class="id" title="definition">ennr_0</span></a>.<br/>
+<span class="id" title="keyword">Notation</span> <a name="6c0c7e6498dc98a53ecd79a166b511f5"><span class="id" title="notation">&quot;</span></a>1" := <a class="idref" href="OpSemProofs.ennr.html#ennr_1"><span class="id" title="definition">ennr_1</span></a>.<br/>
+
+<br/>
+<span class="id" title="keyword">Definition</span> <a name="ennr_plus"><span class="id" title="definition">ennr_plus</span></a> (<span class="id" title="var">a</span> <span class="id" title="var">b</span> : <a class="idref" href="OpSemProofs.ennr.html#4b5a53b513abe55876de4397b6a258fb"><span class="id" title="notation">R</span></a>+) : <a class="idref" href="OpSemProofs.ennr.html#4b5a53b513abe55876de4397b6a258fb"><span class="id" title="notation">R</span></a>+ :=<br/>
+&nbsp;&nbsp;<span class="id" title="keyword">match</span> <a class="idref" href="OpSemProofs.ennr.html#a"><span class="id" title="variable">a</span></a>, <a class="idref" href="OpSemProofs.ennr.html#b"><span class="id" title="variable">b</span></a> <span class="id" title="keyword">with</span><br/>
+&nbsp;&nbsp;| <a class="idref" href="OpSemProofs.ennr.html#finite"><span class="id" title="constructor">finite</span></a> <span class="id" title="var">ra</span> <span class="id" title="var">ra_pos</span>, <a class="idref" href="OpSemProofs.ennr.html#finite"><span class="id" title="constructor">finite</span></a> <span class="id" title="var">rb</span> <span class="id" title="var">rb_pos</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;=&gt; <a class="idref" href="OpSemProofs.ennr.html#finite"><span class="id" title="constructor">finite</span></a> (<span class="id" title="var">ra</span> <a class="idref" href="http://coq.inria.fr/distrib/8.6/stdlib/Coq.Reals.Rdefinitions.html#7de2d195108bdf12ab090711a555a032"><span class="id" title="notation">+</span></a> <span class="id" title="var">rb</span>) (<a class="idref" href="http://coq.inria.fr/distrib/8.6/stdlib/Coq.Reals.RIneq.html#Rplus_le_le_0_compat"><span class="id" title="lemma">Rplus_le_le_0_compat</span></a> <span class="id" title="var">_</span> <span class="id" title="var">_</span> <span class="id" title="var">ra_pos</span> <span class="id" title="var">rb_pos</span>)<br/>
+&nbsp;&nbsp;| <span class="id" title="var">_</span>, <span class="id" title="var">_</span> =&gt; <a class="idref" href="OpSemProofs.ennr.html#infinite"><span class="id" title="constructor">infinite</span></a><br/>
+&nbsp;&nbsp;<span class="id" title="keyword">end</span>.<br/>
+<span class="id" title="keyword">Infix</span> <a name="2b7048fe69ca5fd3a9840dce788e8965"><span class="id" title="notation">&quot;</span></a>+" := <a class="idref" href="OpSemProofs.ennr.html#ennr_plus"><span class="id" title="definition">ennr_plus</span></a>.<br/>
+
+<br/>
+<span class="id" title="keyword">Definition</span> <a name="ennr_mult"><span class="id" title="definition">ennr_mult</span></a> (<span class="id" title="var">a</span> <span class="id" title="var">b</span> : <a class="idref" href="OpSemProofs.ennr.html#4b5a53b513abe55876de4397b6a258fb"><span class="id" title="notation">R</span></a>+) : <a class="idref" href="OpSemProofs.ennr.html#4b5a53b513abe55876de4397b6a258fb"><span class="id" title="notation">R</span></a>+ :=<br/>
+&nbsp;&nbsp;<span class="id" title="keyword">match</span> <a class="idref" href="OpSemProofs.ennr.html#a"><span class="id" title="variable">a</span></a>, <a class="idref" href="OpSemProofs.ennr.html#b"><span class="id" title="variable">b</span></a> <span class="id" title="keyword">with</span><br/>
+&nbsp;&nbsp;| <a class="idref" href="OpSemProofs.ennr.html#finite"><span class="id" title="constructor">finite</span></a> <span class="id" title="var">ra</span> <span class="id" title="var">ra_pos</span>, <a class="idref" href="OpSemProofs.ennr.html#finite"><span class="id" title="constructor">finite</span></a> <span class="id" title="var">rb</span> <span class="id" title="var">rb_pos</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;=&gt; <a class="idref" href="OpSemProofs.ennr.html#finite"><span class="id" title="constructor">finite</span></a> (<span class="id" title="var">ra</span> <a class="idref" href="http://coq.inria.fr/distrib/8.6/stdlib/Coq.Reals.Rdefinitions.html#361afbb9b173fae6251865f2da226003"><span class="id" title="notation">*</span></a> <span class="id" title="var">rb</span>) (<a class="idref" href="http://coq.inria.fr/distrib/8.6/stdlib/Coq.Reals.RIneq.html#Rmult_le_pos"><span class="id" title="lemma">Rmult_le_pos</span></a> <span class="id" title="var">_</span> <span class="id" title="var">_</span> <span class="id" title="var">ra_pos</span> <span class="id" title="var">rb_pos</span>)<br/>
+&nbsp;&nbsp;| <a class="idref" href="OpSemProofs.ennr.html#finite"><span class="id" title="constructor">finite</span></a> <span class="id" title="var">ra</span> <span class="id" title="var">ra_pos</span>, <a class="idref" href="OpSemProofs.ennr.html#infinite"><span class="id" title="constructor">infinite</span></a><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;=&gt; <span class="id" title="keyword">if</span> <a class="idref" href="http://coq.inria.fr/distrib/8.6/stdlib/Coq.Reals.RIneq.html#Req_EM_T"><span class="id" title="lemma">Req_EM_T</span></a> 0 <span class="id" title="var">ra</span> <span class="id" title="keyword">then</span> 0 <span class="id" title="keyword">else</span> <a class="idref" href="OpSemProofs.ennr.html#infinite"><span class="id" title="constructor">infinite</span></a><br/>
+&nbsp;&nbsp;| <a class="idref" href="OpSemProofs.ennr.html#infinite"><span class="id" title="constructor">infinite</span></a>, <a class="idref" href="OpSemProofs.ennr.html#finite"><span class="id" title="constructor">finite</span></a> <span class="id" title="var">rb</span> <span class="id" title="var">rb_pos</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;=&gt; <span class="id" title="keyword">if</span> <a class="idref" href="http://coq.inria.fr/distrib/8.6/stdlib/Coq.Reals.RIneq.html#Req_EM_T"><span class="id" title="lemma">Req_EM_T</span></a> 0 <span class="id" title="var">rb</span> <span class="id" title="keyword">then</span> 0 <span class="id" title="keyword">else</span> <a class="idref" href="OpSemProofs.ennr.html#infinite"><span class="id" title="constructor">infinite</span></a><br/>
+&nbsp;&nbsp;| <a class="idref" href="OpSemProofs.ennr.html#infinite"><span class="id" title="constructor">infinite</span></a>, <a class="idref" href="OpSemProofs.ennr.html#infinite"><span class="id" title="constructor">infinite</span></a><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;=&gt; <a class="idref" href="OpSemProofs.ennr.html#infinite"><span class="id" title="constructor">infinite</span></a><br/>
+&nbsp;&nbsp;<span class="id" title="keyword">end</span>.<br/>
+<span class="id" title="keyword">Infix</span> <a name="94d37570a1573183fff24de5e7b31e72"><span class="id" title="notation">&quot;</span></a>*" := <a class="idref" href="OpSemProofs.ennr.html#ennr_mult"><span class="id" title="definition">ennr_mult</span></a>.<br/>
+
+<br/>
+<span class="id" title="keyword">Lemma</span> <a name="ennr_add_0_l"><span class="id" title="lemma">ennr_add_0_l</span></a> : <span class="id" title="keyword">forall</span> <span class="id" title="var">n</span>, 0 <a class="idref" href="OpSemProofs.ennr.html#2b7048fe69ca5fd3a9840dce788e8965"><span class="id" title="notation">+</span></a> <a class="idref" href="OpSemProofs.ennr.html#n"><span class="id" title="variable">n</span></a> <a class="idref" href="http://coq.inria.fr/distrib/8.6/stdlib/Coq.Init.Logic.html#1c39bf18749e5cc609e83c0a0ba5a372"><span class="id" title="notation">=</span></a> <a class="idref" href="OpSemProofs.ennr.html#n"><span class="id" title="variable">n</span></a>.<br/>
+<span class="id" title="keyword">Proof</span>.<br/>
+&nbsp;&nbsp;<span class="id" title="tactic">destruct</span> <span class="id" title="var">n</span>; <span class="id" title="tactic">auto</span>; <span class="id" title="var">Finite</span>.<br/>
+<span class="id" title="keyword">Qed</span>.<br/>
+
+<br/>
+<span class="id" title="keyword">Lemma</span> <a name="ennr_add_comm"><span class="id" title="lemma">ennr_add_comm</span></a> : <span class="id" title="keyword">forall</span> <span class="id" title="var">n</span> <span class="id" title="var">m</span>, <a class="idref" href="OpSemProofs.ennr.html#n"><span class="id" title="variable">n</span></a> <a class="idref" href="OpSemProofs.ennr.html#2b7048fe69ca5fd3a9840dce788e8965"><span class="id" title="notation">+</span></a> <a class="idref" href="OpSemProofs.ennr.html#m"><span class="id" title="variable">m</span></a> <a class="idref" href="http://coq.inria.fr/distrib/8.6/stdlib/Coq.Init.Logic.html#1c39bf18749e5cc609e83c0a0ba5a372"><span class="id" title="notation">=</span></a> <a class="idref" href="OpSemProofs.ennr.html#m"><span class="id" title="variable">m</span></a> <a class="idref" href="OpSemProofs.ennr.html#2b7048fe69ca5fd3a9840dce788e8965"><span class="id" title="notation">+</span></a> <a class="idref" href="OpSemProofs.ennr.html#n"><span class="id" title="variable">n</span></a>.<br/>
+<span class="id" title="keyword">Proof</span>.<br/>
+&nbsp;&nbsp;<span class="id" title="tactic">destruct</span> <span class="id" title="var">n</span>, <span class="id" title="var">m</span>; <span class="id" title="tactic">auto</span>; <span class="id" title="var">Finite</span>.<br/>
+<span class="id" title="keyword">Qed</span>.<br/>
+
+<br/>
+<span class="id" title="keyword">Lemma</span> <a name="ennr_add_assoc"><span class="id" title="lemma">ennr_add_assoc</span></a> : <span class="id" title="keyword">forall</span> <span class="id" title="var">n</span> <span class="id" title="var">m</span> <span class="id" title="var">p</span>, <a class="idref" href="OpSemProofs.ennr.html#n"><span class="id" title="variable">n</span></a> <a class="idref" href="OpSemProofs.ennr.html#2b7048fe69ca5fd3a9840dce788e8965"><span class="id" title="notation">+</span></a> <a class="idref" href="OpSemProofs.ennr.html#2b7048fe69ca5fd3a9840dce788e8965"><span class="id" title="notation">(</span></a><a class="idref" href="OpSemProofs.ennr.html#m"><span class="id" title="variable">m</span></a> <a class="idref" href="OpSemProofs.ennr.html#2b7048fe69ca5fd3a9840dce788e8965"><span class="id" title="notation">+</span></a> <a class="idref" href="OpSemProofs.ennr.html#p"><span class="id" title="variable">p</span></a><a class="idref" href="OpSemProofs.ennr.html#2b7048fe69ca5fd3a9840dce788e8965"><span class="id" title="notation">)</span></a> <a class="idref" href="http://coq.inria.fr/distrib/8.6/stdlib/Coq.Init.Logic.html#1c39bf18749e5cc609e83c0a0ba5a372"><span class="id" title="notation">=</span></a> <a class="idref" href="OpSemProofs.ennr.html#2b7048fe69ca5fd3a9840dce788e8965"><span class="id" title="notation">(</span></a><a class="idref" href="OpSemProofs.ennr.html#n"><span class="id" title="variable">n</span></a> <a class="idref" href="OpSemProofs.ennr.html#2b7048fe69ca5fd3a9840dce788e8965"><span class="id" title="notation">+</span></a> <a class="idref" href="OpSemProofs.ennr.html#m"><span class="id" title="variable">m</span></a><a class="idref" href="OpSemProofs.ennr.html#2b7048fe69ca5fd3a9840dce788e8965"><span class="id" title="notation">)</span></a> <a class="idref" href="OpSemProofs.ennr.html#2b7048fe69ca5fd3a9840dce788e8965"><span class="id" title="notation">+</span></a> <a class="idref" href="OpSemProofs.ennr.html#p"><span class="id" title="variable">p</span></a>.<br/>
+<span class="id" title="keyword">Proof</span>.<br/>
+&nbsp;&nbsp;<span class="id" title="tactic">destruct</span> <span class="id" title="var">n</span>, <span class="id" title="var">m</span>, <span class="id" title="var">p</span>; <span class="id" title="tactic">auto</span>; <span class="id" title="var">Finite</span>.<br/>
+<span class="id" title="keyword">Qed</span>.<br/>
+
+<br/>
+<span class="id" title="keyword">Lemma</span> <a name="ennr_mul_1_l"><span class="id" title="lemma">ennr_mul_1_l</span></a> : <span class="id" title="keyword">forall</span> <span class="id" title="var">n</span>, 1 <a class="idref" href="OpSemProofs.ennr.html#94d37570a1573183fff24de5e7b31e72"><span class="id" title="notation">*</span></a> <a class="idref" href="OpSemProofs.ennr.html#n"><span class="id" title="variable">n</span></a> <a class="idref" href="http://coq.inria.fr/distrib/8.6/stdlib/Coq.Init.Logic.html#1c39bf18749e5cc609e83c0a0ba5a372"><span class="id" title="notation">=</span></a> <a class="idref" href="OpSemProofs.ennr.html#n"><span class="id" title="variable">n</span></a>.<br/>
+<span class="id" title="keyword">Proof</span>.<br/>
+&nbsp;&nbsp;<span class="id" title="tactic">destruct</span> <span class="id" title="var">n</span>; <span class="id" title="tactic">simpl</span>; <span class="id" title="tactic">auto</span>.<br/>
+&nbsp;&nbsp;- <span class="id" title="var">Finite</span>.<br/>
+&nbsp;&nbsp;- <span class="id" title="tactic">destruct</span> <a class="idref" href="http://coq.inria.fr/distrib/8.6/stdlib/Coq.Reals.RIneq.html#Req_EM_T"><span class="id" title="lemma">Req_EM_T</span></a>; <span class="id" title="tactic">simpl</span>; <span class="id" title="tactic">auto</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="tactic">fourier</span>.<br/>
+<span class="id" title="keyword">Qed</span>.<br/>
+
+<br/>
+<span class="id" title="keyword">Lemma</span> <a name="ennr_mul_0_l"><span class="id" title="lemma">ennr_mul_0_l</span></a> : <span class="id" title="keyword">forall</span> <span class="id" title="var">n</span>, 0 <a class="idref" href="OpSemProofs.ennr.html#94d37570a1573183fff24de5e7b31e72"><span class="id" title="notation">*</span></a> <a class="idref" href="OpSemProofs.ennr.html#n"><span class="id" title="variable">n</span></a> <a class="idref" href="http://coq.inria.fr/distrib/8.6/stdlib/Coq.Init.Logic.html#1c39bf18749e5cc609e83c0a0ba5a372"><span class="id" title="notation">=</span></a> 0.<br/>
+<span class="id" title="keyword">Proof</span>.<br/>
+&nbsp;&nbsp;<span class="id" title="tactic">destruct</span> <span class="id" title="var">n</span>; <span class="id" title="tactic">simpl</span>; <span class="id" title="tactic">auto</span>.<br/>
+&nbsp;&nbsp;- <span class="id" title="var">Finite</span>.<br/>
+&nbsp;&nbsp;- <span class="id" title="tactic">destruct</span> <a class="idref" href="http://coq.inria.fr/distrib/8.6/stdlib/Coq.Reals.RIneq.html#Req_EM_T"><span class="id" title="lemma">Req_EM_T</span></a>; <span class="id" title="tactic">simpl</span>; <span class="id" title="tactic">auto</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">contradict</span> <span class="id" title="var">n</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="tactic">auto</span>.<br/>
+<span class="id" title="keyword">Qed</span>.<br/>
+
+<br/>
+<span class="id" title="keyword">Lemma</span> <a name="ennr_mul_comm"><span class="id" title="lemma">ennr_mul_comm</span></a> : <span class="id" title="keyword">forall</span> <span class="id" title="var">n</span> <span class="id" title="var">m</span>, <a class="idref" href="OpSemProofs.ennr.html#n"><span class="id" title="variable">n</span></a> <a class="idref" href="OpSemProofs.ennr.html#94d37570a1573183fff24de5e7b31e72"><span class="id" title="notation">*</span></a> <a class="idref" href="OpSemProofs.ennr.html#m"><span class="id" title="variable">m</span></a> <a class="idref" href="http://coq.inria.fr/distrib/8.6/stdlib/Coq.Init.Logic.html#1c39bf18749e5cc609e83c0a0ba5a372"><span class="id" title="notation">=</span></a> <a class="idref" href="OpSemProofs.ennr.html#m"><span class="id" title="variable">m</span></a> <a class="idref" href="OpSemProofs.ennr.html#94d37570a1573183fff24de5e7b31e72"><span class="id" title="notation">*</span></a> <a class="idref" href="OpSemProofs.ennr.html#n"><span class="id" title="variable">n</span></a>.<br/>
+<span class="id" title="keyword">Proof</span>.<br/>
+&nbsp;&nbsp;<span class="id" title="tactic">destruct</span> <span class="id" title="var">n</span>, <span class="id" title="var">m</span>; <span class="id" title="tactic">auto</span>; <span class="id" title="var">Finite</span>.<br/>
+<span class="id" title="keyword">Qed</span>.<br/>
+
+<br/>
+<span class="id" title="keyword">Lemma</span> <a name="ennr_mul_assoc"><span class="id" title="lemma">ennr_mul_assoc</span></a> : <span class="id" title="keyword">forall</span> <span class="id" title="var">n</span> <span class="id" title="var">m</span> <span class="id" title="var">p</span>, <a class="idref" href="OpSemProofs.ennr.html#n"><span class="id" title="variable">n</span></a> <a class="idref" href="OpSemProofs.ennr.html#94d37570a1573183fff24de5e7b31e72"><span class="id" title="notation">*</span></a> <a class="idref" href="OpSemProofs.ennr.html#94d37570a1573183fff24de5e7b31e72"><span class="id" title="notation">(</span></a><a class="idref" href="OpSemProofs.ennr.html#m"><span class="id" title="variable">m</span></a> <a class="idref" href="OpSemProofs.ennr.html#94d37570a1573183fff24de5e7b31e72"><span class="id" title="notation">*</span></a> <a class="idref" href="OpSemProofs.ennr.html#p"><span class="id" title="variable">p</span></a><a class="idref" href="OpSemProofs.ennr.html#94d37570a1573183fff24de5e7b31e72"><span class="id" title="notation">)</span></a> <a class="idref" href="http://coq.inria.fr/distrib/8.6/stdlib/Coq.Init.Logic.html#1c39bf18749e5cc609e83c0a0ba5a372"><span class="id" title="notation">=</span></a> <a class="idref" href="OpSemProofs.ennr.html#94d37570a1573183fff24de5e7b31e72"><span class="id" title="notation">(</span></a><a class="idref" href="OpSemProofs.ennr.html#n"><span class="id" title="variable">n</span></a> <a class="idref" href="OpSemProofs.ennr.html#94d37570a1573183fff24de5e7b31e72"><span class="id" title="notation">*</span></a> <a class="idref" href="OpSemProofs.ennr.html#m"><span class="id" title="variable">m</span></a><a class="idref" href="OpSemProofs.ennr.html#94d37570a1573183fff24de5e7b31e72"><span class="id" title="notation">)</span></a> <a class="idref" href="OpSemProofs.ennr.html#94d37570a1573183fff24de5e7b31e72"><span class="id" title="notation">*</span></a> <a class="idref" href="OpSemProofs.ennr.html#p"><span class="id" title="variable">p</span></a>.<br/>
+<span class="id" title="keyword">Proof</span>.<br/>
+&nbsp;&nbsp;<span class="id" title="tactic">assert</span> (<span class="id" title="keyword">forall</span> <span class="id" title="var">r0</span> <span class="id" title="var">r1</span>, 0 <a class="idref" href="http://coq.inria.fr/distrib/8.6/stdlib/Coq.Init.Logic.html#1c39bf18749e5cc609e83c0a0ba5a372"><span class="id" title="notation">=</span></a> <a class="idref" href="OpSemProofs.ennr.html#r0"><span class="id" title="variable">r0</span></a> <a class="idref" href="http://coq.inria.fr/distrib/8.6/stdlib/Coq.Reals.Rdefinitions.html#361afbb9b173fae6251865f2da226003"><span class="id" title="notation">*</span></a> <a class="idref" href="OpSemProofs.ennr.html#r1"><span class="id" title="variable">r1</span></a> <a class="idref" href="http://coq.inria.fr/distrib/8.6/stdlib/Coq.Init.Logic.html#d43e996736952df71ebeeae74d10a287"><span class="id" title="notation">-&gt;</span></a> 0 <a class="idref" href="http://coq.inria.fr/distrib/8.6/stdlib/Coq.Init.Logic.html#32263a1c8b01baecdff9deb038955bc9"><span class="id" title="notation">&lt;&gt;</span></a> <a class="idref" href="OpSemProofs.ennr.html#r0"><span class="id" title="variable">r0</span></a> <a class="idref" href="http://coq.inria.fr/distrib/8.6/stdlib/Coq.Init.Logic.html#d43e996736952df71ebeeae74d10a287"><span class="id" title="notation">-&gt;</span></a> 0 <a class="idref" href="http://coq.inria.fr/distrib/8.6/stdlib/Coq.Init.Logic.html#32263a1c8b01baecdff9deb038955bc9"><span class="id" title="notation">&lt;&gt;</span></a> <a class="idref" href="OpSemProofs.ennr.html#r1"><span class="id" title="variable">r1</span></a> <a class="idref" href="http://coq.inria.fr/distrib/8.6/stdlib/Coq.Init.Logic.html#d43e996736952df71ebeeae74d10a287"><span class="id" title="notation">-&gt;</span></a> <a class="idref" href="http://coq.inria.fr/distrib/8.6/stdlib/Coq.Init.Logic.html#False"><span class="id" title="inductive">False</span></a>)%<span class="id" title="var">R</span>. {<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="tactic">intros</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">contradict</span> <span class="id" title="var">H0</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="tactic">replace</span> <span class="id" title="var">r0</span> <span class="id" title="keyword">with</span> (<a class="idref" href="http://coq.inria.fr/distrib/8.6/stdlib/Coq.Reals.Rdefinitions.html#361afbb9b173fae6251865f2da226003"><span class="id" title="notation">(</span></a><span class="id" title="var">r0</span> <a class="idref" href="http://coq.inria.fr/distrib/8.6/stdlib/Coq.Reals.Rdefinitions.html#361afbb9b173fae6251865f2da226003"><span class="id" title="notation">*</span></a> <span class="id" title="var">r1</span><a class="idref" href="http://coq.inria.fr/distrib/8.6/stdlib/Coq.Reals.Rdefinitions.html#361afbb9b173fae6251865f2da226003"><span class="id" title="notation">)</span></a> <a class="idref" href="http://coq.inria.fr/distrib/8.6/stdlib/Coq.Reals.Rdefinitions.html#361afbb9b173fae6251865f2da226003"><span class="id" title="notation">*</span></a> <a class="idref" href="http://coq.inria.fr/distrib/8.6/stdlib/Coq.Reals.Rdefinitions.html#2f596a539cf733f1c05f7537bd65e225"><span class="id" title="notation">/</span></a> <span class="id" title="var">r1</span>)%<span class="id" title="var">R</span>. {<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="tactic">rewrite</span> &lt;- <span class="id" title="var">H</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="tactic">ring</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;} {<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="tactic">rewrite</span> <a class="idref" href="http://coq.inria.fr/distrib/8.6/stdlib/Coq.Reals.Raxioms.html#Rmult_assoc"><span class="id" title="axiom">Rmult_assoc</span></a>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="tactic">rewrite</span> <a class="idref" href="http://coq.inria.fr/distrib/8.6/stdlib/Coq.Reals.RIneq.html#Rinv_r"><span class="id" title="lemma">Rinv_r</span></a>; <span class="id" title="tactic">auto</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="tactic">ring</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;}<br/>
+&nbsp;&nbsp;}<br/>
+<br/>
+&nbsp;&nbsp;<span class="id" title="tactic">destruct</span> <span class="id" title="var">n</span>, <span class="id" title="var">m</span>, <span class="id" title="var">p</span>;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="tactic">repeat</span> (<span class="id" title="tactic">try</span> <span class="id" title="tactic">destruct</span> <a class="idref" href="http://coq.inria.fr/distrib/8.6/stdlib/Coq.Reals.RIneq.html#Req_EM_T"><span class="id" title="lemma">Req_EM_T</span></a>; <span class="id" title="tactic">simpl</span>);<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="tactic">subst</span>;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="tactic">auto</span>;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="tactic">solve</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[ <span class="id" title="var">Finite</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;| <span class="id" title="var">contradict</span> <span class="id" title="var">n</span>; <span class="id" title="tactic">ring</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;| <span class="id" title="var">contradict</span> <span class="id" title="var">n0</span>; <span class="id" title="tactic">ring</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;| <span class="id" title="var">contradict</span> <span class="id" title="var">H</span>; <span class="id" title="tactic">eauto</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;].<br/>
+<span class="id" title="keyword">Qed</span>.<br/>
+
+<br/>
+<span class="id" title="keyword">Lemma</span> <a name="ennr_distr_l"><span class="id" title="lemma">ennr_distr_l</span></a> : <span class="id" title="keyword">forall</span> <span class="id" title="var">n</span> <span class="id" title="var">m</span> <span class="id" title="var">p</span>, <a class="idref" href="OpSemProofs.ennr.html#94d37570a1573183fff24de5e7b31e72"><span class="id" title="notation">(</span></a><a class="idref" href="OpSemProofs.ennr.html#n"><span class="id" title="variable">n</span></a> <a class="idref" href="OpSemProofs.ennr.html#2b7048fe69ca5fd3a9840dce788e8965"><span class="id" title="notation">+</span></a> <a class="idref" href="OpSemProofs.ennr.html#m"><span class="id" title="variable">m</span></a><a class="idref" href="OpSemProofs.ennr.html#94d37570a1573183fff24de5e7b31e72"><span class="id" title="notation">)</span></a> <a class="idref" href="OpSemProofs.ennr.html#94d37570a1573183fff24de5e7b31e72"><span class="id" title="notation">*</span></a> <a class="idref" href="OpSemProofs.ennr.html#p"><span class="id" title="variable">p</span></a> <a class="idref" href="http://coq.inria.fr/distrib/8.6/stdlib/Coq.Init.Logic.html#1c39bf18749e5cc609e83c0a0ba5a372"><span class="id" title="notation">=</span></a> <a class="idref" href="OpSemProofs.ennr.html#n"><span class="id" title="variable">n</span></a> <a class="idref" href="OpSemProofs.ennr.html#94d37570a1573183fff24de5e7b31e72"><span class="id" title="notation">*</span></a> <a class="idref" href="OpSemProofs.ennr.html#p"><span class="id" title="variable">p</span></a> <a class="idref" href="OpSemProofs.ennr.html#2b7048fe69ca5fd3a9840dce788e8965"><span class="id" title="notation">+</span></a> <a class="idref" href="OpSemProofs.ennr.html#m"><span class="id" title="variable">m</span></a> <a class="idref" href="OpSemProofs.ennr.html#94d37570a1573183fff24de5e7b31e72"><span class="id" title="notation">*</span></a> <a class="idref" href="OpSemProofs.ennr.html#p"><span class="id" title="variable">p</span></a>.<br/>
+<span class="id" title="keyword">Proof</span>.<br/>
+&nbsp;&nbsp;<span class="id" title="tactic">destruct</span> <span class="id" title="var">n</span>, <span class="id" title="var">m</span>, <span class="id" title="var">p</span>;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="tactic">repeat</span> (<span class="id" title="tactic">try</span> <span class="id" title="tactic">destruct</span> <a class="idref" href="http://coq.inria.fr/distrib/8.6/stdlib/Coq.Reals.RIneq.html#Req_EM_T"><span class="id" title="lemma">Req_EM_T</span></a>; <span class="id" title="tactic">simpl</span>);<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="tactic">subst</span>;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="tactic">auto</span>;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="tactic">try</span> <span class="id" title="var">Finite</span>.<br/>
+&nbsp;&nbsp;{<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">contradict</span> <span class="id" title="var">n</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="tactic">rewrite</span> <span class="id" title="var">e</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="tactic">ring</span>.<br/>
+&nbsp;&nbsp;} {<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">contradict</span> <span class="id" title="var">n</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="tactic">apply</span> <a class="idref" href="http://coq.inria.fr/distrib/8.6/stdlib/Coq.Reals.RIneq.html#Rle_antisym"><span class="id" title="lemma">Rle_antisym</span></a>; <span class="id" title="tactic">auto</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="tactic">rewrite</span> <span class="id" title="var">e</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="tactic">replace</span> <span class="id" title="var">r</span> <span class="id" title="keyword">with</span> (<span class="id" title="var">r</span> <a class="idref" href="http://coq.inria.fr/distrib/8.6/stdlib/Coq.Reals.Rdefinitions.html#7de2d195108bdf12ab090711a555a032"><span class="id" title="notation">+</span></a> 0)%<span class="id" title="var">R</span> <span class="id" title="tactic">at</span> 1 <span class="id" title="tactic">by</span> <span class="id" title="tactic">ring</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="tactic">apply</span> <a class="idref" href="http://coq.inria.fr/distrib/8.6/stdlib/Coq.Reals.RIneq.html#Rplus_le_compat"><span class="id" title="lemma">Rplus_le_compat</span></a>; <span class="id" title="tactic">auto</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="tactic">apply</span> <a class="idref" href="http://coq.inria.fr/distrib/8.6/stdlib/Coq.Reals.RIneq.html#Rle_refl"><span class="id" title="lemma">Rle_refl</span></a>.<br/>
+&nbsp;&nbsp;}<br/>
+&nbsp;&nbsp;<span class="id" title="var">contradict</span> <span class="id" title="var">n</span>; <span class="id" title="tactic">ring</span>.<br/>
+<span class="id" title="keyword">Qed</span>.<br/>
+
+<br/>
+<span class="id" title="var">Arguments</span> <a class="idref" href="OpSemProofs.ennr.html#ennr_plus"><span class="id" title="definition">ennr_plus</span></a> <span class="id" title="var">_</span> <span class="id" title="var">_</span> : <span class="id" title="tactic">simpl</span> <span class="id" title="var">never</span>.<br/>
+<span class="id" title="var">Arguments</span> <a class="idref" href="OpSemProofs.ennr.html#ennr_mult"><span class="id" title="definition">ennr_mult</span></a> <span class="id" title="var">_</span> <span class="id" title="var">_</span> : <span class="id" title="tactic">simpl</span> <span class="id" title="var">never</span>.<br/>
+
+<br/>
+<span class="id" title="keyword">Definition</span> <a name="ennr_semiring"><span class="id" title="definition">ennr_semiring</span></a> :=<br/>
+&nbsp;&nbsp;<a class="idref" href="http://coq.inria.fr/distrib/8.6/stdlib/Coq.setoid_ring.Ring_theory.html#mk_srt"><span class="id" title="constructor">mk_srt</span></a> <a class="idref" href="OpSemProofs.ennr.html#ennr_0"><span class="id" title="definition">ennr_0</span></a> <a class="idref" href="OpSemProofs.ennr.html#ennr_1"><span class="id" title="definition">ennr_1</span></a> <a class="idref" href="OpSemProofs.ennr.html#ennr_plus"><span class="id" title="definition">ennr_plus</span></a> <a class="idref" href="OpSemProofs.ennr.html#ennr_mult"><span class="id" title="definition">ennr_mult</span></a> <a class="idref" href="http://coq.inria.fr/distrib/8.6/stdlib/Coq.Init.Logic.html#eq"><span class="id" title="inductive">eq</span></a><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<a class="idref" href="OpSemProofs.ennr.html#ennr_add_0_l"><span class="id" title="lemma">ennr_add_0_l</span></a><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<a class="idref" href="OpSemProofs.ennr.html#ennr_add_comm"><span class="id" title="lemma">ennr_add_comm</span></a><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<a class="idref" href="OpSemProofs.ennr.html#ennr_add_assoc"><span class="id" title="lemma">ennr_add_assoc</span></a><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<a class="idref" href="OpSemProofs.ennr.html#ennr_mul_1_l"><span class="id" title="lemma">ennr_mul_1_l</span></a><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<a class="idref" href="OpSemProofs.ennr.html#ennr_mul_0_l"><span class="id" title="lemma">ennr_mul_0_l</span></a><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<a class="idref" href="OpSemProofs.ennr.html#ennr_mul_comm"><span class="id" title="lemma">ennr_mul_comm</span></a><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<a class="idref" href="OpSemProofs.ennr.html#ennr_mul_assoc"><span class="id" title="lemma">ennr_mul_assoc</span></a><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<a class="idref" href="OpSemProofs.ennr.html#ennr_distr_l"><span class="id" title="lemma">ennr_distr_l</span></a><br/>
+.<br/>
+<span class="id" title="keyword">Add</span> <span class="id" title="var">Ring</span> <span class="id" title="var">ennr_semiring</span> : <a class="idref" href="OpSemProofs.ennr.html#ennr_semiring"><span class="id" title="definition">ennr_semiring</span></a>.<br/>
+
+<br/>
+</div>
+
+<div class="doc">
+<a name="lab3"></a><h1 class="section">Misc definitions and facts about <span class="inlinecode"><a class="idref" href="OpSemProofs.ennr.html#ennr"><span class="id" title="inductive">R<sup><small>+</small></sup></span></a></span>.</h1>
+
+</div>
+<div class="code">
+
+<br/>
+<span class="id" title="keyword">Definition</span> <a name="ennr_lt"><span class="id" title="definition">ennr_lt</span></a> (<span class="id" title="var">a</span> <span class="id" title="var">b</span> : <a class="idref" href="OpSemProofs.ennr.html#4b5a53b513abe55876de4397b6a258fb"><span class="id" title="notation">R</span></a>+) : <span class="id" title="keyword">Prop</span> :=<br/>
+&nbsp;&nbsp;<span class="id" title="keyword">match</span> <a class="idref" href="OpSemProofs.ennr.html#a"><span class="id" title="variable">a</span></a>, <a class="idref" href="OpSemProofs.ennr.html#b"><span class="id" title="variable">b</span></a> <span class="id" title="keyword">with</span><br/>
+&nbsp;&nbsp;| <a class="idref" href="OpSemProofs.ennr.html#finite"><span class="id" title="constructor">finite</span></a> <span class="id" title="var">ra</span> <span class="id" title="var">_</span>, <a class="idref" href="OpSemProofs.ennr.html#finite"><span class="id" title="constructor">finite</span></a> <span class="id" title="var">rb</span> <span class="id" title="var">_</span> =&gt; <span class="id" title="var">ra</span> <a class="idref" href="http://coq.inria.fr/distrib/8.6/stdlib/Coq.Reals.Rdefinitions.html#1cc22ba6849531267d3b25ca7b262449"><span class="id" title="notation">&lt;</span></a> <span class="id" title="var">rb</span><br/>
+&nbsp;&nbsp;| <a class="idref" href="OpSemProofs.ennr.html#finite"><span class="id" title="constructor">finite</span></a> <span class="id" title="var">_</span> <span class="id" title="var">_</span>, <a class="idref" href="OpSemProofs.ennr.html#infinite"><span class="id" title="constructor">infinite</span></a> =&gt; <a class="idref" href="http://coq.inria.fr/distrib/8.6/stdlib/Coq.Init.Logic.html#True"><span class="id" title="inductive">True</span></a><br/>
+&nbsp;&nbsp;| <a class="idref" href="OpSemProofs.ennr.html#infinite"><span class="id" title="constructor">infinite</span></a>, <span class="id" title="var">_</span> =&gt; <a class="idref" href="http://coq.inria.fr/distrib/8.6/stdlib/Coq.Init.Logic.html#False"><span class="id" title="inductive">False</span></a><br/>
+&nbsp;&nbsp;<span class="id" title="keyword">end</span>.<br/>
+<span class="id" title="keyword">Definition</span> <a name="ennr_gt"><span class="id" title="definition">ennr_gt</span></a> <span class="id" title="var">a</span> <span class="id" title="var">b</span> := <a class="idref" href="OpSemProofs.ennr.html#ennr_lt"><span class="id" title="definition">ennr_lt</span></a> <a class="idref" href="OpSemProofs.ennr.html#b"><span class="id" title="variable">b</span></a> <a class="idref" href="OpSemProofs.ennr.html#a"><span class="id" title="variable">a</span></a>.<br/>
+<span class="id" title="keyword">Definition</span> <a name="ennr_le"><span class="id" title="definition">ennr_le</span></a> <span class="id" title="var">a</span> <span class="id" title="var">b</span> := <a class="idref" href="OpSemProofs.ennr.html#ennr_lt"><span class="id" title="definition">ennr_lt</span></a> <a class="idref" href="OpSemProofs.ennr.html#a"><span class="id" title="variable">a</span></a> <a class="idref" href="OpSemProofs.ennr.html#b"><span class="id" title="variable">b</span></a> <a class="idref" href="http://coq.inria.fr/distrib/8.6/stdlib/Coq.Init.Logic.html#7a45dffb109c3069e5c675be68643e60"><span class="id" title="notation">\/</span></a> <a class="idref" href="OpSemProofs.ennr.html#a"><span class="id" title="variable">a</span></a> <a class="idref" href="http://coq.inria.fr/distrib/8.6/stdlib/Coq.Init.Logic.html#1c39bf18749e5cc609e83c0a0ba5a372"><span class="id" title="notation">=</span></a> <a class="idref" href="OpSemProofs.ennr.html#b"><span class="id" title="variable">b</span></a>.<br/>
+<span class="id" title="keyword">Definition</span> <a name="ennr_ge"><span class="id" title="definition">ennr_ge</span></a> <span class="id" title="var">a</span> <span class="id" title="var">b</span> := <a class="idref" href="OpSemProofs.ennr.html#ennr_gt"><span class="id" title="definition">ennr_gt</span></a> <a class="idref" href="OpSemProofs.ennr.html#a"><span class="id" title="variable">a</span></a> <a class="idref" href="OpSemProofs.ennr.html#b"><span class="id" title="variable">b</span></a> <a class="idref" href="http://coq.inria.fr/distrib/8.6/stdlib/Coq.Init.Logic.html#7a45dffb109c3069e5c675be68643e60"><span class="id" title="notation">\/</span></a> <a class="idref" href="OpSemProofs.ennr.html#a"><span class="id" title="variable">a</span></a> <a class="idref" href="http://coq.inria.fr/distrib/8.6/stdlib/Coq.Init.Logic.html#1c39bf18749e5cc609e83c0a0ba5a372"><span class="id" title="notation">=</span></a> <a class="idref" href="OpSemProofs.ennr.html#b"><span class="id" title="variable">b</span></a>.<br/>
+<span class="id" title="keyword">Infix</span> <a name="1ec2333ee553124df9d9eade05162791"><span class="id" title="notation">&quot;</span></a>&lt;" := <a class="idref" href="OpSemProofs.ennr.html#ennr_lt"><span class="id" title="definition">ennr_lt</span></a>.<br/>
+<span class="id" title="keyword">Infix</span> <a name="75338fc4da155a86233c78260c4419ea"><span class="id" title="notation">&quot;</span></a>&lt;=" := <a class="idref" href="OpSemProofs.ennr.html#ennr_le"><span class="id" title="definition">ennr_le</span></a>.<br/>
+<span class="id" title="keyword">Infix</span> <a name="8e168f57fb77dc2e7a0b073ee6798edb"><span class="id" title="notation">&quot;</span></a>&gt;" := <a class="idref" href="OpSemProofs.ennr.html#ennr_gt"><span class="id" title="definition">ennr_gt</span></a>.<br/>
+<span class="id" title="keyword">Infix</span> <a name="0b74bf45e912640b7b95f8af6e5a46c1"><span class="id" title="notation">&quot;</span></a>&gt;=" := <a class="idref" href="OpSemProofs.ennr.html#ennr_ge"><span class="id" title="definition">ennr_ge</span></a>.<br/>
+
+<br/>
+<span class="id" title="keyword">Lemma</span> <a name="ennr_gt_dec"><span class="id" title="lemma">ennr_gt_dec</span></a> (<span class="id" title="var">a</span> <span class="id" title="var">b</span> : <a class="idref" href="OpSemProofs.ennr.html#4b5a53b513abe55876de4397b6a258fb"><span class="id" title="notation">R</span></a>+) : <a class="idref" href="http://coq.inria.fr/distrib/8.6/stdlib/Coq.Init.Specif.html#5bf2050e90b21ebc82dc5463d1ba338e"><span class="id" title="notation">{</span></a><a class="idref" href="OpSemProofs.ennr.html#a"><span class="id" title="variable">a</span></a> <a class="idref" href="OpSemProofs.ennr.html#8e168f57fb77dc2e7a0b073ee6798edb"><span class="id" title="notation">&gt;</span></a> <a class="idref" href="OpSemProofs.ennr.html#b"><span class="id" title="variable">b</span></a><a class="idref" href="http://coq.inria.fr/distrib/8.6/stdlib/Coq.Init.Specif.html#5bf2050e90b21ebc82dc5463d1ba338e"><span class="id" title="notation">}</span></a> <a class="idref" href="http://coq.inria.fr/distrib/8.6/stdlib/Coq.Init.Specif.html#5bf2050e90b21ebc82dc5463d1ba338e"><span class="id" title="notation">+</span></a> <a class="idref" href="http://coq.inria.fr/distrib/8.6/stdlib/Coq.Init.Specif.html#5bf2050e90b21ebc82dc5463d1ba338e"><span class="id" title="notation">{</span></a><a class="idref" href="http://coq.inria.fr/distrib/8.6/stdlib/Coq.Init.Logic.html#611abc97cba304de784fa909dbdea1fa"><span class="id" title="notation">~</span></a> <a class="idref" href="OpSemProofs.ennr.html#a"><span class="id" title="variable">a</span></a> <a class="idref" href="OpSemProofs.ennr.html#8e168f57fb77dc2e7a0b073ee6798edb"><span class="id" title="notation">&gt;</span></a> <a class="idref" href="OpSemProofs.ennr.html#b"><span class="id" title="variable">b</span></a><a class="idref" href="http://coq.inria.fr/distrib/8.6/stdlib/Coq.Init.Specif.html#5bf2050e90b21ebc82dc5463d1ba338e"><span class="id" title="notation">}</span></a>.<br/>
+<span class="id" title="keyword">Proof</span>.<br/>
+&nbsp;&nbsp;<span class="id" title="tactic">destruct</span> <span class="id" title="var">a</span>, <span class="id" title="var">b</span>; <span class="id" title="tactic">simpl</span>; <span class="id" title="tactic">auto</span>.<br/>
+&nbsp;&nbsp;<span class="id" title="tactic">apply</span> <a class="idref" href="http://coq.inria.fr/distrib/8.6/stdlib/Coq.Reals.RIneq.html#Rgt_dec"><span class="id" title="lemma">Rgt_dec</span></a>.<br/>
+<span class="id" title="keyword">Qed</span>.<br/>
+
+<br/>
+<span class="id" title="keyword">Lemma</span> <a name="ennr_mul_1_r"><span class="id" title="lemma">ennr_mul_1_r</span></a> : <span class="id" title="keyword">forall</span> <span class="id" title="var">n</span>, <a class="idref" href="OpSemProofs.ennr.html#n"><span class="id" title="variable">n</span></a> <a class="idref" href="OpSemProofs.ennr.html#94d37570a1573183fff24de5e7b31e72"><span class="id" title="notation">*</span></a> 1 <a class="idref" href="http://coq.inria.fr/distrib/8.6/stdlib/Coq.Init.Logic.html#1c39bf18749e5cc609e83c0a0ba5a372"><span class="id" title="notation">=</span></a> <a class="idref" href="OpSemProofs.ennr.html#n"><span class="id" title="variable">n</span></a>.<br/>
+<span class="id" title="keyword">Proof</span>.<br/>
+&nbsp;&nbsp;<span class="id" title="tactic">intros</span>.<br/>
+&nbsp;&nbsp;<span class="id" title="tactic">rewrite</span> <a class="idref" href="OpSemProofs.ennr.html#ennr_mul_comm"><span class="id" title="lemma">ennr_mul_comm</span></a>.<br/>
+&nbsp;&nbsp;<span class="id" title="tactic">apply</span> <a class="idref" href="OpSemProofs.ennr.html#ennr_mul_1_l"><span class="id" title="lemma">ennr_mul_1_l</span></a>.<br/>
+<span class="id" title="keyword">Qed</span>.<br/>
+</div>
+</div>
+<div id="footer">
+  Generated by <a href="http://coq.inria.fr/">coqdoc</a> and improved with <a href="https://github.com/tebbi/coqdocjs">CoqdocJS</a>
+</div>
+</div>
+</body>
+
+</html>

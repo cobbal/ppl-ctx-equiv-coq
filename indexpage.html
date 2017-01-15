@@ -1,0 +1,1773 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+
+<head>
+<meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
+<link href="coqdoc.css" rel="stylesheet" type="text/css" />
+<link href="coqdocjs.css" rel="stylesheet" type="text/css"/>
+<script type="text/javascript" src="config.js"></script>
+<script type="text/javascript" src="coqdocjs.js"></script>
+</head>
+
+<body onload="document.getElementById('content').focus()">
+  <div id="header">
+    <span class="left">
+      <span class="modulename"> <script> document.write(document.title) </script> </span>
+    </span>
+
+    <span class="button" id="toggle-proofs"></span>
+
+    <span class="right">
+      <a href="../">Project Page</a>
+      <a href="./indexpage.html"> Index </a>
+      <a href="./toc.html"> Table of Contents </a>
+    </span>
+</div>
+    <div id="content" tabindex="-1" onblur="document.getElementById('content').focus()">
+    <div id="main">
+<table>
+<tr>
+<td>Global Index</td>
+<td><a href="indexpage.html#global_A">A</a></td>
+<td><a href="indexpage.html#global_B">B</a></td>
+<td><a href="indexpage.html#global_C">C</a></td>
+<td><a href="indexpage.html#global_D">D</a></td>
+<td><a href="indexpage.html#global_E">E</a></td>
+<td><a href="indexpage.html#global_F">F</a></td>
+<td><a href="indexpage.html#global_G">G</a></td>
+<td>H</td>
+<td><a href="indexpage.html#global_I">I</a></td>
+<td><a href="indexpage.html#global_J">J</a></td>
+<td><a href="indexpage.html#global_K">K</a></td>
+<td><a href="indexpage.html#global_L">L</a></td>
+<td><a href="indexpage.html#global_M">M</a></td>
+<td>N</td>
+<td><a href="indexpage.html#global_O">O</a></td>
+<td><a href="indexpage.html#global_P">P</a></td>
+<td>Q</td>
+<td><a href="indexpage.html#global_R">R</a></td>
+<td><a href="indexpage.html#global_S">S</a></td>
+<td><a href="indexpage.html#global_T">T</a></td>
+<td><a href="indexpage.html#global_U">U</a></td>
+<td><a href="indexpage.html#global_V">V</a></td>
+<td><a href="indexpage.html#global_W">W</a></td>
+<td>X</td>
+<td>Y</td>
+<td>Z</td>
+<td>_</td>
+<td><a href="indexpage.html#global_*">other</a></td>
+<td>(414 entries)</td>
+</tr>
+<tr>
+<td>Notation Index</td>
+<td>A</td>
+<td>B</td>
+<td>C</td>
+<td>D</td>
+<td>E</td>
+<td>F</td>
+<td>G</td>
+<td>H</td>
+<td>I</td>
+<td>J</td>
+<td>K</td>
+<td>L</td>
+<td>M</td>
+<td>N</td>
+<td>O</td>
+<td>P</td>
+<td>Q</td>
+<td>R</td>
+<td>S</td>
+<td>T</td>
+<td>U</td>
+<td>V</td>
+<td>W</td>
+<td>X</td>
+<td>Y</td>
+<td>Z</td>
+<td>_</td>
+<td><a href="indexpage.html#notation_*">other</a></td>
+<td>(30 entries)</td>
+</tr>
+<tr>
+<td>Module Index</td>
+<td>A</td>
+<td>B</td>
+<td>C</td>
+<td>D</td>
+<td><a href="indexpage.html#module_E">E</a></td>
+<td>F</td>
+<td>G</td>
+<td>H</td>
+<td>I</td>
+<td>J</td>
+<td>K</td>
+<td><a href="indexpage.html#module_L">L</a></td>
+<td>M</td>
+<td>N</td>
+<td>O</td>
+<td><a href="indexpage.html#module_P">P</a></td>
+<td>Q</td>
+<td>R</td>
+<td>S</td>
+<td>T</td>
+<td>U</td>
+<td>V</td>
+<td>W</td>
+<td>X</td>
+<td>Y</td>
+<td>Z</td>
+<td>_</td>
+<td>other</td>
+<td>(3 entries)</td>
+</tr>
+<tr>
+<td>Library Index</td>
+<td>A</td>
+<td>B</td>
+<td><a href="indexpage.html#library_C">C</a></td>
+<td><a href="indexpage.html#library_D">D</a></td>
+<td><a href="indexpage.html#library_E">E</a></td>
+<td>F</td>
+<td>G</td>
+<td>H</td>
+<td><a href="indexpage.html#library_I">I</a></td>
+<td>J</td>
+<td>K</td>
+<td>L</td>
+<td>M</td>
+<td>N</td>
+<td>O</td>
+<td><a href="indexpage.html#library_P">P</a></td>
+<td>Q</td>
+<td><a href="indexpage.html#library_R">R</a></td>
+<td><a href="indexpage.html#library_S">S</a></td>
+<td>T</td>
+<td><a href="indexpage.html#library_U">U</a></td>
+<td>V</td>
+<td>W</td>
+<td>X</td>
+<td>Y</td>
+<td>Z</td>
+<td>_</td>
+<td>other</td>
+<td>(11 entries)</td>
+</tr>
+<tr>
+<td>Lemma Index</td>
+<td><a href="indexpage.html#lemma_A">A</a></td>
+<td><a href="indexpage.html#lemma_B">B</a></td>
+<td><a href="indexpage.html#lemma_C">C</a></td>
+<td><a href="indexpage.html#lemma_D">D</a></td>
+<td><a href="indexpage.html#lemma_E">E</a></td>
+<td><a href="indexpage.html#lemma_F">F</a></td>
+<td>G</td>
+<td>H</td>
+<td><a href="indexpage.html#lemma_I">I</a></td>
+<td><a href="indexpage.html#lemma_J">J</a></td>
+<td>K</td>
+<td><a href="indexpage.html#lemma_L">L</a></td>
+<td><a href="indexpage.html#lemma_M">M</a></td>
+<td>N</td>
+<td>O</td>
+<td><a href="indexpage.html#lemma_P">P</a></td>
+<td>Q</td>
+<td><a href="indexpage.html#lemma_R">R</a></td>
+<td><a href="indexpage.html#lemma_S">S</a></td>
+<td><a href="indexpage.html#lemma_T">T</a></td>
+<td><a href="indexpage.html#lemma_U">U</a></td>
+<td><a href="indexpage.html#lemma_V">V</a></td>
+<td><a href="indexpage.html#lemma_W">W</a></td>
+<td>X</td>
+<td>Y</td>
+<td>Z</td>
+<td>_</td>
+<td><a href="indexpage.html#lemma_*">other</a></td>
+<td>(134 entries)</td>
+</tr>
+<tr>
+<td>Constructor Index</td>
+<td><a href="indexpage.html#constructor_A">A</a></td>
+<td>B</td>
+<td><a href="indexpage.html#constructor_C">C</a></td>
+<td><a href="indexpage.html#constructor_D">D</a></td>
+<td><a href="indexpage.html#constructor_E">E</a></td>
+<td><a href="indexpage.html#constructor_F">F</a></td>
+<td><a href="indexpage.html#constructor_G">G</a></td>
+<td>H</td>
+<td><a href="indexpage.html#constructor_I">I</a></td>
+<td>J</td>
+<td>K</td>
+<td><a href="indexpage.html#constructor_L">L</a></td>
+<td><a href="indexpage.html#constructor_M">M</a></td>
+<td>N</td>
+<td>O</td>
+<td><a href="indexpage.html#constructor_P">P</a></td>
+<td>Q</td>
+<td>R</td>
+<td>S</td>
+<td>T</td>
+<td><a href="indexpage.html#constructor_U">U</a></td>
+<td>V</td>
+<td>W</td>
+<td>X</td>
+<td>Y</td>
+<td>Z</td>
+<td>_</td>
+<td><a href="indexpage.html#constructor_*">other</a></td>
+<td>(51 entries)</td>
+</tr>
+<tr>
+<td>Axiom Index</td>
+<td>A</td>
+<td>B</td>
+<td>C</td>
+<td>D</td>
+<td>E</td>
+<td>F</td>
+<td>G</td>
+<td>H</td>
+<td><a href="indexpage.html#axiom_I">I</a></td>
+<td>J</td>
+<td>K</td>
+<td><a href="indexpage.html#axiom_L">L</a></td>
+<td><a href="indexpage.html#axiom_M">M</a></td>
+<td>N</td>
+<td>O</td>
+<td>P</td>
+<td>Q</td>
+<td><a href="indexpage.html#axiom_R">R</a></td>
+<td>S</td>
+<td><a href="indexpage.html#axiom_T">T</a></td>
+<td>U</td>
+<td>V</td>
+<td>W</td>
+<td>X</td>
+<td>Y</td>
+<td>Z</td>
+<td>_</td>
+<td><a href="indexpage.html#axiom_*">other</a></td>
+<td>(11 entries)</td>
+</tr>
+<tr>
+<td>Inductive Index</td>
+<td>A</td>
+<td>B</td>
+<td><a href="indexpage.html#inductive_C">C</a></td>
+<td><a href="indexpage.html#inductive_D">D</a></td>
+<td><a href="indexpage.html#inductive_E">E</a></td>
+<td>F</td>
+<td><a href="indexpage.html#inductive_G">G</a></td>
+<td>H</td>
+<td><a href="indexpage.html#inductive_I">I</a></td>
+<td>J</td>
+<td><a href="indexpage.html#inductive_K">K</a></td>
+<td>L</td>
+<td>M</td>
+<td>N</td>
+<td>O</td>
+<td>P</td>
+<td>Q</td>
+<td>R</td>
+<td>S</td>
+<td><a href="indexpage.html#inductive_T">T</a></td>
+<td><a href="indexpage.html#inductive_U">U</a></td>
+<td><a href="indexpage.html#inductive_V">V</a></td>
+<td>W</td>
+<td>X</td>
+<td>Y</td>
+<td>Z</td>
+<td>_</td>
+<td>other</td>
+<td>(16 entries)</td>
+</tr>
+<tr>
+<td>Projection Index</td>
+<td>A</td>
+<td>B</td>
+<td>C</td>
+<td>D</td>
+<td>E</td>
+<td>F</td>
+<td>G</td>
+<td>H</td>
+<td><a href="indexpage.html#projection_I">I</a></td>
+<td>J</td>
+<td>K</td>
+<td><a href="indexpage.html#projection_L">L</a></td>
+<td>M</td>
+<td>N</td>
+<td>O</td>
+<td><a href="indexpage.html#projection_P">P</a></td>
+<td>Q</td>
+<td>R</td>
+<td>S</td>
+<td>T</td>
+<td>U</td>
+<td>V</td>
+<td>W</td>
+<td>X</td>
+<td>Y</td>
+<td>Z</td>
+<td>_</td>
+<td>other</td>
+<td>(4 entries)</td>
+</tr>
+<tr>
+<td>Instance Index</td>
+<td><a href="indexpage.html#instance_A">A</a></td>
+<td>B</td>
+<td>C</td>
+<td>D</td>
+<td><a href="indexpage.html#instance_E">E</a></td>
+<td><a href="indexpage.html#instance_F">F</a></td>
+<td><a href="indexpage.html#instance_G">G</a></td>
+<td>H</td>
+<td><a href="indexpage.html#instance_I">I</a></td>
+<td>J</td>
+<td>K</td>
+<td>L</td>
+<td><a href="indexpage.html#instance_M">M</a></td>
+<td>N</td>
+<td>O</td>
+<td><a href="indexpage.html#instance_P">P</a></td>
+<td>Q</td>
+<td><a href="indexpage.html#instance_R">R</a></td>
+<td><a href="indexpage.html#instance_S">S</a></td>
+<td>T</td>
+<td><a href="indexpage.html#instance_U">U</a></td>
+<td><a href="indexpage.html#instance_V">V</a></td>
+<td>W</td>
+<td>X</td>
+<td>Y</td>
+<td>Z</td>
+<td>_</td>
+<td>other</td>
+<td>(41 entries)</td>
+</tr>
+<tr>
+<td>Definition Index</td>
+<td><a href="indexpage.html#definition_A">A</a></td>
+<td><a href="indexpage.html#definition_B">B</a></td>
+<td><a href="indexpage.html#definition_C">C</a></td>
+<td><a href="indexpage.html#definition_D">D</a></td>
+<td><a href="indexpage.html#definition_E">E</a></td>
+<td><a href="indexpage.html#definition_F">F</a></td>
+<td>G</td>
+<td>H</td>
+<td><a href="indexpage.html#definition_I">I</a></td>
+<td><a href="indexpage.html#definition_J">J</a></td>
+<td>K</td>
+<td><a href="indexpage.html#definition_L">L</a></td>
+<td><a href="indexpage.html#definition_M">M</a></td>
+<td>N</td>
+<td><a href="indexpage.html#definition_O">O</a></td>
+<td><a href="indexpage.html#definition_P">P</a></td>
+<td>Q</td>
+<td><a href="indexpage.html#definition_R">R</a></td>
+<td><a href="indexpage.html#definition_S">S</a></td>
+<td><a href="indexpage.html#definition_T">T</a></td>
+<td><a href="indexpage.html#definition_U">U</a></td>
+<td><a href="indexpage.html#definition_V">V</a></td>
+<td><a href="indexpage.html#definition_W">W</a></td>
+<td>X</td>
+<td>Y</td>
+<td>Z</td>
+<td>_</td>
+<td><a href="indexpage.html#definition_*">other</a></td>
+<td>(110 entries)</td>
+</tr>
+<tr>
+<td>Record Index</td>
+<td>A</td>
+<td>B</td>
+<td>C</td>
+<td>D</td>
+<td>E</td>
+<td>F</td>
+<td>G</td>
+<td>H</td>
+<td><a href="indexpage.html#record_I">I</a></td>
+<td>J</td>
+<td>K</td>
+<td><a href="indexpage.html#record_L">L</a></td>
+<td>M</td>
+<td>N</td>
+<td>O</td>
+<td><a href="indexpage.html#record_P">P</a></td>
+<td>Q</td>
+<td>R</td>
+<td>S</td>
+<td>T</td>
+<td>U</td>
+<td>V</td>
+<td>W</td>
+<td>X</td>
+<td>Y</td>
+<td>Z</td>
+<td>_</td>
+<td>other</td>
+<td>(3 entries)</td>
+</tr>
+</table>
+<hr/>
+<h1>Global Index</h1>
+<a name="global_A"></a><h2>A </h2>
+<a href="OpSemProofs.using_relations.html#add_comm_related">add_comm_related</a> [lemma, in <a href="OpSemProofs.using_relations.html">OpSemProofs.using_relations</a>]<br/>
+<a href="OpSemProofs.using_relations.html#add_zero_related">add_zero_related</a> [lemma, in <a href="OpSemProofs.using_relations.html">OpSemProofs.using_relations</a>]<br/>
+<a href="OpSemProofs.relations.html#apply_in">apply_in</a> [definition, in <a href="OpSemProofs.relations.html">OpSemProofs.relations</a>]<br/>
+<a href="OpSemProofs.relations.html#apply_G_rel">apply_G_rel</a> [lemma, in <a href="OpSemProofs.relations.html">OpSemProofs.relations</a>]<br/>
+<a href="OpSemProofs.using_relations.html#apply_id_equiv">apply_id_equiv</a> [lemma, in <a href="OpSemProofs.using_relations.html">OpSemProofs.using_relations</a>]<br/>
+<a href="OpSemProofs.determinism.html#apply_dG_rel">apply_dG_rel</a> [lemma, in <a href="OpSemProofs.determinism.html">OpSemProofs.determinism</a>]<br/>
+<a href="OpSemProofs.syntax.html#Arrow">Arrow</a> [constructor, in <a href="OpSemProofs.syntax.html">OpSemProofs.syntax</a>]<br/>
+<a href="OpSemProofs.properties_of_relations.html#A_rel_subidentity">A_rel_subidentity</a> [lemma, in <a href="OpSemProofs.properties_of_relations.html">OpSemProofs.properties_of_relations</a>]<br/>
+<a href="OpSemProofs.properties_of_relations.html#A_rel_transitive">A_rel_transitive</a> [instance, in <a href="OpSemProofs.properties_of_relations.html">OpSemProofs.properties_of_relations</a>]<br/>
+<a href="OpSemProofs.properties_of_relations.html#A_rel_transitive'">A_rel_transitive'</a> [instance, in <a href="OpSemProofs.properties_of_relations.html">OpSemProofs.properties_of_relations</a>]<br/>
+<a href="OpSemProofs.properties_of_relations.html#A_rel_symmetric">A_rel_symmetric</a> [instance, in <a href="OpSemProofs.properties_of_relations.html">OpSemProofs.properties_of_relations</a>]<br/>
+<a href="OpSemProofs.properties_of_relations.html#A_rel_symmetric'">A_rel_symmetric'</a> [lemma, in <a href="OpSemProofs.properties_of_relations.html">OpSemProofs.properties_of_relations</a>]<br/>
+<a href="OpSemProofs.relations.html#A_rel">A_rel</a> [definition, in <a href="OpSemProofs.relations.html">OpSemProofs.relations</a>]<br/>
+<a href="OpSemProofs.relations.html#A_rel'">A_rel'</a> [definition, in <a href="OpSemProofs.relations.html">OpSemProofs.relations</a>]<br/>
+<br/><br/><a name="global_B"></a><h2>B </h2>
+<a href="OpSemProofs.using_relations.html#beta_value">beta_value</a> [lemma, in <a href="OpSemProofs.using_relations.html">OpSemProofs.using_relations</a>]<br/>
+<a href="OpSemProofs.chain.html#bichain">bichain</a> [definition, in <a href="OpSemProofs.chain.html">OpSemProofs.chain</a>]<br/>
+<a href="OpSemProofs.chain.html#bichain_rect">bichain_rect</a> [lemma, in <a href="OpSemProofs.chain.html">OpSemProofs.chain</a>]<br/>
+<a href="OpSemProofs.chain.html#bichain_to_list">bichain_to_list</a> [definition, in <a href="OpSemProofs.chain.html">OpSemProofs.chain</a>]<br/>
+<a href="OpSemProofs.chain.html#bichain_fold_right">bichain_fold_right</a> [definition, in <a href="OpSemProofs.chain.html">OpSemProofs.chain</a>]<br/>
+<a href="OpSemProofs.chain.html#bichain_cons">bichain_cons</a> [definition, in <a href="OpSemProofs.chain.html">OpSemProofs.chain</a>]<br/>
+<a href="OpSemProofs.chain.html#bicurry">bicurry</a> [definition, in <a href="OpSemProofs.chain.html">OpSemProofs.chain</a>]<br/>
+<a href="OpSemProofs.integration.html#d675fad8deb025bbdd061daa63bb7e02">bind_πL_πR</a> [lemma, in <a href="OpSemProofs.integration.html">OpSemProofs.integration</a>]<br/>
+<a href="OpSemProofs.integration.html#bind_meas_option">bind_meas_option</a> [lemma, in <a href="OpSemProofs.integration.html">OpSemProofs.integration</a>]<br/>
+<a href="OpSemProofs.integration.html#bind_empty">bind_empty</a> [lemma, in <a href="OpSemProofs.integration.html">OpSemProofs.integration</a>]<br/>
+<a href="OpSemProofs.syntax.html#body_subst">body_subst</a> [lemma, in <a href="OpSemProofs.syntax.html">OpSemProofs.syntax</a>]<br/>
+<a href="OpSemProofs.integration.html#bool_of_dec">bool_of_dec</a> [definition, in <a href="OpSemProofs.integration.html">OpSemProofs.integration</a>]<br/>
+<a href="OpSemProofs.relations.html#60e7968d930bf9e318f2e2e48a2d66a5">by_μe_eq_μEntropy_factor</a> [lemma, in <a href="OpSemProofs.relations.html">OpSemProofs.relations</a>]<br/>
+<a href="OpSemProofs.relations.html#6b159917391e0b22c3d219ed753c075f">by_μe_eq_μEntropy_app</a> [lemma, in <a href="OpSemProofs.relations.html">OpSemProofs.relations</a>]<br/>
+<a href="OpSemProofs.relations.html#3d73e4d0d501299c162b8b474d094411">by_μe_eq_μEntropy_plus</a> [lemma, in <a href="OpSemProofs.relations.html">OpSemProofs.relations</a>]<br/>
+<br/><br/><a name="global_C"></a><h2>C </h2>
+<a href="OpSemProofs.chain.html#chain">chain</a> [inductive, in <a href="OpSemProofs.chain.html">OpSemProofs.chain</a>]<br/>
+<a href="OpSemProofs.chain.html">chain</a> [library]<br/>
+<a href="OpSemProofs.chain.html#chain_to_list">chain_to_list</a> [definition, in <a href="OpSemProofs.chain.html">OpSemProofs.chain</a>]<br/>
+<a href="OpSemProofs.chain.html#chain_fold_left">chain_fold_left</a> [definition, in <a href="OpSemProofs.chain.html">OpSemProofs.chain</a>]<br/>
+<a href="OpSemProofs.chain.html#chain_fold_right">chain_fold_right</a> [definition, in <a href="OpSemProofs.chain.html">OpSemProofs.chain</a>]<br/>
+<a href="OpSemProofs.chain.html#chain_snoc">chain_snoc</a> [definition, in <a href="OpSemProofs.chain.html">OpSemProofs.chain</a>]<br/>
+<a href="OpSemProofs.chain.html#chain_app_assoc">chain_app_assoc</a> [lemma, in <a href="OpSemProofs.chain.html">OpSemProofs.chain</a>]<br/>
+<a href="OpSemProofs.chain.html#chain_app_nil_r">chain_app_nil_r</a> [lemma, in <a href="OpSemProofs.chain.html">OpSemProofs.chain</a>]<br/>
+<a href="OpSemProofs.chain.html#chain_app">chain_app</a> [definition, in <a href="OpSemProofs.chain.html">OpSemProofs.chain</a>]<br/>
+<a href="OpSemProofs.chain.html#chain_cons">chain_cons</a> [constructor, in <a href="OpSemProofs.chain.html">OpSemProofs.chain</a>]<br/>
+<a href="OpSemProofs.chain.html#chain_nil">chain_nil</a> [constructor, in <a href="OpSemProofs.chain.html">OpSemProofs.chain</a>]<br/>
+<a href="OpSemProofs.syntax.html#close">close</a> [lemma, in <a href="OpSemProofs.syntax.html">OpSemProofs.syntax</a>]<br/>
+<a href="OpSemProofs.integration.html#coarsening">coarsening</a> [lemma, in <a href="OpSemProofs.integration.html">OpSemProofs.integration</a>]<br/>
+<a href="OpSemProofs.relations.html#compat_factor">compat_factor</a> [lemma, in <a href="OpSemProofs.relations.html">OpSemProofs.relations</a>]<br/>
+<a href="OpSemProofs.relations.html#compat_sample">compat_sample</a> [lemma, in <a href="OpSemProofs.relations.html">OpSemProofs.relations</a>]<br/>
+<a href="OpSemProofs.relations.html#compat_app">compat_app</a> [lemma, in <a href="OpSemProofs.relations.html">OpSemProofs.relations</a>]<br/>
+<a href="OpSemProofs.relations.html#compat_plus">compat_plus</a> [lemma, in <a href="OpSemProofs.relations.html">OpSemProofs.relations</a>]<br/>
+<a href="OpSemProofs.relations.html#compat_lam">compat_lam</a> [lemma, in <a href="OpSemProofs.relations.html">OpSemProofs.relations</a>]<br/>
+<a href="OpSemProofs.relations.html#compat_var">compat_var</a> [lemma, in <a href="OpSemProofs.relations.html">OpSemProofs.relations</a>]<br/>
+<a href="OpSemProofs.relations.html#compat_real">compat_real</a> [lemma, in <a href="OpSemProofs.relations.html">OpSemProofs.relations</a>]<br/>
+<a href="OpSemProofs.ctxequiv.html#compat_plug">compat_plug</a> [lemma, in <a href="OpSemProofs.ctxequiv.html">OpSemProofs.ctxequiv</a>]<br/>
+<a href="OpSemProofs.ctxequiv.html#compat_plug1">compat_plug1</a> [lemma, in <a href="OpSemProofs.ctxequiv.html">OpSemProofs.ctxequiv</a>]<br/>
+<a href="OpSemProofs.determinism.html#compat_plus">compat_plus</a> [lemma, in <a href="OpSemProofs.determinism.html">OpSemProofs.determinism</a>]<br/>
+<a href="OpSemProofs.determinism.html#compat_sample">compat_sample</a> [lemma, in <a href="OpSemProofs.determinism.html">OpSemProofs.determinism</a>]<br/>
+<a href="OpSemProofs.determinism.html#compat_factor">compat_factor</a> [lemma, in <a href="OpSemProofs.determinism.html">OpSemProofs.determinism</a>]<br/>
+<a href="OpSemProofs.determinism.html#compat_app">compat_app</a> [lemma, in <a href="OpSemProofs.determinism.html">OpSemProofs.determinism</a>]<br/>
+<a href="OpSemProofs.determinism.html#compat_lam">compat_lam</a> [lemma, in <a href="OpSemProofs.determinism.html">OpSemProofs.determinism</a>]<br/>
+<a href="OpSemProofs.determinism.html#compat_var">compat_var</a> [lemma, in <a href="OpSemProofs.determinism.html">OpSemProofs.determinism</a>]<br/>
+<a href="OpSemProofs.determinism.html#compat_real">compat_real</a> [lemma, in <a href="OpSemProofs.determinism.html">OpSemProofs.determinism</a>]<br/>
+<a href="OpSemProofs.ctxequiv.html#ctx">ctx</a> [definition, in <a href="OpSemProofs.ctxequiv.html">OpSemProofs.ctxequiv</a>]<br/>
+<a href="OpSemProofs.ctxequiv.html">ctxequiv</a> [library]<br/>
+<a href="OpSemProofs.ctxequiv.html#ctx_equiv">ctx_equiv</a> [definition, in <a href="OpSemProofs.ctxequiv.html">OpSemProofs.ctxequiv</a>]<br/>
+<a href="OpSemProofs.ctxequiv.html#ctx_type_unique">ctx_type_unique</a> [lemma, in <a href="OpSemProofs.ctxequiv.html">OpSemProofs.ctxequiv</a>]<br/>
+<a href="OpSemProofs.ctxequiv.html#ctx_frame">ctx_frame</a> [inductive, in <a href="OpSemProofs.ctxequiv.html">OpSemProofs.ctxequiv</a>]<br/>
+<a href="OpSemProofs.ctxequiv.html#c_hole">c_hole</a> [definition, in <a href="OpSemProofs.ctxequiv.html">OpSemProofs.ctxequiv</a>]<br/>
+<a href="OpSemProofs.ctxequiv.html#c_lam">c_lam</a> [constructor, in <a href="OpSemProofs.ctxequiv.html">OpSemProofs.ctxequiv</a>]<br/>
+<a href="OpSemProofs.ctxequiv.html#c_plus_r">c_plus_r</a> [constructor, in <a href="OpSemProofs.ctxequiv.html">OpSemProofs.ctxequiv</a>]<br/>
+<a href="OpSemProofs.ctxequiv.html#c_plus_l">c_plus_l</a> [constructor, in <a href="OpSemProofs.ctxequiv.html">OpSemProofs.ctxequiv</a>]<br/>
+<a href="OpSemProofs.ctxequiv.html#c_factor">c_factor</a> [constructor, in <a href="OpSemProofs.ctxequiv.html">OpSemProofs.ctxequiv</a>]<br/>
+<a href="OpSemProofs.ctxequiv.html#c_app_a">c_app_a</a> [constructor, in <a href="OpSemProofs.ctxequiv.html">OpSemProofs.ctxequiv</a>]<br/>
+<a href="OpSemProofs.ctxequiv.html#c_app_f">c_app_f</a> [constructor, in <a href="OpSemProofs.ctxequiv.html">OpSemProofs.ctxequiv</a>]<br/>
+<br/><br/><a name="global_D"></a><h2>D </h2>
+<a href="OpSemProofs.chain.html#dep_bicurry">dep_bicurry</a> [lemma, in <a href="OpSemProofs.chain.html">OpSemProofs.chain</a>]<br/>
+<a href="OpSemProofs.using_relations.html#dep_ids_ids">dep_ids_ids</a> [lemma, in <a href="OpSemProofs.using_relations.html">OpSemProofs.using_relations</a>]<br/>
+<a href="OpSemProofs.using_relations.html#dep_ids">dep_ids</a> [definition, in <a href="OpSemProofs.using_relations.html">OpSemProofs.using_relations</a>]<br/>
+<a href="OpSemProofs.using_relations.html#dep_ids'">dep_ids'</a> [definition, in <a href="OpSemProofs.using_relations.html">OpSemProofs.using_relations</a>]<br/>
+<a href="OpSemProofs.syntax.html#dep_env_allT">dep_env_allT</a> [definition, in <a href="OpSemProofs.syntax.html">OpSemProofs.syntax</a>]<br/>
+<a href="OpSemProofs.syntax.html#dep_map">dep_map</a> [definition, in <a href="OpSemProofs.syntax.html">OpSemProofs.syntax</a>]<br/>
+<a href="OpSemProofs.syntax.html#dep_lookup">dep_lookup</a> [definition, in <a href="OpSemProofs.syntax.html">OpSemProofs.syntax</a>]<br/>
+<a href="OpSemProofs.syntax.html#dep_cons">dep_cons</a> [constructor, in <a href="OpSemProofs.syntax.html">OpSemProofs.syntax</a>]<br/>
+<a href="OpSemProofs.syntax.html#dep_nil">dep_nil</a> [constructor, in <a href="OpSemProofs.syntax.html">OpSemProofs.syntax</a>]<br/>
+<a href="OpSemProofs.syntax.html#dep_list">dep_list</a> [inductive, in <a href="OpSemProofs.syntax.html">OpSemProofs.syntax</a>]<br/>
+<a href="OpSemProofs.determinism.html">determinism</a> [library]<br/>
+<a href="OpSemProofs.determinism.html#dE_rel">dE_rel</a> [definition, in <a href="OpSemProofs.determinism.html">OpSemProofs.determinism</a>]<br/>
+<a href="OpSemProofs.determinism.html#dE_rel'">dE_rel'</a> [definition, in <a href="OpSemProofs.determinism.html">OpSemProofs.determinism</a>]<br/>
+<a href="OpSemProofs.determinism.html#dG_rel">dG_rel</a> [definition, in <a href="OpSemProofs.determinism.html">OpSemProofs.determinism</a>]<br/>
+<a href="OpSemProofs.integration.html#dirac">dirac</a> [definition, in <a href="OpSemProofs.integration.html">OpSemProofs.integration</a>]<br/>
+<a href="OpSemProofs.determinism.html#dV_rel">dV_rel</a> [definition, in <a href="OpSemProofs.determinism.html">OpSemProofs.determinism</a>]<br/>
+<a href="OpSemProofs.determinism.html#dV_rel_arrow">dV_rel_arrow</a> [inductive, in <a href="OpSemProofs.determinism.html">OpSemProofs.determinism</a>]<br/>
+<a href="OpSemProofs.determinism.html#dV_rel_real">dV_rel_real</a> [definition, in <a href="OpSemProofs.determinism.html">OpSemProofs.determinism</a>]<br/>
+<br/><br/><a name="global_E"></a><h2>E </h2>
+<a href="OpSemProofs.syntax.html#empty_env">empty_env</a> [definition, in <a href="OpSemProofs.syntax.html">OpSemProofs.syntax</a>]<br/>
+<a href="OpSemProofs.integration.html#empty_meas">empty_meas</a> [definition, in <a href="OpSemProofs.integration.html">OpSemProofs.integration</a>]<br/>
+<a href="OpSemProofs.ennr.html#ennr">ennr</a> [inductive, in <a href="OpSemProofs.ennr.html">OpSemProofs.ennr</a>]<br/>
+<a href="OpSemProofs.ennr.html">ennr</a> [library]<br/>
+<a href="OpSemProofs.ennr.html#ennr_mul_1_r">ennr_mul_1_r</a> [lemma, in <a href="OpSemProofs.ennr.html">OpSemProofs.ennr</a>]<br/>
+<a href="OpSemProofs.ennr.html#ennr_gt_dec">ennr_gt_dec</a> [lemma, in <a href="OpSemProofs.ennr.html">OpSemProofs.ennr</a>]<br/>
+<a href="OpSemProofs.ennr.html#ennr_ge">ennr_ge</a> [definition, in <a href="OpSemProofs.ennr.html">OpSemProofs.ennr</a>]<br/>
+<a href="OpSemProofs.ennr.html#ennr_le">ennr_le</a> [definition, in <a href="OpSemProofs.ennr.html">OpSemProofs.ennr</a>]<br/>
+<a href="OpSemProofs.ennr.html#ennr_gt">ennr_gt</a> [definition, in <a href="OpSemProofs.ennr.html">OpSemProofs.ennr</a>]<br/>
+<a href="OpSemProofs.ennr.html#ennr_lt">ennr_lt</a> [definition, in <a href="OpSemProofs.ennr.html">OpSemProofs.ennr</a>]<br/>
+<a href="OpSemProofs.ennr.html#ennr_semiring">ennr_semiring</a> [definition, in <a href="OpSemProofs.ennr.html">OpSemProofs.ennr</a>]<br/>
+<a href="OpSemProofs.ennr.html#ennr_distr_l">ennr_distr_l</a> [lemma, in <a href="OpSemProofs.ennr.html">OpSemProofs.ennr</a>]<br/>
+<a href="OpSemProofs.ennr.html#ennr_mul_assoc">ennr_mul_assoc</a> [lemma, in <a href="OpSemProofs.ennr.html">OpSemProofs.ennr</a>]<br/>
+<a href="OpSemProofs.ennr.html#ennr_mul_comm">ennr_mul_comm</a> [lemma, in <a href="OpSemProofs.ennr.html">OpSemProofs.ennr</a>]<br/>
+<a href="OpSemProofs.ennr.html#ennr_mul_0_l">ennr_mul_0_l</a> [lemma, in <a href="OpSemProofs.ennr.html">OpSemProofs.ennr</a>]<br/>
+<a href="OpSemProofs.ennr.html#ennr_mul_1_l">ennr_mul_1_l</a> [lemma, in <a href="OpSemProofs.ennr.html">OpSemProofs.ennr</a>]<br/>
+<a href="OpSemProofs.ennr.html#ennr_add_assoc">ennr_add_assoc</a> [lemma, in <a href="OpSemProofs.ennr.html">OpSemProofs.ennr</a>]<br/>
+<a href="OpSemProofs.ennr.html#ennr_add_comm">ennr_add_comm</a> [lemma, in <a href="OpSemProofs.ennr.html">OpSemProofs.ennr</a>]<br/>
+<a href="OpSemProofs.ennr.html#ennr_add_0_l">ennr_add_0_l</a> [lemma, in <a href="OpSemProofs.ennr.html">OpSemProofs.ennr</a>]<br/>
+<a href="OpSemProofs.ennr.html#ennr_mult">ennr_mult</a> [definition, in <a href="OpSemProofs.ennr.html">OpSemProofs.ennr</a>]<br/>
+<a href="OpSemProofs.ennr.html#ennr_plus">ennr_plus</a> [definition, in <a href="OpSemProofs.ennr.html">OpSemProofs.ennr</a>]<br/>
+<a href="OpSemProofs.ennr.html#ennr_1">ennr_1</a> [definition, in <a href="OpSemProofs.ennr.html">OpSemProofs.ennr</a>]<br/>
+<a href="OpSemProofs.ennr.html#ennr_0">ennr_0</a> [definition, in <a href="OpSemProofs.ennr.html">OpSemProofs.ennr</a>]<br/>
+<a href="OpSemProofs.entropy.html#Entropy">Entropy</a> [definition, in <a href="OpSemProofs.entropy.html">OpSemProofs.entropy</a>]<br/>
+<a href="OpSemProofs.entropy.html">entropy</a> [library]<br/>
+<a href="OpSemProofs.integration.html#ent_finite">ent_finite</a> [constructor, in <a href="OpSemProofs.integration.html">OpSemProofs.integration</a>]<br/>
+<a href="OpSemProofs.syntax.html#Env">Env</a> [definition, in <a href="OpSemProofs.syntax.html">OpSemProofs.syntax</a>]<br/>
+<a href="OpSemProofs.syntax.html#env_search_subst">env_search_subst</a> [lemma, in <a href="OpSemProofs.syntax.html">OpSemProofs.syntax</a>]<br/>
+<a href="OpSemProofs.syntax.html#env_search">env_search</a> [lemma, in <a href="OpSemProofs.syntax.html">OpSemProofs.syntax</a>]<br/>
+<a href="OpSemProofs.utils.html#eq_pointwise">eq_pointwise</a> [instance, in <a href="OpSemProofs.utils.html">OpSemProofs.utils</a>]<br/>
+<a href="OpSemProofs.syntax.html#erase">erase</a> [definition, in <a href="OpSemProofs.syntax.html">OpSemProofs.syntax</a>]<br/>
+<a href="OpSemProofs.using_relations.html#erase_simple">erase_simple</a> [lemma, in <a href="OpSemProofs.using_relations.html">OpSemProofs.using_relations</a>]<br/>
+<a href="OpSemProofs.using_relations.html#erase_up_simple_ctx">erase_up_simple_ctx</a> [lemma, in <a href="OpSemProofs.using_relations.html">OpSemProofs.using_relations</a>]<br/>
+<a href="OpSemProofs.using_relations.html#erase_plug">erase_plug</a> [lemma, in <a href="OpSemProofs.using_relations.html">OpSemProofs.using_relations</a>]<br/>
+<a href="OpSemProofs.using_relations.html#erase_eq">erase_eq</a> [lemma, in <a href="OpSemProofs.using_relations.html">OpSemProofs.using_relations</a>]<br/>
+<a href="OpSemProofs.syntax.html#erase_envs_equiv">erase_envs_equiv</a> [lemma, in <a href="OpSemProofs.syntax.html">OpSemProofs.syntax</a>]<br/>
+<a href="OpSemProofs.syntax.html#erase_wt_env">erase_wt_env</a> [definition, in <a href="OpSemProofs.syntax.html">OpSemProofs.syntax</a>]<br/>
+<a href="OpSemProofs.syntax.html#erase_wt_expr_env">erase_wt_expr_env</a> [definition, in <a href="OpSemProofs.syntax.html">OpSemProofs.syntax</a>]<br/>
+<a href="OpSemProofs.syntax.html#erase_injective">erase_injective</a> [lemma, in <a href="OpSemProofs.syntax.html">OpSemProofs.syntax</a>]<br/>
+<a href="OpSemProofs.ctxequiv.html#erase_ctx_injective">erase_ctx_injective</a> [lemma, in <a href="OpSemProofs.ctxequiv.html">OpSemProofs.ctxequiv</a>]<br/>
+<a href="OpSemProofs.ctxequiv.html#erase_cons">erase_cons</a> [lemma, in <a href="OpSemProofs.ctxequiv.html">OpSemProofs.ctxequiv</a>]<br/>
+<a href="OpSemProofs.ctxequiv.html#erase_ctx">erase_ctx</a> [definition, in <a href="OpSemProofs.ctxequiv.html">OpSemProofs.ctxequiv</a>]<br/>
+<a href="OpSemProofs.ctxequiv.html#erase_ctx_frame">erase_ctx_frame</a> [definition, in <a href="OpSemProofs.ctxequiv.html">OpSemProofs.ctxequiv</a>]<br/>
+<a href="OpSemProofs.syntax.html#erase'">erase'</a> [definition, in <a href="OpSemProofs.syntax.html">OpSemProofs.syntax</a>]<br/>
+<a href="OpSemProofs.relations.html#ev">ev</a> [definition, in <a href="OpSemProofs.relations.html">OpSemProofs.relations</a>]<br/>
+<a href="OpSemProofs.syntax.html#eval">eval</a> [inductive, in <a href="OpSemProofs.syntax.html">OpSemProofs.syntax</a>]<br/>
+<a href="OpSemProofs.relations.html#eval_in">eval_in</a> [definition, in <a href="OpSemProofs.relations.html">OpSemProofs.relations</a>]<br/>
+<a href="OpSemProofs.syntax.html#EVAL_plus">EVAL_plus</a> [constructor, in <a href="OpSemProofs.syntax.html">OpSemProofs.syntax</a>]<br/>
+<a href="OpSemProofs.syntax.html#EVAL_sample">EVAL_sample</a> [constructor, in <a href="OpSemProofs.syntax.html">OpSemProofs.syntax</a>]<br/>
+<a href="OpSemProofs.syntax.html#EVAL_factor">EVAL_factor</a> [constructor, in <a href="OpSemProofs.syntax.html">OpSemProofs.syntax</a>]<br/>
+<a href="OpSemProofs.syntax.html#EVAL_app">EVAL_app</a> [constructor, in <a href="OpSemProofs.syntax.html">OpSemProofs.syntax</a>]<br/>
+<a href="OpSemProofs.syntax.html#EVAL_val">EVAL_val</a> [constructor, in <a href="OpSemProofs.syntax.html">OpSemProofs.syntax</a>]<br/>
+<a href="OpSemProofs.determinism.html#eval_dec.eval_dec">eval_dec.eval_dec</a> [lemma, in <a href="OpSemProofs.determinism.html">OpSemProofs.determinism</a>]<br/>
+<a href="OpSemProofs.determinism.html#eval_dec.eval_dec_not_ex">eval_dec.eval_dec_not_ex</a> [constructor, in <a href="OpSemProofs.determinism.html">OpSemProofs.determinism</a>]<br/>
+<a href="OpSemProofs.determinism.html#eval_dec.eval_dec_ex_unique">eval_dec.eval_dec_ex_unique</a> [constructor, in <a href="OpSemProofs.determinism.html">OpSemProofs.determinism</a>]<br/>
+<a href="OpSemProofs.determinism.html#eval_dec.eval_dec_result">eval_dec.eval_dec_result</a> [inductive, in <a href="OpSemProofs.determinism.html">OpSemProofs.determinism</a>]<br/>
+<a href="OpSemProofs.determinism.html#eval_dec">eval_dec</a> [module, in <a href="OpSemProofs.determinism.html">OpSemProofs.determinism</a>]<br/>
+<a href="OpSemProofs.integration.html#Event">Event</a> [definition, in <a href="OpSemProofs.integration.html">OpSemProofs.integration</a>]<br/>
+<a href="OpSemProofs.relations.html#ew">ew</a> [definition, in <a href="OpSemProofs.relations.html">OpSemProofs.relations</a>]<br/>
+<a href="OpSemProofs.syntax.html#expr">expr</a> [inductive, in <a href="OpSemProofs.syntax.html">OpSemProofs.syntax</a>]<br/>
+<a href="OpSemProofs.using_relations.html#expr_lift_erase">expr_lift_erase</a> [lemma, in <a href="OpSemProofs.using_relations.html">OpSemProofs.using_relations</a>]<br/>
+<a href="OpSemProofs.using_relations.html#expr_lift">expr_lift</a> [instance, in <a href="OpSemProofs.using_relations.html">OpSemProofs.using_relations</a>]<br/>
+<a href="OpSemProofs.syntax.html#expr_eq_dec">expr_eq_dec</a> [lemma, in <a href="OpSemProofs.syntax.html">OpSemProofs.syntax</a>]<br/>
+<a href="OpSemProofs.syntax.html#expr_ren">expr_ren</a> [lemma, in <a href="OpSemProofs.syntax.html">OpSemProofs.syntax</a>]<br/>
+<a href="OpSemProofs.syntax.html#expr_of_val">expr_of_val</a> [definition, in <a href="OpSemProofs.syntax.html">OpSemProofs.syntax</a>]<br/>
+<a href="OpSemProofs.syntax.html#expr_type_unique">expr_type_unique</a> [lemma, in <a href="OpSemProofs.syntax.html">OpSemProofs.syntax</a>]<br/>
+<a href="OpSemProofs.determinism.html#extend_dgrel">extend_dgrel</a> [lemma, in <a href="OpSemProofs.determinism.html">OpSemProofs.determinism</a>]<br/>
+<a href="OpSemProofs.properties_of_relations.html#E_rel_reflexive">E_rel_reflexive</a> [instance, in <a href="OpSemProofs.properties_of_relations.html">OpSemProofs.properties_of_relations</a>]<br/>
+<a href="OpSemProofs.properties_of_relations.html#E_rel_transitive">E_rel_transitive</a> [instance, in <a href="OpSemProofs.properties_of_relations.html">OpSemProofs.properties_of_relations</a>]<br/>
+<a href="OpSemProofs.properties_of_relations.html#E_rel_transitive'">E_rel_transitive'</a> [instance, in <a href="OpSemProofs.properties_of_relations.html">OpSemProofs.properties_of_relations</a>]<br/>
+<a href="OpSemProofs.properties_of_relations.html#E_rel_symmetric">E_rel_symmetric</a> [instance, in <a href="OpSemProofs.properties_of_relations.html">OpSemProofs.properties_of_relations</a>]<br/>
+<a href="OpSemProofs.properties_of_relations.html#E_rel_symmetric'">E_rel_symmetric'</a> [lemma, in <a href="OpSemProofs.properties_of_relations.html">OpSemProofs.properties_of_relations</a>]<br/>
+<a href="OpSemProofs.relations.html#E_rel">E_rel</a> [definition, in <a href="OpSemProofs.relations.html">OpSemProofs.relations</a>]<br/>
+<a href="OpSemProofs.relations.html#E_rel'">E_rel'</a> [definition, in <a href="OpSemProofs.relations.html">OpSemProofs.relations</a>]<br/>
+<a href="OpSemProofs.syntax.html#e_plus">e_plus</a> [constructor, in <a href="OpSemProofs.syntax.html">OpSemProofs.syntax</a>]<br/>
+<a href="OpSemProofs.syntax.html#e_sample">e_sample</a> [constructor, in <a href="OpSemProofs.syntax.html">OpSemProofs.syntax</a>]<br/>
+<a href="OpSemProofs.syntax.html#e_factor">e_factor</a> [constructor, in <a href="OpSemProofs.syntax.html">OpSemProofs.syntax</a>]<br/>
+<a href="OpSemProofs.syntax.html#e_app">e_app</a> [constructor, in <a href="OpSemProofs.syntax.html">OpSemProofs.syntax</a>]<br/>
+<a href="OpSemProofs.syntax.html#e_lam">e_lam</a> [constructor, in <a href="OpSemProofs.syntax.html">OpSemProofs.syntax</a>]<br/>
+<a href="OpSemProofs.syntax.html#e_var">e_var</a> [constructor, in <a href="OpSemProofs.syntax.html">OpSemProofs.syntax</a>]<br/>
+<a href="OpSemProofs.syntax.html#e_real">e_real</a> [constructor, in <a href="OpSemProofs.syntax.html">OpSemProofs.syntax</a>]<br/>
+<br/><br/><a name="global_F"></a><h2>F </h2>
+<a href="OpSemProofs.relations.html#factor_in">factor_in</a> [definition, in <a href="OpSemProofs.relations.html">OpSemProofs.relations</a>]<br/>
+<a href="OpSemProofs.ennr.html#finite">finite</a> [constructor, in <a href="OpSemProofs.ennr.html">OpSemProofs.ennr</a>]<br/>
+<a href="OpSemProofs.ennr.html#finite_inj">finite_inj</a> [lemma, in <a href="OpSemProofs.ennr.html">OpSemProofs.ennr</a>]<br/>
+<a href="OpSemProofs.syntax.html#for_absurd_val">for_absurd_val</a> [lemma, in <a href="OpSemProofs.syntax.html">OpSemProofs.syntax</a>]<br/>
+<a href="OpSemProofs.utils.html#fromOption">fromOption</a> [definition, in <a href="OpSemProofs.utils.html">OpSemProofs.utils</a>]<br/>
+<a href="OpSemProofs.integration.html#full_event">full_event</a> [definition, in <a href="OpSemProofs.integration.html">OpSemProofs.integration</a>]<br/>
+<a href="OpSemProofs.utils.html#functional_ext_rewriting2">functional_ext_rewriting2</a> [instance, in <a href="OpSemProofs.utils.html">OpSemProofs.utils</a>]<br/>
+<a href="OpSemProofs.utils.html#functional_ext_rewriting">functional_ext_rewriting</a> [instance, in <a href="OpSemProofs.utils.html">OpSemProofs.utils</a>]<br/>
+<a href="OpSemProofs.relations.html#fundamental_property_of_values">fundamental_property_of_values</a> [lemma, in <a href="OpSemProofs.relations.html">OpSemProofs.relations</a>]<br/>
+<a href="OpSemProofs.relations.html#fundamental_property">fundamental_property</a> [lemma, in <a href="OpSemProofs.relations.html">OpSemProofs.relations</a>]<br/>
+<a href="OpSemProofs.determinism.html#fundamental_property">fundamental_property</a> [lemma, in <a href="OpSemProofs.determinism.html">OpSemProofs.determinism</a>]<br/>
+<br/><br/><a name="global_G"></a><h2>G </h2>
+<a href="OpSemProofs.properties_of_relations.html#G_rel_reflexive">G_rel_reflexive</a> [instance, in <a href="OpSemProofs.properties_of_relations.html">OpSemProofs.properties_of_relations</a>]<br/>
+<a href="OpSemProofs.properties_of_relations.html#G_rel_transitive">G_rel_transitive</a> [instance, in <a href="OpSemProofs.properties_of_relations.html">OpSemProofs.properties_of_relations</a>]<br/>
+<a href="OpSemProofs.properties_of_relations.html#G_rel_symmetric">G_rel_symmetric</a> [instance, in <a href="OpSemProofs.properties_of_relations.html">OpSemProofs.properties_of_relations</a>]<br/>
+<a href="OpSemProofs.relations.html#G_rel_cons">G_rel_cons</a> [constructor, in <a href="OpSemProofs.relations.html">OpSemProofs.relations</a>]<br/>
+<a href="OpSemProofs.relations.html#G_rel_nil">G_rel_nil</a> [constructor, in <a href="OpSemProofs.relations.html">OpSemProofs.relations</a>]<br/>
+<a href="OpSemProofs.relations.html#G_rel">G_rel</a> [inductive, in <a href="OpSemProofs.relations.html">OpSemProofs.relations</a>]<br/>
+<br/><br/><a name="global_I"></a><h2>I </h2>
+<a href="OpSemProofs.utils.html#id">id</a> [definition, in <a href="OpSemProofs.utils.html">OpSemProofs.utils</a>]<br/>
+<a href="OpSemProofs.syntax.html#Ids_u_expr">Ids_u_expr</a> [instance, in <a href="OpSemProofs.syntax.html">OpSemProofs.syntax</a>]<br/>
+<a href="OpSemProofs.integration.html#ifte">ifte</a> [definition, in <a href="OpSemProofs.integration.html">OpSemProofs.integration</a>]<br/>
+<a href="OpSemProofs.integration.html#indicator">indicator</a> [definition, in <a href="OpSemProofs.integration.html">OpSemProofs.integration</a>]<br/>
+<a href="OpSemProofs.ennr.html#infinite">infinite</a> [constructor, in <a href="OpSemProofs.ennr.html">OpSemProofs.ennr</a>]<br/>
+<a href="OpSemProofs.integration.html#integral_of_pushforward">integral_of_pushforward</a> [lemma, in <a href="OpSemProofs.integration.html">OpSemProofs.integration</a>]<br/>
+<a href="OpSemProofs.integration.html#integration">integration</a> [axiom, in <a href="OpSemProofs.integration.html">OpSemProofs.integration</a>]<br/>
+<a href="OpSemProofs.integration.html">integration</a> [library]<br/>
+<a href="OpSemProofs.integration.html#integration_const_entropy">integration_const_entropy</a> [lemma, in <a href="OpSemProofs.integration.html">OpSemProofs.integration</a>]<br/>
+<a href="OpSemProofs.integration.html#integration_of_0">integration_of_0</a> [lemma, in <a href="OpSemProofs.integration.html">OpSemProofs.integration</a>]<br/>
+<a href="OpSemProofs.integration.html#integration_linear_in_meas">integration_linear_in_meas</a> [lemma, in <a href="OpSemProofs.integration.html">OpSemProofs.integration</a>]<br/>
+<a href="OpSemProofs.integration.html#integration_linear_mult_l">integration_linear_mult_l</a> [lemma, in <a href="OpSemProofs.integration.html">OpSemProofs.integration</a>]<br/>
+<a href="OpSemProofs.integration.html#integration_linear_mult_r">integration_linear_mult_r</a> [lemma, in <a href="OpSemProofs.integration.html">OpSemProofs.integration</a>]<br/>
+<a href="OpSemProofs.integration.html#ed3afcd402abe270516a6ae3f8c8535f">integration_πL_πR</a> [axiom, in <a href="OpSemProofs.integration.html">OpSemProofs.integration</a>]<br/>
+<a href="OpSemProofs.integration.html#integration_of_indicator">integration_of_indicator</a> [axiom, in <a href="OpSemProofs.integration.html">OpSemProofs.integration</a>]<br/>
+<a href="OpSemProofs.integration.html#integration_linear">integration_linear</a> [axiom, in <a href="OpSemProofs.integration.html">OpSemProofs.integration</a>]<br/>
+<a href="OpSemProofs.integration.html#interchangable">interchangable</a> [record, in <a href="OpSemProofs.integration.html">OpSemProofs.integration</a>]<br/>
+<a href="OpSemProofs.integration.html#interchangable">interchangable</a> [inductive, in <a href="OpSemProofs.integration.html">OpSemProofs.integration</a>]<br/>
+<a href="OpSemProofs.integration.html#interchangable_sym">interchangable_sym</a> [instance, in <a href="OpSemProofs.integration.html">OpSemProofs.integration</a>]<br/>
+<a href="OpSemProofs.integration.html#interchange">interchange</a> [projection, in <a href="OpSemProofs.integration.html">OpSemProofs.integration</a>]<br/>
+<a href="OpSemProofs.integration.html#interchange">interchange</a> [constructor, in <a href="OpSemProofs.integration.html">OpSemProofs.integration</a>]<br/>
+<a href="OpSemProofs.syntax.html#invert_eval_val">invert_eval_val</a> [lemma, in <a href="OpSemProofs.syntax.html">OpSemProofs.syntax</a>]<br/>
+<a href="OpSemProofs.using_relations.html#is_u_simple">is_u_simple</a> [definition, in <a href="OpSemProofs.using_relations.html">OpSemProofs.using_relations</a>]<br/>
+<a href="OpSemProofs.using_relations.html#is_pure">is_pure</a> [definition, in <a href="OpSemProofs.using_relations.html">OpSemProofs.using_relations</a>]<br/>
+<a href="OpSemProofs.syntax.html#is_val_unique">is_val_unique</a> [lemma, in <a href="OpSemProofs.syntax.html">OpSemProofs.syntax</a>]<br/>
+<a href="OpSemProofs.syntax.html#is_val">is_val</a> [definition, in <a href="OpSemProofs.syntax.html">OpSemProofs.syntax</a>]<br/>
+<br/><br/><a name="global_J"></a><h2>J </h2>
+<a href="OpSemProofs.entropy.html#join">join</a> [definition, in <a href="OpSemProofs.entropy.html">OpSemProofs.entropy</a>]<br/>
+<a href="OpSemProofs.entropy.html#d150ac28e6b050b7db5323a8e3eac403">join_πL_πR</a> [lemma, in <a href="OpSemProofs.entropy.html">OpSemProofs.entropy</a>]<br/>
+<a href="OpSemProofs.entropy.html#join'">join'</a> [definition, in <a href="OpSemProofs.entropy.html">OpSemProofs.entropy</a>]<br/>
+<br/><br/><a name="global_K"></a><h2>K </h2>
+<a href="OpSemProofs.integration.html#KnownToBeSigmaFinite">KnownToBeSigmaFinite</a> [inductive, in <a href="OpSemProofs.integration.html">OpSemProofs.integration</a>]<br/>
+<br/><br/><a name="global_L"></a><h2>L </h2>
+<a href="OpSemProofs.using_relations.html#lam_is_dirac">lam_is_dirac</a> [lemma, in <a href="OpSemProofs.using_relations.html">OpSemProofs.using_relations</a>]<br/>
+<a href="OpSemProofs.integration.html#lebesgue_pos_measure_interval">lebesgue_pos_measure_interval</a> [axiom, in <a href="OpSemProofs.integration.html">OpSemProofs.integration</a>]<br/>
+<a href="OpSemProofs.integration.html#lebesgue_pos_measure">lebesgue_pos_measure</a> [axiom, in <a href="OpSemProofs.integration.html">OpSemProofs.integration</a>]<br/>
+<a href="OpSemProofs.integration.html#leb_finite">leb_finite</a> [constructor, in <a href="OpSemProofs.integration.html">OpSemProofs.integration</a>]<br/>
+<a href="OpSemProofs.using_relations.html#Lift">Lift</a> [module, in <a href="OpSemProofs.using_relations.html">OpSemProofs.using_relations</a>]<br/>
+<a href="OpSemProofs.using_relations.html#Lift.lift1">Lift.lift1</a> [projection, in <a href="OpSemProofs.using_relations.html">OpSemProofs.using_relations</a>]<br/>
+<a href="OpSemProofs.using_relations.html#Lift.lobj">Lift.lobj</a> [projection, in <a href="OpSemProofs.using_relations.html">OpSemProofs.using_relations</a>]<br/>
+<a href="OpSemProofs.using_relations.html#Lift.mk">Lift.mk</a> [constructor, in <a href="OpSemProofs.using_relations.html">OpSemProofs.using_relations</a>]<br/>
+<a href="OpSemProofs.using_relations.html#Lift.type">Lift.type</a> [record, in <a href="OpSemProofs.using_relations.html">OpSemProofs.using_relations</a>]<br/>
+<a href="OpSemProofs.using_relations.html#lift1">lift1</a> [definition, in <a href="OpSemProofs.using_relations.html">OpSemProofs.using_relations</a>]<br/>
+<a href="OpSemProofs.syntax.html#lookup">lookup</a> [definition, in <a href="OpSemProofs.syntax.html">OpSemProofs.syntax</a>]<br/>
+<br/><br/><a name="global_M"></a><h2>M </h2>
+<a href="OpSemProofs.integration.html#Meas">Meas</a> [definition, in <a href="OpSemProofs.integration.html">OpSemProofs.integration</a>]<br/>
+<a href="OpSemProofs.integration.html#meas_option_interchangable">meas_option_interchangable</a> [instance, in <a href="OpSemProofs.integration.html">OpSemProofs.integration</a>]<br/>
+<a href="OpSemProofs.integration.html#meas_id_right">meas_id_right</a> [lemma, in <a href="OpSemProofs.integration.html">OpSemProofs.integration</a>]<br/>
+<a href="OpSemProofs.integration.html#meas_id_left">meas_id_left</a> [lemma, in <a href="OpSemProofs.integration.html">OpSemProofs.integration</a>]<br/>
+<a href="OpSemProofs.integration.html#meas_option">meas_option</a> [definition, in <a href="OpSemProofs.integration.html">OpSemProofs.integration</a>]<br/>
+<a href="OpSemProofs.integration.html#meas_bind_assoc">meas_bind_assoc</a> [axiom, in <a href="OpSemProofs.integration.html">OpSemProofs.integration</a>]<br/>
+<a href="OpSemProofs.integration.html#meas_bind">meas_bind</a> [definition, in <a href="OpSemProofs.integration.html">OpSemProofs.integration</a>]<br/>
+<a href="OpSemProofs.relations.html#mk_V_rel_arrow">mk_V_rel_arrow</a> [constructor, in <a href="OpSemProofs.relations.html">OpSemProofs.relations</a>]<br/>
+<a href="OpSemProofs.syntax.html#mk_val">mk_val</a> [constructor, in <a href="OpSemProofs.syntax.html">OpSemProofs.syntax</a>]<br/>
+<a href="OpSemProofs.determinism.html#mk_dV_rel_arrow">mk_dV_rel_arrow</a> [constructor, in <a href="OpSemProofs.determinism.html">OpSemProofs.determinism</a>]<br/>
+<br/><br/><a name="global_O"></a><h2>O </h2>
+<a href="OpSemProofs.using_relations.html#open_subst1">open_subst1</a> [definition, in <a href="OpSemProofs.using_relations.html">OpSemProofs.using_relations</a>]<br/>
+<a href="OpSemProofs.utils.html#option_bind">option_bind</a> [definition, in <a href="OpSemProofs.utils.html">OpSemProofs.utils</a>]<br/>
+<a href="OpSemProofs.utils.html#option_ap">option_ap</a> [definition, in <a href="OpSemProofs.utils.html">OpSemProofs.utils</a>]<br/>
+<a href="OpSemProofs.integration.html#option_meas">option_meas</a> [definition, in <a href="OpSemProofs.integration.html">OpSemProofs.integration</a>]<br/>
+<a href="OpSemProofs.utils.html#option0">option0</a> [definition, in <a href="OpSemProofs.utils.html">OpSemProofs.utils</a>]<br/>
+<br/><br/><a name="global_P"></a><h2>P </h2>
+<a href="OpSemProofs.integration.html#pick_2_entropies">pick_2_entropies</a> [lemma, in <a href="OpSemProofs.integration.html">OpSemProofs.integration</a>]<br/>
+<a href="OpSemProofs.integration.html#pick_3_entropies">pick_3_entropies</a> [lemma, in <a href="OpSemProofs.integration.html">OpSemProofs.integration</a>]<br/>
+<a href="OpSemProofs.integration.html#pick_3_and_leftover">pick_3_and_leftover</a> [lemma, in <a href="OpSemProofs.integration.html">OpSemProofs.integration</a>]<br/>
+<a href="OpSemProofs.ctxequiv.html#plug">plug</a> [instance, in <a href="OpSemProofs.ctxequiv.html">OpSemProofs.ctxequiv</a>]<br/>
+<a href="OpSemProofs.ctxequiv.html#Plug">Plug</a> [module, in <a href="OpSemProofs.ctxequiv.html">OpSemProofs.ctxequiv</a>]<br/>
+<a href="OpSemProofs.using_relations.html#plug_app">plug_app</a> [lemma, in <a href="OpSemProofs.using_relations.html">OpSemProofs.using_relations</a>]<br/>
+<a href="OpSemProofs.ctxequiv.html#plug_cons">plug_cons</a> [lemma, in <a href="OpSemProofs.ctxequiv.html">OpSemProofs.ctxequiv</a>]<br/>
+<a href="OpSemProofs.ctxequiv.html#plug_frame">plug_frame</a> [instance, in <a href="OpSemProofs.ctxequiv.html">OpSemProofs.ctxequiv</a>]<br/>
+<a href="OpSemProofs.ctxequiv.html#Plug.mk">Plug.mk</a> [constructor, in <a href="OpSemProofs.ctxequiv.html">OpSemProofs.ctxequiv</a>]<br/>
+<a href="OpSemProofs.ctxequiv.html#Plug.plug">Plug.plug</a> [projection, in <a href="OpSemProofs.ctxequiv.html">OpSemProofs.ctxequiv</a>]<br/>
+<a href="OpSemProofs.ctxequiv.html#Plug.type">Plug.type</a> [record, in <a href="OpSemProofs.ctxequiv.html">OpSemProofs.ctxequiv</a>]<br/>
+<a href="OpSemProofs.relations.html#plus_in">plus_in</a> [definition, in <a href="OpSemProofs.relations.html">OpSemProofs.relations</a>]<br/>
+<a href="OpSemProofs.utils.html#pointwise_eq_ext">pointwise_eq_ext</a> [instance, in <a href="OpSemProofs.utils.html">OpSemProofs.utils</a>]<br/>
+<a href="OpSemProofs.integration.html#preimage">preimage</a> [definition, in <a href="OpSemProofs.integration.html">OpSemProofs.integration</a>]<br/>
+<a href="OpSemProofs.using_relations.html#project_same_integral">project_same_integral</a> [lemma, in <a href="OpSemProofs.using_relations.html">OpSemProofs.using_relations</a>]<br/>
+<a href="OpSemProofs.properties_of_relations.html">properties_of_relations</a> [library]<br/>
+<a href="OpSemProofs.using_relations.html#pure_of_val">pure_of_val</a> [lemma, in <a href="OpSemProofs.using_relations.html">OpSemProofs.using_relations</a>]<br/>
+<a href="OpSemProofs.integration.html#pushforward">pushforward</a> [definition, in <a href="OpSemProofs.integration.html">OpSemProofs.integration</a>]<br/>
+<a href="OpSemProofs.integration.html#pushforward_interchangable">pushforward_interchangable</a> [instance, in <a href="OpSemProofs.integration.html">OpSemProofs.integration</a>]<br/>
+<br/><br/><a name="global_R"></a><h2>R </h2>
+<a href="OpSemProofs.utils.html#refl_respectful">refl_respectful</a> [instance, in <a href="OpSemProofs.utils.html">OpSemProofs.utils</a>]<br/>
+<a href="OpSemProofs.relations.html#related_exprs">related_exprs</a> [definition, in <a href="OpSemProofs.relations.html">OpSemProofs.relations</a>]<br/>
+<a href="OpSemProofs.determinism.html#related_expr">related_expr</a> [definition, in <a href="OpSemProofs.determinism.html">OpSemProofs.determinism</a>]<br/>
+<a href="OpSemProofs.properties_of_relations.html#relate_exprs">relate_exprs</a> [lemma, in <a href="OpSemProofs.properties_of_relations.html">OpSemProofs.properties_of_relations</a>]<br/>
+<a href="OpSemProofs.relations.html">relations</a> [library]<br/>
+<a href="OpSemProofs.ctxequiv.html#relation_sound">relation_sound</a> [lemma, in <a href="OpSemProofs.ctxequiv.html">OpSemProofs.ctxequiv</a>]<br/>
+<a href="OpSemProofs.properties_of_relations.html#rel_expr_reflexive">rel_expr_reflexive</a> [instance, in <a href="OpSemProofs.properties_of_relations.html">OpSemProofs.properties_of_relations</a>]<br/>
+<a href="OpSemProofs.properties_of_relations.html#rel_expr_transitive">rel_expr_transitive</a> [instance, in <a href="OpSemProofs.properties_of_relations.html">OpSemProofs.properties_of_relations</a>]<br/>
+<a href="OpSemProofs.properties_of_relations.html#rel_expr_symmetric">rel_expr_symmetric</a> [instance, in <a href="OpSemProofs.properties_of_relations.html">OpSemProofs.properties_of_relations</a>]<br/>
+<a href="OpSemProofs.using_relations.html#rename_u_simple">rename_u_simple</a> [lemma, in <a href="OpSemProofs.using_relations.html">OpSemProofs.using_relations</a>]<br/>
+<a href="OpSemProofs.using_relations.html#rename_simple_u_plug">rename_simple_u_plug</a> [lemma, in <a href="OpSemProofs.using_relations.html">OpSemProofs.using_relations</a>]<br/>
+<a href="OpSemProofs.syntax.html#Rename_u_expr">Rename_u_expr</a> [instance, in <a href="OpSemProofs.syntax.html">OpSemProofs.syntax</a>]<br/>
+<a href="OpSemProofs.ctxequiv.html#Rename_u_ctx">Rename_u_ctx</a> [instance, in <a href="OpSemProofs.ctxequiv.html">OpSemProofs.ctxequiv</a>]<br/>
+<a href="OpSemProofs.ctxequiv.html#Rename_u_ctx_frame">Rename_u_ctx_frame</a> [instance, in <a href="OpSemProofs.ctxequiv.html">OpSemProofs.ctxequiv</a>]<br/>
+<a href="OpSemProofs.syntax.html#rewrite_v_lam">rewrite_v_lam</a> [definition, in <a href="OpSemProofs.syntax.html">OpSemProofs.syntax</a>]<br/>
+<a href="OpSemProofs.syntax.html#rewrite_v_real">rewrite_v_real</a> [definition, in <a href="OpSemProofs.syntax.html">OpSemProofs.syntax</a>]<br/>
+<a href="OpSemProofs.integration.html#riemann_def_of_lebesgue_integration">riemann_def_of_lebesgue_integration</a> [axiom, in <a href="OpSemProofs.integration.html">OpSemProofs.integration</a>]<br/>
+<br/><br/><a name="global_S"></a><h2>S </h2>
+<a href="OpSemProofs.properties_of_relations.html#same_substitution_suffices">same_substitution_suffices</a> [lemma, in <a href="OpSemProofs.properties_of_relations.html">OpSemProofs.properties_of_relations</a>]<br/>
+<a href="OpSemProofs.integration.html#score_meas_interchangable">score_meas_interchangable</a> [instance, in <a href="OpSemProofs.integration.html">OpSemProofs.integration</a>]<br/>
+<a href="OpSemProofs.integration.html#score_meas">score_meas</a> [definition, in <a href="OpSemProofs.integration.html">OpSemProofs.integration</a>]<br/>
+<a href="OpSemProofs.integration.html#sigma_finite_is_interchangable">sigma_finite_is_interchangable</a> [instance, in <a href="OpSemProofs.integration.html">OpSemProofs.integration</a>]<br/>
+<a href="OpSemProofs.using_relations.html#simple_cons_plug">simple_cons_plug</a> [lemma, in <a href="OpSemProofs.using_relations.html">OpSemProofs.using_relations</a>]<br/>
+<a href="OpSemProofs.using_relations.html#simple_ctx_frame_lift'">simple_ctx_frame_lift'</a> [instance, in <a href="OpSemProofs.using_relations.html">OpSemProofs.using_relations</a>]<br/>
+<a href="OpSemProofs.using_relations.html#simple_ctx_frame_lift">simple_ctx_frame_lift</a> [definition, in <a href="OpSemProofs.using_relations.html">OpSemProofs.using_relations</a>]<br/>
+<a href="OpSemProofs.using_relations.html#simple_plug">simple_plug</a> [instance, in <a href="OpSemProofs.using_relations.html">OpSemProofs.using_relations</a>]<br/>
+<a href="OpSemProofs.using_relations.html#simple_ctx_frame_rect">simple_ctx_frame_rect</a> [lemma, in <a href="OpSemProofs.using_relations.html">OpSemProofs.using_relations</a>]<br/>
+<a href="OpSemProofs.using_relations.html#simple_ctx">simple_ctx</a> [definition, in <a href="OpSemProofs.using_relations.html">OpSemProofs.using_relations</a>]<br/>
+<a href="OpSemProofs.using_relations.html#simple_ctx_frame">simple_ctx_frame</a> [definition, in <a href="OpSemProofs.using_relations.html">OpSemProofs.using_relations</a>]<br/>
+<a href="OpSemProofs.using_relations.html#single_frame_case_plus_r">single_frame_case_plus_r</a> [lemma, in <a href="OpSemProofs.using_relations.html">OpSemProofs.using_relations</a>]<br/>
+<a href="OpSemProofs.using_relations.html#single_frame_case_plus_l">single_frame_case_plus_l</a> [lemma, in <a href="OpSemProofs.using_relations.html">OpSemProofs.using_relations</a>]<br/>
+<a href="OpSemProofs.using_relations.html#single_frame_case_factor">single_frame_case_factor</a> [lemma, in <a href="OpSemProofs.using_relations.html">OpSemProofs.using_relations</a>]<br/>
+<a href="OpSemProofs.using_relations.html#single_frame_case_app_r">single_frame_case_app_r</a> [lemma, in <a href="OpSemProofs.using_relations.html">OpSemProofs.using_relations</a>]<br/>
+<a href="OpSemProofs.using_relations.html#single_frame_case_app_l">single_frame_case_app_l</a> [lemma, in <a href="OpSemProofs.using_relations.html">OpSemProofs.using_relations</a>]<br/>
+<a href="OpSemProofs.utils.html#subrel_eq_respect">subrel_eq_respect</a> [instance, in <a href="OpSemProofs.utils.html">OpSemProofs.utils</a>]<br/>
+<a href="OpSemProofs.syntax.html#SubstLemmas_u_expr">SubstLemmas_u_expr</a> [instance, in <a href="OpSemProofs.syntax.html">OpSemProofs.syntax</a>]<br/>
+<a href="OpSemProofs.using_relations.html#subst_into_simple">subst_into_simple</a> [lemma, in <a href="OpSemProofs.using_relations.html">OpSemProofs.using_relations</a>]<br/>
+<a href="OpSemProofs.syntax.html#subst_only_matters_up_to_env">subst_only_matters_up_to_env</a> [lemma, in <a href="OpSemProofs.syntax.html">OpSemProofs.syntax</a>]<br/>
+<a href="OpSemProofs.syntax.html#Subst_u_expr">Subst_u_expr</a> [instance, in <a href="OpSemProofs.syntax.html">OpSemProofs.syntax</a>]<br/>
+<a href="OpSemProofs.chain.html#surjective_pairing'">surjective_pairing'</a> [lemma, in <a href="OpSemProofs.chain.html">OpSemProofs.chain</a>]<br/>
+<a href="OpSemProofs.syntax.html">syntax</a> [library]<br/>
+<br/><br/><a name="global_T"></a><h2>T </h2>
+<a href="OpSemProofs.using_relations.html#the_infinite_cons_doesnt_exist">the_infinite_cons_doesnt_exist</a> [lemma, in <a href="OpSemProofs.using_relations.html">OpSemProofs.using_relations</a>]<br/>
+<a href="OpSemProofs.integration.html#tonelli_sigma_finite">tonelli_sigma_finite</a> [axiom, in <a href="OpSemProofs.integration.html">OpSemProofs.integration</a>]<br/>
+<a href="OpSemProofs.syntax.html#Ty">Ty</a> [inductive, in <a href="OpSemProofs.syntax.html">OpSemProofs.syntax</a>]<br/>
+<a href="OpSemProofs.syntax.html#ty_subst1">ty_subst1</a> [definition, in <a href="OpSemProofs.syntax.html">OpSemProofs.syntax</a>]<br/>
+<a href="OpSemProofs.syntax.html#ty_subst">ty_subst</a> [lemma, in <a href="OpSemProofs.syntax.html">OpSemProofs.syntax</a>]<br/>
+<a href="OpSemProofs.syntax.html#ty_eq_dec">ty_eq_dec</a> [lemma, in <a href="OpSemProofs.syntax.html">OpSemProofs.syntax</a>]<br/>
+<br/><br/><a name="global_U"></a><h2>U </h2>
+<a href="OpSemProofs.ctxequiv.html#uc_hole">uc_hole</a> [definition, in <a href="OpSemProofs.ctxequiv.html">OpSemProofs.ctxequiv</a>]<br/>
+<a href="OpSemProofs.ctxequiv.html#uc_lam">uc_lam</a> [constructor, in <a href="OpSemProofs.ctxequiv.html">OpSemProofs.ctxequiv</a>]<br/>
+<a href="OpSemProofs.ctxequiv.html#uc_plus_r">uc_plus_r</a> [constructor, in <a href="OpSemProofs.ctxequiv.html">OpSemProofs.ctxequiv</a>]<br/>
+<a href="OpSemProofs.ctxequiv.html#uc_plus_l">uc_plus_l</a> [constructor, in <a href="OpSemProofs.ctxequiv.html">OpSemProofs.ctxequiv</a>]<br/>
+<a href="OpSemProofs.ctxequiv.html#uc_factor">uc_factor</a> [constructor, in <a href="OpSemProofs.ctxequiv.html">OpSemProofs.ctxequiv</a>]<br/>
+<a href="OpSemProofs.ctxequiv.html#uc_app_a">uc_app_a</a> [constructor, in <a href="OpSemProofs.ctxequiv.html">OpSemProofs.ctxequiv</a>]<br/>
+<a href="OpSemProofs.ctxequiv.html#uc_app_f">uc_app_f</a> [constructor, in <a href="OpSemProofs.ctxequiv.html">OpSemProofs.ctxequiv</a>]<br/>
+<a href="OpSemProofs.integration.html#unif_score_meas">unif_score_meas</a> [definition, in <a href="OpSemProofs.integration.html">OpSemProofs.integration</a>]<br/>
+<a href="OpSemProofs.using_relations.html#unsimple">unsimple</a> [definition, in <a href="OpSemProofs.using_relations.html">OpSemProofs.using_relations</a>]<br/>
+<a href="OpSemProofs.using_relations.html#unsimple_cons">unsimple_cons</a> [lemma, in <a href="OpSemProofs.using_relations.html">OpSemProofs.using_relations</a>]<br/>
+<a href="OpSemProofs.using_relations.html#up_app">up_app</a> [lemma, in <a href="OpSemProofs.using_relations.html">OpSemProofs.using_relations</a>]<br/>
+<a href="OpSemProofs.using_relations.html#up_cons">up_cons</a> [lemma, in <a href="OpSemProofs.using_relations.html">OpSemProofs.using_relations</a>]<br/>
+<a href="OpSemProofs.using_relations.html#up_simple_ctx">up_simple_ctx</a> [instance, in <a href="OpSemProofs.using_relations.html">OpSemProofs.using_relations</a>]<br/>
+<a href="OpSemProofs.using_relations.html#up_simple_ctx'">up_simple_ctx'</a> [definition, in <a href="OpSemProofs.using_relations.html">OpSemProofs.using_relations</a>]<br/>
+<a href="OpSemProofs.syntax.html#up_expr_env">up_expr_env</a> [lemma, in <a href="OpSemProofs.syntax.html">OpSemProofs.syntax</a>]<br/>
+<a href="OpSemProofs.using_relations.html">using_relations</a> [library]<br/>
+<a href="OpSemProofs.utils.html">utils</a> [library]<br/>
+<a href="OpSemProofs.syntax.html#u_expr_eq_dec">u_expr_eq_dec</a> [lemma, in <a href="OpSemProofs.syntax.html">OpSemProofs.syntax</a>]<br/>
+<a href="OpSemProofs.syntax.html#u_var">u_var</a> [constructor, in <a href="OpSemProofs.syntax.html">OpSemProofs.syntax</a>]<br/>
+<a href="OpSemProofs.syntax.html#u_lam">u_lam</a> [constructor, in <a href="OpSemProofs.syntax.html">OpSemProofs.syntax</a>]<br/>
+<a href="OpSemProofs.syntax.html#u_real">u_real</a> [constructor, in <a href="OpSemProofs.syntax.html">OpSemProofs.syntax</a>]<br/>
+<a href="OpSemProofs.syntax.html#u_plus">u_plus</a> [constructor, in <a href="OpSemProofs.syntax.html">OpSemProofs.syntax</a>]<br/>
+<a href="OpSemProofs.syntax.html#u_sample">u_sample</a> [constructor, in <a href="OpSemProofs.syntax.html">OpSemProofs.syntax</a>]<br/>
+<a href="OpSemProofs.syntax.html#u_factor">u_factor</a> [constructor, in <a href="OpSemProofs.syntax.html">OpSemProofs.syntax</a>]<br/>
+<a href="OpSemProofs.syntax.html#u_app">u_app</a> [constructor, in <a href="OpSemProofs.syntax.html">OpSemProofs.syntax</a>]<br/>
+<a href="OpSemProofs.syntax.html#u_expr">u_expr</a> [inductive, in <a href="OpSemProofs.syntax.html">OpSemProofs.syntax</a>]<br/>
+<a href="OpSemProofs.ctxequiv.html#u_plug'">u_plug'</a> [instance, in <a href="OpSemProofs.ctxequiv.html">OpSemProofs.ctxequiv</a>]<br/>
+<a href="OpSemProofs.ctxequiv.html#u_plug">u_plug</a> [definition, in <a href="OpSemProofs.ctxequiv.html">OpSemProofs.ctxequiv</a>]<br/>
+<a href="OpSemProofs.ctxequiv.html#u_plug_frame">u_plug_frame</a> [instance, in <a href="OpSemProofs.ctxequiv.html">OpSemProofs.ctxequiv</a>]<br/>
+<a href="OpSemProofs.ctxequiv.html#u_ctx">u_ctx</a> [definition, in <a href="OpSemProofs.ctxequiv.html">OpSemProofs.ctxequiv</a>]<br/>
+<a href="OpSemProofs.ctxequiv.html#u_ctx_frame">u_ctx_frame</a> [inductive, in <a href="OpSemProofs.ctxequiv.html">OpSemProofs.ctxequiv</a>]<br/>
+<br/><br/><a name="global_V"></a><h2>V </h2>
+<a href="OpSemProofs.syntax.html#val">val</a> [inductive, in <a href="OpSemProofs.syntax.html">OpSemProofs.syntax</a>]<br/>
+<a href="OpSemProofs.relations.html#val_is_dirac">val_is_dirac</a> [lemma, in <a href="OpSemProofs.relations.html">OpSemProofs.relations</a>]<br/>
+<a href="OpSemProofs.relations.html#val_is_atomic">val_is_atomic</a> [lemma, in <a href="OpSemProofs.relations.html">OpSemProofs.relations</a>]<br/>
+<a href="OpSemProofs.syntax.html#val_real_rect">val_real_rect</a> [lemma, in <a href="OpSemProofs.syntax.html">OpSemProofs.syntax</a>]<br/>
+<a href="OpSemProofs.syntax.html#val_arrow_rect">val_arrow_rect</a> [definition, in <a href="OpSemProofs.syntax.html">OpSemProofs.syntax</a>]<br/>
+<a href="OpSemProofs.syntax.html#val_eq">val_eq</a> [lemma, in <a href="OpSemProofs.syntax.html">OpSemProofs.syntax</a>]<br/>
+<a href="OpSemProofs.using_relations.html#var_0">var_0</a> [definition, in <a href="OpSemProofs.using_relations.html">OpSemProofs.using_relations</a>]<br/>
+<a href="OpSemProofs.properties_of_relations.html#V_rel_reflexive">V_rel_reflexive</a> [instance, in <a href="OpSemProofs.properties_of_relations.html">OpSemProofs.properties_of_relations</a>]<br/>
+<a href="OpSemProofs.properties_of_relations.html#V_rel_transitive">V_rel_transitive</a> [instance, in <a href="OpSemProofs.properties_of_relations.html">OpSemProofs.properties_of_relations</a>]<br/>
+<a href="OpSemProofs.properties_of_relations.html#V_rel_symmetric">V_rel_symmetric</a> [instance, in <a href="OpSemProofs.properties_of_relations.html">OpSemProofs.properties_of_relations</a>]<br/>
+<a href="OpSemProofs.relations.html#V_rel">V_rel</a> [definition, in <a href="OpSemProofs.relations.html">OpSemProofs.relations</a>]<br/>
+<a href="OpSemProofs.relations.html#V_rel_arrow">V_rel_arrow</a> [inductive, in <a href="OpSemProofs.relations.html">OpSemProofs.relations</a>]<br/>
+<a href="OpSemProofs.relations.html#V_rel_real">V_rel_real</a> [definition, in <a href="OpSemProofs.relations.html">OpSemProofs.relations</a>]<br/>
+<a href="OpSemProofs.syntax.html#v_lam">v_lam</a> [definition, in <a href="OpSemProofs.syntax.html">OpSemProofs.syntax</a>]<br/>
+<a href="OpSemProofs.syntax.html#v_real">v_real</a> [definition, in <a href="OpSemProofs.syntax.html">OpSemProofs.syntax</a>]<br/>
+<br/><br/><a name="global_W"></a><h2>W </h2>
+<a href="OpSemProofs.syntax.html#weaken">weaken</a> [definition, in <a href="OpSemProofs.syntax.html">OpSemProofs.syntax</a>]<br/>
+<a href="OpSemProofs.syntax.html#weaken_eq">weaken_eq</a> [lemma, in <a href="OpSemProofs.syntax.html">OpSemProofs.syntax</a>]<br/>
+<a href="OpSemProofs.syntax.html#weaken_lookup">weaken_lookup</a> [lemma, in <a href="OpSemProofs.syntax.html">OpSemProofs.syntax</a>]<br/>
+<a href="OpSemProofs.relations.html#work_of_factor">work_of_factor</a> [lemma, in <a href="OpSemProofs.relations.html">OpSemProofs.relations</a>]<br/>
+<a href="OpSemProofs.relations.html#work_of_app">work_of_app</a> [lemma, in <a href="OpSemProofs.relations.html">OpSemProofs.relations</a>]<br/>
+<a href="OpSemProofs.relations.html#work_of_plus">work_of_plus</a> [lemma, in <a href="OpSemProofs.relations.html">OpSemProofs.relations</a>]<br/>
+<a href="OpSemProofs.syntax.html#wt_env">wt_env</a> [definition, in <a href="OpSemProofs.syntax.html">OpSemProofs.syntax</a>]<br/>
+<a href="OpSemProofs.syntax.html#wt_val_rect">wt_val_rect</a> [lemma, in <a href="OpSemProofs.syntax.html">OpSemProofs.syntax</a>]<br/>
+<br/><br/><a name="global_*"></a><h2>other </h2>
+<a href="OpSemProofs.ennr.html#4b5a53b513abe55876de4397b6a258fb">R+ (type_scope)</a> [notation, in <a href="OpSemProofs.ennr.html">OpSemProofs.ennr</a>]<br/>
+<a href="OpSemProofs.chain.html#5be159d7812e0ee1400ff6c822eafcc6">_ :::: _</a> [notation, in <a href="OpSemProofs.chain.html">OpSemProofs.chain</a>]<br/>
+<a href="OpSemProofs.chain.html#91e656735222bde846d497c947f59127">_ +++ _</a> [notation, in <a href="OpSemProofs.chain.html">OpSemProofs.chain</a>]<br/>
+<a href="OpSemProofs.chain.html#1021880247279dc3b4c69f3c19e5eb38">_ ::: _</a> [notation, in <a href="OpSemProofs.chain.html">OpSemProofs.chain</a>]<br/>
+<a href="OpSemProofs.utils.html#21eebdda6a1bd64885e2dcac5205d0fd">_ <*> _</a> [notation, in <a href="OpSemProofs.utils.html">OpSemProofs.utils</a>]<br/>
+<a href="OpSemProofs.utils.html#4349a846da865f3ca93aa43a0e297d28">_ <$> _</a> [notation, in <a href="OpSemProofs.utils.html">OpSemProofs.utils</a>]<br/>
+<a href="OpSemProofs.utils.html#28309b4b31fc061cea0bf998329431b2">_ ∘ _</a> [notation, in <a href="OpSemProofs.utils.html">OpSemProofs.utils</a>]<br/>
+<a href="OpSemProofs.ennr.html#0b74bf45e912640b7b95f8af6e5a46c1">_ >= _</a> [notation, in <a href="OpSemProofs.ennr.html">OpSemProofs.ennr</a>]<br/>
+<a href="OpSemProofs.ennr.html#8e168f57fb77dc2e7a0b073ee6798edb">_ > _</a> [notation, in <a href="OpSemProofs.ennr.html">OpSemProofs.ennr</a>]<br/>
+<a href="OpSemProofs.ennr.html#75338fc4da155a86233c78260c4419ea">_ <= _</a> [notation, in <a href="OpSemProofs.ennr.html">OpSemProofs.ennr</a>]<br/>
+<a href="OpSemProofs.ennr.html#1ec2333ee553124df9d9eade05162791">_ < _</a> [notation, in <a href="OpSemProofs.ennr.html">OpSemProofs.ennr</a>]<br/>
+<a href="OpSemProofs.ennr.html#94d37570a1573183fff24de5e7b31e72">_ * _</a> [notation, in <a href="OpSemProofs.ennr.html">OpSemProofs.ennr</a>]<br/>
+<a href="OpSemProofs.ennr.html#2b7048fe69ca5fd3a9840dce788e8965">_ + _</a> [notation, in <a href="OpSemProofs.ennr.html">OpSemProofs.ennr</a>]<br/>
+<a href="OpSemProofs.using_relations.html#4050e36d999608810a0c5caab3c4684b">_ ↑</a> [notation, in <a href="OpSemProofs.using_relations.html">OpSemProofs.using_relations</a>]<br/>
+<a href="OpSemProofs.using_relations.html#1acad0ad77adcbcdf68a70ab21aafe4a">_ ^ _</a> [notation, in <a href="OpSemProofs.using_relations.html">OpSemProofs.using_relations</a>]<br/>
+<a href="OpSemProofs.using_relations.html#1acad0ad77adcbcdf68a70ab21aafe4a">_ ^ _</a> [notation, in <a href="OpSemProofs.using_relations.html">OpSemProofs.using_relations</a>]<br/>
+<a href="OpSemProofs.using_relations.html#4da2177d195dc82064c14a944a31fdb1">_ +! _</a> [notation, in <a href="OpSemProofs.using_relations.html">OpSemProofs.using_relations</a>]<br/>
+<a href="OpSemProofs.using_relations.html#c08910e202733241c0ff38b25be5a0c9">_ @ _</a> [notation, in <a href="OpSemProofs.using_relations.html">OpSemProofs.using_relations</a>]<br/>
+<a href="OpSemProofs.syntax.html#f3c8ae9482c969ad716aa1d8aebf6f70">_ ~> _</a> [notation, in <a href="OpSemProofs.syntax.html">OpSemProofs.syntax</a>]<br/>
+<a href="OpSemProofs.ctxequiv.html#028a11f0a2834a1ec28da5fb3b03142c">_ ⟨ _ ⟩</a> [notation, in <a href="OpSemProofs.ctxequiv.html">OpSemProofs.ctxequiv</a>]<br/>
+<a href="OpSemProofs.integration.html#536ef57757278fb23d9a25071832cfce">_ >>= _</a> [notation, in <a href="OpSemProofs.integration.html">OpSemProofs.integration</a>]<br/>
+<a href="OpSemProofs.ctxequiv.html#1112558c4c77925d049077334e1e3bf7">CTX _ ⊢ [ _ ⊢ _ ] : _</a> [notation, in <a href="OpSemProofs.ctxequiv.html">OpSemProofs.ctxequiv</a>]<br/>
+<a href="OpSemProofs.syntax.html#1bb7c05a0a72de467d2ab07359d3e8be">EVAL _ ⊢ _ ⇓ _ , _</a> [notation, in <a href="OpSemProofs.syntax.html">OpSemProofs.syntax</a>]<br/>
+<a href="OpSemProofs.relations.html#ddffdd593e1b78db8f6c6c6fd2af39d5">EXP _ ⊢ _ ≈ _ : _</a> [notation, in <a href="OpSemProofs.relations.html">OpSemProofs.relations</a>]<br/>
+<a href="OpSemProofs.ctxequiv.html#91f8cac763c09c296cc6814eda0cd1eb">FRAME _ ⊢ [ _ ⊢ _ ] : _</a> [notation, in <a href="OpSemProofs.ctxequiv.html">OpSemProofs.ctxequiv</a>]<br/>
+<a href="OpSemProofs.using_relations.html#c0c02c16b8cafc352446e8cb260afc62">SIMPLE _ ⊢ [ _ ] : _</a> [notation, in <a href="OpSemProofs.using_relations.html">OpSemProofs.using_relations</a>]<br/>
+<a href="OpSemProofs.ennr.html#9b8e7c0becfb9a3a7d9ae3c5ba9f104b">0</a> [notation, in <a href="OpSemProofs.ennr.html">OpSemProofs.ennr</a>]<br/>
+<a href="OpSemProofs.ennr.html#6c0c7e6498dc98a53ecd79a166b511f5">1</a> [notation, in <a href="OpSemProofs.ennr.html">OpSemProofs.ennr</a>]<br/>
+<a href="OpSemProofs.syntax.html#e2ec2a380d764ef079e64369fbd29f66">·</a> [notation, in <a href="OpSemProofs.syntax.html">OpSemProofs.syntax</a>]<br/>
+<a href="OpSemProofs.using_relations.html#65d9010c5ccaf056398b75f39e23bc42">λ, _</a> [notation, in <a href="OpSemProofs.using_relations.html">OpSemProofs.using_relations</a>]<br/>
+<a href="OpSemProofs.syntax.html#e7b0d812dc6fa89f651429266ac01c95">ℝ</a> [constructor, in <a href="OpSemProofs.syntax.html">OpSemProofs.syntax</a>]<br/>
+<a href="OpSemProofs.relations.html#a1155692e3f69913320174f980c7eaf1">μ</a> [definition, in <a href="OpSemProofs.relations.html">OpSemProofs.relations</a>]<br/>
+<a href="OpSemProofs.integration.html#0dfb6736089a821010aaeb3893e7247c">μEntropy</a> [axiom, in <a href="OpSemProofs.integration.html">OpSemProofs.integration</a>]<br/>
+<a href="OpSemProofs.integration.html#3c2349133d3a5b1d9ece88089b1acd9e">μEntropy_is_a_probability_measure</a> [axiom, in <a href="OpSemProofs.integration.html">OpSemProofs.integration</a>]<br/>
+<a href="OpSemProofs.relations.html#825ab294b442ee5fb4977f2b0ecf9ce3">μe_eq_μEntropy2</a> [lemma, in <a href="OpSemProofs.relations.html">OpSemProofs.relations</a>]<br/>
+<a href="OpSemProofs.relations.html#aa5961eec1b5cf263cc3952fef16d06b">μe_eq_μEntropy</a> [lemma, in <a href="OpSemProofs.relations.html">OpSemProofs.relations</a>]<br/>
+<a href="OpSemProofs.relations.html#85ea0b4441c825b385ac281f0a2ead7b">μe_as_pushforard</a> [lemma, in <a href="OpSemProofs.relations.html">OpSemProofs.relations</a>]<br/>
+<a href="OpSemProofs.relations.html#2be176f2e0eea699c741e37f67beb394">μ_interchangable</a> [lemma, in <a href="OpSemProofs.relations.html">OpSemProofs.relations</a>]<br/>
+<a href="OpSemProofs.entropy.html#31bf0b12546409e15021243132fc7574">π</a> [definition, in <a href="OpSemProofs.entropy.html">OpSemProofs.entropy</a>]<br/>
+<a href="OpSemProofs.entropy.html#31c76a36555cdb7bda2afea8f8b43fb5">πL</a> [definition, in <a href="OpSemProofs.entropy.html">OpSemProofs.entropy</a>]<br/>
+<a href="OpSemProofs.using_relations.html#cbaecc9fc20d04e6a332589d28c6b521">πL_same_integral</a> [lemma, in <a href="OpSemProofs.using_relations.html">OpSemProofs.using_relations</a>]<br/>
+<a href="OpSemProofs.entropy.html#c7439a98e1b557f89109379d719fd3aa">πL_join</a> [lemma, in <a href="OpSemProofs.entropy.html">OpSemProofs.entropy</a>]<br/>
+<a href="OpSemProofs.entropy.html#2f5d93f1fe57e714be44f811695b8b4e">πL_n</a> [definition, in <a href="OpSemProofs.entropy.html">OpSemProofs.entropy</a>]<br/>
+<a href="OpSemProofs.entropy.html#3f47f6a7fc05e816047de1ebd2a32693">πR</a> [definition, in <a href="OpSemProofs.entropy.html">OpSemProofs.entropy</a>]<br/>
+<a href="OpSemProofs.using_relations.html#bfac5eddf9fc1d8942a4ab8db88b46db">πR_same_integral</a> [lemma, in <a href="OpSemProofs.using_relations.html">OpSemProofs.using_relations</a>]<br/>
+<a href="OpSemProofs.entropy.html#93eec631a4ede9eb6571f8c41b525d63">πR_join</a> [lemma, in <a href="OpSemProofs.entropy.html">OpSemProofs.entropy</a>]<br/>
+<a href="OpSemProofs.entropy.html#6677286d0940501a2e83ff8bb3d27013">πR_n</a> [definition, in <a href="OpSemProofs.entropy.html">OpSemProofs.entropy</a>]<br/>
+<a href="OpSemProofs.entropy.html#d7c856db2e5bb163abb9d063b48abbee">π_S_join</a> [lemma, in <a href="OpSemProofs.entropy.html">OpSemProofs.entropy</a>]<br/>
+<a href="OpSemProofs.entropy.html#ee96f78c1fd04497bdf684f0afc1956d">π_O_join</a> [lemma, in <a href="OpSemProofs.entropy.html">OpSemProofs.entropy</a>]<br/>
+<a href="OpSemProofs.entropy.html#c4ef42a16bb2b55568462c06146d90e6">π_π_n_correspond</a> [lemma, in <a href="OpSemProofs.entropy.html">OpSemProofs.entropy</a>]<br/>
+<a href="OpSemProofs.entropy.html#971eb5e4646db967b76d8e1df6479825">π_leftover</a> [definition, in <a href="OpSemProofs.entropy.html">OpSemProofs.entropy</a>]<br/>
+<a href="OpSemProofs.entropy.html#2fe603edf83c8dec6d60e8ad17b3bb61">π_n_leftover</a> [definition, in <a href="OpSemProofs.entropy.html">OpSemProofs.entropy</a>]<br/>
+<a href="OpSemProofs.entropy.html#8d545b848d66b8e7e32685f333266ba3">π_n</a> [definition, in <a href="OpSemProofs.entropy.html">OpSemProofs.entropy</a>]<br/>
+<br/><br/><hr/>
+<h1>Notation Index</h1>
+<a name="notation_*"></a><h2>other </h2>
+<a href="OpSemProofs.ennr.html#4b5a53b513abe55876de4397b6a258fb">R+ (type_scope)</a> [in <a href="OpSemProofs.ennr.html">OpSemProofs.ennr</a>]<br/>
+<a href="OpSemProofs.chain.html#5be159d7812e0ee1400ff6c822eafcc6">_ :::: _</a> [in <a href="OpSemProofs.chain.html">OpSemProofs.chain</a>]<br/>
+<a href="OpSemProofs.chain.html#91e656735222bde846d497c947f59127">_ +++ _</a> [in <a href="OpSemProofs.chain.html">OpSemProofs.chain</a>]<br/>
+<a href="OpSemProofs.chain.html#1021880247279dc3b4c69f3c19e5eb38">_ ::: _</a> [in <a href="OpSemProofs.chain.html">OpSemProofs.chain</a>]<br/>
+<a href="OpSemProofs.utils.html#21eebdda6a1bd64885e2dcac5205d0fd">_ <*> _</a> [in <a href="OpSemProofs.utils.html">OpSemProofs.utils</a>]<br/>
+<a href="OpSemProofs.utils.html#4349a846da865f3ca93aa43a0e297d28">_ <$> _</a> [in <a href="OpSemProofs.utils.html">OpSemProofs.utils</a>]<br/>
+<a href="OpSemProofs.utils.html#28309b4b31fc061cea0bf998329431b2">_ ∘ _</a> [in <a href="OpSemProofs.utils.html">OpSemProofs.utils</a>]<br/>
+<a href="OpSemProofs.ennr.html#0b74bf45e912640b7b95f8af6e5a46c1">_ >= _</a> [in <a href="OpSemProofs.ennr.html">OpSemProofs.ennr</a>]<br/>
+<a href="OpSemProofs.ennr.html#8e168f57fb77dc2e7a0b073ee6798edb">_ > _</a> [in <a href="OpSemProofs.ennr.html">OpSemProofs.ennr</a>]<br/>
+<a href="OpSemProofs.ennr.html#75338fc4da155a86233c78260c4419ea">_ <= _</a> [in <a href="OpSemProofs.ennr.html">OpSemProofs.ennr</a>]<br/>
+<a href="OpSemProofs.ennr.html#1ec2333ee553124df9d9eade05162791">_ < _</a> [in <a href="OpSemProofs.ennr.html">OpSemProofs.ennr</a>]<br/>
+<a href="OpSemProofs.ennr.html#94d37570a1573183fff24de5e7b31e72">_ * _</a> [in <a href="OpSemProofs.ennr.html">OpSemProofs.ennr</a>]<br/>
+<a href="OpSemProofs.ennr.html#2b7048fe69ca5fd3a9840dce788e8965">_ + _</a> [in <a href="OpSemProofs.ennr.html">OpSemProofs.ennr</a>]<br/>
+<a href="OpSemProofs.using_relations.html#4050e36d999608810a0c5caab3c4684b">_ ↑</a> [in <a href="OpSemProofs.using_relations.html">OpSemProofs.using_relations</a>]<br/>
+<a href="OpSemProofs.using_relations.html#1acad0ad77adcbcdf68a70ab21aafe4a">_ ^ _</a> [in <a href="OpSemProofs.using_relations.html">OpSemProofs.using_relations</a>]<br/>
+<a href="OpSemProofs.using_relations.html#1acad0ad77adcbcdf68a70ab21aafe4a">_ ^ _</a> [in <a href="OpSemProofs.using_relations.html">OpSemProofs.using_relations</a>]<br/>
+<a href="OpSemProofs.using_relations.html#4da2177d195dc82064c14a944a31fdb1">_ +! _</a> [in <a href="OpSemProofs.using_relations.html">OpSemProofs.using_relations</a>]<br/>
+<a href="OpSemProofs.using_relations.html#c08910e202733241c0ff38b25be5a0c9">_ @ _</a> [in <a href="OpSemProofs.using_relations.html">OpSemProofs.using_relations</a>]<br/>
+<a href="OpSemProofs.syntax.html#f3c8ae9482c969ad716aa1d8aebf6f70">_ ~> _</a> [in <a href="OpSemProofs.syntax.html">OpSemProofs.syntax</a>]<br/>
+<a href="OpSemProofs.ctxequiv.html#028a11f0a2834a1ec28da5fb3b03142c">_ ⟨ _ ⟩</a> [in <a href="OpSemProofs.ctxequiv.html">OpSemProofs.ctxequiv</a>]<br/>
+<a href="OpSemProofs.integration.html#536ef57757278fb23d9a25071832cfce">_ >>= _</a> [in <a href="OpSemProofs.integration.html">OpSemProofs.integration</a>]<br/>
+<a href="OpSemProofs.ctxequiv.html#1112558c4c77925d049077334e1e3bf7">CTX _ ⊢ [ _ ⊢ _ ] : _</a> [in <a href="OpSemProofs.ctxequiv.html">OpSemProofs.ctxequiv</a>]<br/>
+<a href="OpSemProofs.syntax.html#1bb7c05a0a72de467d2ab07359d3e8be">EVAL _ ⊢ _ ⇓ _ , _</a> [in <a href="OpSemProofs.syntax.html">OpSemProofs.syntax</a>]<br/>
+<a href="OpSemProofs.relations.html#ddffdd593e1b78db8f6c6c6fd2af39d5">EXP _ ⊢ _ ≈ _ : _</a> [in <a href="OpSemProofs.relations.html">OpSemProofs.relations</a>]<br/>
+<a href="OpSemProofs.ctxequiv.html#91f8cac763c09c296cc6814eda0cd1eb">FRAME _ ⊢ [ _ ⊢ _ ] : _</a> [in <a href="OpSemProofs.ctxequiv.html">OpSemProofs.ctxequiv</a>]<br/>
+<a href="OpSemProofs.using_relations.html#c0c02c16b8cafc352446e8cb260afc62">SIMPLE _ ⊢ [ _ ] : _</a> [in <a href="OpSemProofs.using_relations.html">OpSemProofs.using_relations</a>]<br/>
+<a href="OpSemProofs.ennr.html#9b8e7c0becfb9a3a7d9ae3c5ba9f104b">0</a> [in <a href="OpSemProofs.ennr.html">OpSemProofs.ennr</a>]<br/>
+<a href="OpSemProofs.ennr.html#6c0c7e6498dc98a53ecd79a166b511f5">1</a> [in <a href="OpSemProofs.ennr.html">OpSemProofs.ennr</a>]<br/>
+<a href="OpSemProofs.syntax.html#e2ec2a380d764ef079e64369fbd29f66">·</a> [in <a href="OpSemProofs.syntax.html">OpSemProofs.syntax</a>]<br/>
+<a href="OpSemProofs.using_relations.html#65d9010c5ccaf056398b75f39e23bc42">λ, _</a> [in <a href="OpSemProofs.using_relations.html">OpSemProofs.using_relations</a>]<br/>
+<br/><br/><hr/>
+<h1>Module Index</h1>
+<a name="module_E"></a><h2>E </h2>
+<a href="OpSemProofs.determinism.html#eval_dec">eval_dec</a> [in <a href="OpSemProofs.determinism.html">OpSemProofs.determinism</a>]<br/>
+<br/><br/><a name="module_L"></a><h2>L </h2>
+<a href="OpSemProofs.using_relations.html#Lift">Lift</a> [in <a href="OpSemProofs.using_relations.html">OpSemProofs.using_relations</a>]<br/>
+<br/><br/><a name="module_P"></a><h2>P </h2>
+<a href="OpSemProofs.ctxequiv.html#Plug">Plug</a> [in <a href="OpSemProofs.ctxequiv.html">OpSemProofs.ctxequiv</a>]<br/>
+<br/><br/><hr/>
+<h1>Library Index</h1>
+<a name="library_C"></a><h2>C </h2>
+<a href="OpSemProofs.chain.html">chain</a> <br/>
+<a href="OpSemProofs.ctxequiv.html">ctxequiv</a> <br/>
+<br/><br/><a name="library_D"></a><h2>D </h2>
+<a href="OpSemProofs.determinism.html">determinism</a> <br/>
+<br/><br/><a name="library_E"></a><h2>E </h2>
+<a href="OpSemProofs.ennr.html">ennr</a> <br/>
+<a href="OpSemProofs.entropy.html">entropy</a> <br/>
+<br/><br/><a name="library_I"></a><h2>I </h2>
+<a href="OpSemProofs.integration.html">integration</a> <br/>
+<br/><br/><a name="library_P"></a><h2>P </h2>
+<a href="OpSemProofs.properties_of_relations.html">properties_of_relations</a> <br/>
+<br/><br/><a name="library_R"></a><h2>R </h2>
+<a href="OpSemProofs.relations.html">relations</a> <br/>
+<br/><br/><a name="library_S"></a><h2>S </h2>
+<a href="OpSemProofs.syntax.html">syntax</a> <br/>
+<br/><br/><a name="library_U"></a><h2>U </h2>
+<a href="OpSemProofs.using_relations.html">using_relations</a> <br/>
+<a href="OpSemProofs.utils.html">utils</a> <br/>
+<br/><br/><hr/>
+<h1>Lemma Index</h1>
+<a name="lemma_A"></a><h2>A </h2>
+<a href="OpSemProofs.using_relations.html#add_comm_related">add_comm_related</a> [in <a href="OpSemProofs.using_relations.html">OpSemProofs.using_relations</a>]<br/>
+<a href="OpSemProofs.using_relations.html#add_zero_related">add_zero_related</a> [in <a href="OpSemProofs.using_relations.html">OpSemProofs.using_relations</a>]<br/>
+<a href="OpSemProofs.relations.html#apply_G_rel">apply_G_rel</a> [in <a href="OpSemProofs.relations.html">OpSemProofs.relations</a>]<br/>
+<a href="OpSemProofs.using_relations.html#apply_id_equiv">apply_id_equiv</a> [in <a href="OpSemProofs.using_relations.html">OpSemProofs.using_relations</a>]<br/>
+<a href="OpSemProofs.determinism.html#apply_dG_rel">apply_dG_rel</a> [in <a href="OpSemProofs.determinism.html">OpSemProofs.determinism</a>]<br/>
+<a href="OpSemProofs.properties_of_relations.html#A_rel_subidentity">A_rel_subidentity</a> [in <a href="OpSemProofs.properties_of_relations.html">OpSemProofs.properties_of_relations</a>]<br/>
+<a href="OpSemProofs.properties_of_relations.html#A_rel_symmetric'">A_rel_symmetric'</a> [in <a href="OpSemProofs.properties_of_relations.html">OpSemProofs.properties_of_relations</a>]<br/>
+<br/><br/><a name="lemma_B"></a><h2>B </h2>
+<a href="OpSemProofs.using_relations.html#beta_value">beta_value</a> [in <a href="OpSemProofs.using_relations.html">OpSemProofs.using_relations</a>]<br/>
+<a href="OpSemProofs.chain.html#bichain_rect">bichain_rect</a> [in <a href="OpSemProofs.chain.html">OpSemProofs.chain</a>]<br/>
+<a href="OpSemProofs.integration.html#d675fad8deb025bbdd061daa63bb7e02">bind_πL_πR</a> [in <a href="OpSemProofs.integration.html">OpSemProofs.integration</a>]<br/>
+<a href="OpSemProofs.integration.html#bind_meas_option">bind_meas_option</a> [in <a href="OpSemProofs.integration.html">OpSemProofs.integration</a>]<br/>
+<a href="OpSemProofs.integration.html#bind_empty">bind_empty</a> [in <a href="OpSemProofs.integration.html">OpSemProofs.integration</a>]<br/>
+<a href="OpSemProofs.syntax.html#body_subst">body_subst</a> [in <a href="OpSemProofs.syntax.html">OpSemProofs.syntax</a>]<br/>
+<a href="OpSemProofs.relations.html#60e7968d930bf9e318f2e2e48a2d66a5">by_μe_eq_μEntropy_factor</a> [in <a href="OpSemProofs.relations.html">OpSemProofs.relations</a>]<br/>
+<a href="OpSemProofs.relations.html#6b159917391e0b22c3d219ed753c075f">by_μe_eq_μEntropy_app</a> [in <a href="OpSemProofs.relations.html">OpSemProofs.relations</a>]<br/>
+<a href="OpSemProofs.relations.html#3d73e4d0d501299c162b8b474d094411">by_μe_eq_μEntropy_plus</a> [in <a href="OpSemProofs.relations.html">OpSemProofs.relations</a>]<br/>
+<br/><br/><a name="lemma_C"></a><h2>C </h2>
+<a href="OpSemProofs.chain.html#chain_app_assoc">chain_app_assoc</a> [in <a href="OpSemProofs.chain.html">OpSemProofs.chain</a>]<br/>
+<a href="OpSemProofs.chain.html#chain_app_nil_r">chain_app_nil_r</a> [in <a href="OpSemProofs.chain.html">OpSemProofs.chain</a>]<br/>
+<a href="OpSemProofs.syntax.html#close">close</a> [in <a href="OpSemProofs.syntax.html">OpSemProofs.syntax</a>]<br/>
+<a href="OpSemProofs.integration.html#coarsening">coarsening</a> [in <a href="OpSemProofs.integration.html">OpSemProofs.integration</a>]<br/>
+<a href="OpSemProofs.relations.html#compat_factor">compat_factor</a> [in <a href="OpSemProofs.relations.html">OpSemProofs.relations</a>]<br/>
+<a href="OpSemProofs.relations.html#compat_sample">compat_sample</a> [in <a href="OpSemProofs.relations.html">OpSemProofs.relations</a>]<br/>
+<a href="OpSemProofs.relations.html#compat_app">compat_app</a> [in <a href="OpSemProofs.relations.html">OpSemProofs.relations</a>]<br/>
+<a href="OpSemProofs.relations.html#compat_plus">compat_plus</a> [in <a href="OpSemProofs.relations.html">OpSemProofs.relations</a>]<br/>
+<a href="OpSemProofs.relations.html#compat_lam">compat_lam</a> [in <a href="OpSemProofs.relations.html">OpSemProofs.relations</a>]<br/>
+<a href="OpSemProofs.relations.html#compat_var">compat_var</a> [in <a href="OpSemProofs.relations.html">OpSemProofs.relations</a>]<br/>
+<a href="OpSemProofs.relations.html#compat_real">compat_real</a> [in <a href="OpSemProofs.relations.html">OpSemProofs.relations</a>]<br/>
+<a href="OpSemProofs.ctxequiv.html#compat_plug">compat_plug</a> [in <a href="OpSemProofs.ctxequiv.html">OpSemProofs.ctxequiv</a>]<br/>
+<a href="OpSemProofs.ctxequiv.html#compat_plug1">compat_plug1</a> [in <a href="OpSemProofs.ctxequiv.html">OpSemProofs.ctxequiv</a>]<br/>
+<a href="OpSemProofs.determinism.html#compat_plus">compat_plus</a> [in <a href="OpSemProofs.determinism.html">OpSemProofs.determinism</a>]<br/>
+<a href="OpSemProofs.determinism.html#compat_sample">compat_sample</a> [in <a href="OpSemProofs.determinism.html">OpSemProofs.determinism</a>]<br/>
+<a href="OpSemProofs.determinism.html#compat_factor">compat_factor</a> [in <a href="OpSemProofs.determinism.html">OpSemProofs.determinism</a>]<br/>
+<a href="OpSemProofs.determinism.html#compat_app">compat_app</a> [in <a href="OpSemProofs.determinism.html">OpSemProofs.determinism</a>]<br/>
+<a href="OpSemProofs.determinism.html#compat_lam">compat_lam</a> [in <a href="OpSemProofs.determinism.html">OpSemProofs.determinism</a>]<br/>
+<a href="OpSemProofs.determinism.html#compat_var">compat_var</a> [in <a href="OpSemProofs.determinism.html">OpSemProofs.determinism</a>]<br/>
+<a href="OpSemProofs.determinism.html#compat_real">compat_real</a> [in <a href="OpSemProofs.determinism.html">OpSemProofs.determinism</a>]<br/>
+<a href="OpSemProofs.ctxequiv.html#ctx_type_unique">ctx_type_unique</a> [in <a href="OpSemProofs.ctxequiv.html">OpSemProofs.ctxequiv</a>]<br/>
+<br/><br/><a name="lemma_D"></a><h2>D </h2>
+<a href="OpSemProofs.chain.html#dep_bicurry">dep_bicurry</a> [in <a href="OpSemProofs.chain.html">OpSemProofs.chain</a>]<br/>
+<a href="OpSemProofs.using_relations.html#dep_ids_ids">dep_ids_ids</a> [in <a href="OpSemProofs.using_relations.html">OpSemProofs.using_relations</a>]<br/>
+<br/><br/><a name="lemma_E"></a><h2>E </h2>
+<a href="OpSemProofs.ennr.html#ennr_mul_1_r">ennr_mul_1_r</a> [in <a href="OpSemProofs.ennr.html">OpSemProofs.ennr</a>]<br/>
+<a href="OpSemProofs.ennr.html#ennr_gt_dec">ennr_gt_dec</a> [in <a href="OpSemProofs.ennr.html">OpSemProofs.ennr</a>]<br/>
+<a href="OpSemProofs.ennr.html#ennr_distr_l">ennr_distr_l</a> [in <a href="OpSemProofs.ennr.html">OpSemProofs.ennr</a>]<br/>
+<a href="OpSemProofs.ennr.html#ennr_mul_assoc">ennr_mul_assoc</a> [in <a href="OpSemProofs.ennr.html">OpSemProofs.ennr</a>]<br/>
+<a href="OpSemProofs.ennr.html#ennr_mul_comm">ennr_mul_comm</a> [in <a href="OpSemProofs.ennr.html">OpSemProofs.ennr</a>]<br/>
+<a href="OpSemProofs.ennr.html#ennr_mul_0_l">ennr_mul_0_l</a> [in <a href="OpSemProofs.ennr.html">OpSemProofs.ennr</a>]<br/>
+<a href="OpSemProofs.ennr.html#ennr_mul_1_l">ennr_mul_1_l</a> [in <a href="OpSemProofs.ennr.html">OpSemProofs.ennr</a>]<br/>
+<a href="OpSemProofs.ennr.html#ennr_add_assoc">ennr_add_assoc</a> [in <a href="OpSemProofs.ennr.html">OpSemProofs.ennr</a>]<br/>
+<a href="OpSemProofs.ennr.html#ennr_add_comm">ennr_add_comm</a> [in <a href="OpSemProofs.ennr.html">OpSemProofs.ennr</a>]<br/>
+<a href="OpSemProofs.ennr.html#ennr_add_0_l">ennr_add_0_l</a> [in <a href="OpSemProofs.ennr.html">OpSemProofs.ennr</a>]<br/>
+<a href="OpSemProofs.syntax.html#env_search_subst">env_search_subst</a> [in <a href="OpSemProofs.syntax.html">OpSemProofs.syntax</a>]<br/>
+<a href="OpSemProofs.syntax.html#env_search">env_search</a> [in <a href="OpSemProofs.syntax.html">OpSemProofs.syntax</a>]<br/>
+<a href="OpSemProofs.using_relations.html#erase_simple">erase_simple</a> [in <a href="OpSemProofs.using_relations.html">OpSemProofs.using_relations</a>]<br/>
+<a href="OpSemProofs.using_relations.html#erase_up_simple_ctx">erase_up_simple_ctx</a> [in <a href="OpSemProofs.using_relations.html">OpSemProofs.using_relations</a>]<br/>
+<a href="OpSemProofs.using_relations.html#erase_plug">erase_plug</a> [in <a href="OpSemProofs.using_relations.html">OpSemProofs.using_relations</a>]<br/>
+<a href="OpSemProofs.using_relations.html#erase_eq">erase_eq</a> [in <a href="OpSemProofs.using_relations.html">OpSemProofs.using_relations</a>]<br/>
+<a href="OpSemProofs.syntax.html#erase_envs_equiv">erase_envs_equiv</a> [in <a href="OpSemProofs.syntax.html">OpSemProofs.syntax</a>]<br/>
+<a href="OpSemProofs.syntax.html#erase_injective">erase_injective</a> [in <a href="OpSemProofs.syntax.html">OpSemProofs.syntax</a>]<br/>
+<a href="OpSemProofs.ctxequiv.html#erase_ctx_injective">erase_ctx_injective</a> [in <a href="OpSemProofs.ctxequiv.html">OpSemProofs.ctxequiv</a>]<br/>
+<a href="OpSemProofs.ctxequiv.html#erase_cons">erase_cons</a> [in <a href="OpSemProofs.ctxequiv.html">OpSemProofs.ctxequiv</a>]<br/>
+<a href="OpSemProofs.determinism.html#eval_dec.eval_dec">eval_dec.eval_dec</a> [in <a href="OpSemProofs.determinism.html">OpSemProofs.determinism</a>]<br/>
+<a href="OpSemProofs.using_relations.html#expr_lift_erase">expr_lift_erase</a> [in <a href="OpSemProofs.using_relations.html">OpSemProofs.using_relations</a>]<br/>
+<a href="OpSemProofs.syntax.html#expr_eq_dec">expr_eq_dec</a> [in <a href="OpSemProofs.syntax.html">OpSemProofs.syntax</a>]<br/>
+<a href="OpSemProofs.syntax.html#expr_ren">expr_ren</a> [in <a href="OpSemProofs.syntax.html">OpSemProofs.syntax</a>]<br/>
+<a href="OpSemProofs.syntax.html#expr_type_unique">expr_type_unique</a> [in <a href="OpSemProofs.syntax.html">OpSemProofs.syntax</a>]<br/>
+<a href="OpSemProofs.determinism.html#extend_dgrel">extend_dgrel</a> [in <a href="OpSemProofs.determinism.html">OpSemProofs.determinism</a>]<br/>
+<a href="OpSemProofs.properties_of_relations.html#E_rel_symmetric'">E_rel_symmetric'</a> [in <a href="OpSemProofs.properties_of_relations.html">OpSemProofs.properties_of_relations</a>]<br/>
+<br/><br/><a name="lemma_F"></a><h2>F </h2>
+<a href="OpSemProofs.ennr.html#finite_inj">finite_inj</a> [in <a href="OpSemProofs.ennr.html">OpSemProofs.ennr</a>]<br/>
+<a href="OpSemProofs.syntax.html#for_absurd_val">for_absurd_val</a> [in <a href="OpSemProofs.syntax.html">OpSemProofs.syntax</a>]<br/>
+<a href="OpSemProofs.relations.html#fundamental_property_of_values">fundamental_property_of_values</a> [in <a href="OpSemProofs.relations.html">OpSemProofs.relations</a>]<br/>
+<a href="OpSemProofs.relations.html#fundamental_property">fundamental_property</a> [in <a href="OpSemProofs.relations.html">OpSemProofs.relations</a>]<br/>
+<a href="OpSemProofs.determinism.html#fundamental_property">fundamental_property</a> [in <a href="OpSemProofs.determinism.html">OpSemProofs.determinism</a>]<br/>
+<br/><br/><a name="lemma_I"></a><h2>I </h2>
+<a href="OpSemProofs.integration.html#integral_of_pushforward">integral_of_pushforward</a> [in <a href="OpSemProofs.integration.html">OpSemProofs.integration</a>]<br/>
+<a href="OpSemProofs.integration.html#integration_const_entropy">integration_const_entropy</a> [in <a href="OpSemProofs.integration.html">OpSemProofs.integration</a>]<br/>
+<a href="OpSemProofs.integration.html#integration_of_0">integration_of_0</a> [in <a href="OpSemProofs.integration.html">OpSemProofs.integration</a>]<br/>
+<a href="OpSemProofs.integration.html#integration_linear_in_meas">integration_linear_in_meas</a> [in <a href="OpSemProofs.integration.html">OpSemProofs.integration</a>]<br/>
+<a href="OpSemProofs.integration.html#integration_linear_mult_l">integration_linear_mult_l</a> [in <a href="OpSemProofs.integration.html">OpSemProofs.integration</a>]<br/>
+<a href="OpSemProofs.integration.html#integration_linear_mult_r">integration_linear_mult_r</a> [in <a href="OpSemProofs.integration.html">OpSemProofs.integration</a>]<br/>
+<a href="OpSemProofs.syntax.html#invert_eval_val">invert_eval_val</a> [in <a href="OpSemProofs.syntax.html">OpSemProofs.syntax</a>]<br/>
+<a href="OpSemProofs.syntax.html#is_val_unique">is_val_unique</a> [in <a href="OpSemProofs.syntax.html">OpSemProofs.syntax</a>]<br/>
+<br/><br/><a name="lemma_J"></a><h2>J </h2>
+<a href="OpSemProofs.entropy.html#d150ac28e6b050b7db5323a8e3eac403">join_πL_πR</a> [in <a href="OpSemProofs.entropy.html">OpSemProofs.entropy</a>]<br/>
+<br/><br/><a name="lemma_L"></a><h2>L </h2>
+<a href="OpSemProofs.using_relations.html#lam_is_dirac">lam_is_dirac</a> [in <a href="OpSemProofs.using_relations.html">OpSemProofs.using_relations</a>]<br/>
+<br/><br/><a name="lemma_M"></a><h2>M </h2>
+<a href="OpSemProofs.integration.html#meas_id_right">meas_id_right</a> [in <a href="OpSemProofs.integration.html">OpSemProofs.integration</a>]<br/>
+<a href="OpSemProofs.integration.html#meas_id_left">meas_id_left</a> [in <a href="OpSemProofs.integration.html">OpSemProofs.integration</a>]<br/>
+<br/><br/><a name="lemma_P"></a><h2>P </h2>
+<a href="OpSemProofs.integration.html#pick_2_entropies">pick_2_entropies</a> [in <a href="OpSemProofs.integration.html">OpSemProofs.integration</a>]<br/>
+<a href="OpSemProofs.integration.html#pick_3_entropies">pick_3_entropies</a> [in <a href="OpSemProofs.integration.html">OpSemProofs.integration</a>]<br/>
+<a href="OpSemProofs.integration.html#pick_3_and_leftover">pick_3_and_leftover</a> [in <a href="OpSemProofs.integration.html">OpSemProofs.integration</a>]<br/>
+<a href="OpSemProofs.using_relations.html#plug_app">plug_app</a> [in <a href="OpSemProofs.using_relations.html">OpSemProofs.using_relations</a>]<br/>
+<a href="OpSemProofs.ctxequiv.html#plug_cons">plug_cons</a> [in <a href="OpSemProofs.ctxequiv.html">OpSemProofs.ctxequiv</a>]<br/>
+<a href="OpSemProofs.using_relations.html#project_same_integral">project_same_integral</a> [in <a href="OpSemProofs.using_relations.html">OpSemProofs.using_relations</a>]<br/>
+<a href="OpSemProofs.using_relations.html#pure_of_val">pure_of_val</a> [in <a href="OpSemProofs.using_relations.html">OpSemProofs.using_relations</a>]<br/>
+<br/><br/><a name="lemma_R"></a><h2>R </h2>
+<a href="OpSemProofs.properties_of_relations.html#relate_exprs">relate_exprs</a> [in <a href="OpSemProofs.properties_of_relations.html">OpSemProofs.properties_of_relations</a>]<br/>
+<a href="OpSemProofs.ctxequiv.html#relation_sound">relation_sound</a> [in <a href="OpSemProofs.ctxequiv.html">OpSemProofs.ctxequiv</a>]<br/>
+<a href="OpSemProofs.using_relations.html#rename_u_simple">rename_u_simple</a> [in <a href="OpSemProofs.using_relations.html">OpSemProofs.using_relations</a>]<br/>
+<a href="OpSemProofs.using_relations.html#rename_simple_u_plug">rename_simple_u_plug</a> [in <a href="OpSemProofs.using_relations.html">OpSemProofs.using_relations</a>]<br/>
+<br/><br/><a name="lemma_S"></a><h2>S </h2>
+<a href="OpSemProofs.properties_of_relations.html#same_substitution_suffices">same_substitution_suffices</a> [in <a href="OpSemProofs.properties_of_relations.html">OpSemProofs.properties_of_relations</a>]<br/>
+<a href="OpSemProofs.using_relations.html#simple_cons_plug">simple_cons_plug</a> [in <a href="OpSemProofs.using_relations.html">OpSemProofs.using_relations</a>]<br/>
+<a href="OpSemProofs.using_relations.html#simple_ctx_frame_rect">simple_ctx_frame_rect</a> [in <a href="OpSemProofs.using_relations.html">OpSemProofs.using_relations</a>]<br/>
+<a href="OpSemProofs.using_relations.html#single_frame_case_plus_r">single_frame_case_plus_r</a> [in <a href="OpSemProofs.using_relations.html">OpSemProofs.using_relations</a>]<br/>
+<a href="OpSemProofs.using_relations.html#single_frame_case_plus_l">single_frame_case_plus_l</a> [in <a href="OpSemProofs.using_relations.html">OpSemProofs.using_relations</a>]<br/>
+<a href="OpSemProofs.using_relations.html#single_frame_case_factor">single_frame_case_factor</a> [in <a href="OpSemProofs.using_relations.html">OpSemProofs.using_relations</a>]<br/>
+<a href="OpSemProofs.using_relations.html#single_frame_case_app_r">single_frame_case_app_r</a> [in <a href="OpSemProofs.using_relations.html">OpSemProofs.using_relations</a>]<br/>
+<a href="OpSemProofs.using_relations.html#single_frame_case_app_l">single_frame_case_app_l</a> [in <a href="OpSemProofs.using_relations.html">OpSemProofs.using_relations</a>]<br/>
+<a href="OpSemProofs.using_relations.html#subst_into_simple">subst_into_simple</a> [in <a href="OpSemProofs.using_relations.html">OpSemProofs.using_relations</a>]<br/>
+<a href="OpSemProofs.syntax.html#subst_only_matters_up_to_env">subst_only_matters_up_to_env</a> [in <a href="OpSemProofs.syntax.html">OpSemProofs.syntax</a>]<br/>
+<a href="OpSemProofs.chain.html#surjective_pairing'">surjective_pairing'</a> [in <a href="OpSemProofs.chain.html">OpSemProofs.chain</a>]<br/>
+<br/><br/><a name="lemma_T"></a><h2>T </h2>
+<a href="OpSemProofs.using_relations.html#the_infinite_cons_doesnt_exist">the_infinite_cons_doesnt_exist</a> [in <a href="OpSemProofs.using_relations.html">OpSemProofs.using_relations</a>]<br/>
+<a href="OpSemProofs.syntax.html#ty_subst">ty_subst</a> [in <a href="OpSemProofs.syntax.html">OpSemProofs.syntax</a>]<br/>
+<a href="OpSemProofs.syntax.html#ty_eq_dec">ty_eq_dec</a> [in <a href="OpSemProofs.syntax.html">OpSemProofs.syntax</a>]<br/>
+<br/><br/><a name="lemma_U"></a><h2>U </h2>
+<a href="OpSemProofs.using_relations.html#unsimple_cons">unsimple_cons</a> [in <a href="OpSemProofs.using_relations.html">OpSemProofs.using_relations</a>]<br/>
+<a href="OpSemProofs.using_relations.html#up_app">up_app</a> [in <a href="OpSemProofs.using_relations.html">OpSemProofs.using_relations</a>]<br/>
+<a href="OpSemProofs.using_relations.html#up_cons">up_cons</a> [in <a href="OpSemProofs.using_relations.html">OpSemProofs.using_relations</a>]<br/>
+<a href="OpSemProofs.syntax.html#up_expr_env">up_expr_env</a> [in <a href="OpSemProofs.syntax.html">OpSemProofs.syntax</a>]<br/>
+<a href="OpSemProofs.syntax.html#u_expr_eq_dec">u_expr_eq_dec</a> [in <a href="OpSemProofs.syntax.html">OpSemProofs.syntax</a>]<br/>
+<br/><br/><a name="lemma_V"></a><h2>V </h2>
+<a href="OpSemProofs.relations.html#val_is_dirac">val_is_dirac</a> [in <a href="OpSemProofs.relations.html">OpSemProofs.relations</a>]<br/>
+<a href="OpSemProofs.relations.html#val_is_atomic">val_is_atomic</a> [in <a href="OpSemProofs.relations.html">OpSemProofs.relations</a>]<br/>
+<a href="OpSemProofs.syntax.html#val_real_rect">val_real_rect</a> [in <a href="OpSemProofs.syntax.html">OpSemProofs.syntax</a>]<br/>
+<a href="OpSemProofs.syntax.html#val_eq">val_eq</a> [in <a href="OpSemProofs.syntax.html">OpSemProofs.syntax</a>]<br/>
+<br/><br/><a name="lemma_W"></a><h2>W </h2>
+<a href="OpSemProofs.syntax.html#weaken_eq">weaken_eq</a> [in <a href="OpSemProofs.syntax.html">OpSemProofs.syntax</a>]<br/>
+<a href="OpSemProofs.syntax.html#weaken_lookup">weaken_lookup</a> [in <a href="OpSemProofs.syntax.html">OpSemProofs.syntax</a>]<br/>
+<a href="OpSemProofs.relations.html#work_of_factor">work_of_factor</a> [in <a href="OpSemProofs.relations.html">OpSemProofs.relations</a>]<br/>
+<a href="OpSemProofs.relations.html#work_of_app">work_of_app</a> [in <a href="OpSemProofs.relations.html">OpSemProofs.relations</a>]<br/>
+<a href="OpSemProofs.relations.html#work_of_plus">work_of_plus</a> [in <a href="OpSemProofs.relations.html">OpSemProofs.relations</a>]<br/>
+<a href="OpSemProofs.syntax.html#wt_val_rect">wt_val_rect</a> [in <a href="OpSemProofs.syntax.html">OpSemProofs.syntax</a>]<br/>
+<br/><br/><a name="lemma_*"></a><h2>other </h2>
+<a href="OpSemProofs.relations.html#825ab294b442ee5fb4977f2b0ecf9ce3">μe_eq_μEntropy2</a> [in <a href="OpSemProofs.relations.html">OpSemProofs.relations</a>]<br/>
+<a href="OpSemProofs.relations.html#aa5961eec1b5cf263cc3952fef16d06b">μe_eq_μEntropy</a> [in <a href="OpSemProofs.relations.html">OpSemProofs.relations</a>]<br/>
+<a href="OpSemProofs.relations.html#85ea0b4441c825b385ac281f0a2ead7b">μe_as_pushforard</a> [in <a href="OpSemProofs.relations.html">OpSemProofs.relations</a>]<br/>
+<a href="OpSemProofs.relations.html#2be176f2e0eea699c741e37f67beb394">μ_interchangable</a> [in <a href="OpSemProofs.relations.html">OpSemProofs.relations</a>]<br/>
+<a href="OpSemProofs.using_relations.html#cbaecc9fc20d04e6a332589d28c6b521">πL_same_integral</a> [in <a href="OpSemProofs.using_relations.html">OpSemProofs.using_relations</a>]<br/>
+<a href="OpSemProofs.entropy.html#c7439a98e1b557f89109379d719fd3aa">πL_join</a> [in <a href="OpSemProofs.entropy.html">OpSemProofs.entropy</a>]<br/>
+<a href="OpSemProofs.using_relations.html#bfac5eddf9fc1d8942a4ab8db88b46db">πR_same_integral</a> [in <a href="OpSemProofs.using_relations.html">OpSemProofs.using_relations</a>]<br/>
+<a href="OpSemProofs.entropy.html#93eec631a4ede9eb6571f8c41b525d63">πR_join</a> [in <a href="OpSemProofs.entropy.html">OpSemProofs.entropy</a>]<br/>
+<a href="OpSemProofs.entropy.html#d7c856db2e5bb163abb9d063b48abbee">π_S_join</a> [in <a href="OpSemProofs.entropy.html">OpSemProofs.entropy</a>]<br/>
+<a href="OpSemProofs.entropy.html#ee96f78c1fd04497bdf684f0afc1956d">π_O_join</a> [in <a href="OpSemProofs.entropy.html">OpSemProofs.entropy</a>]<br/>
+<a href="OpSemProofs.entropy.html#c4ef42a16bb2b55568462c06146d90e6">π_π_n_correspond</a> [in <a href="OpSemProofs.entropy.html">OpSemProofs.entropy</a>]<br/>
+<br/><br/><hr/>
+<h1>Constructor Index</h1>
+<a name="constructor_A"></a><h2>A </h2>
+<a href="OpSemProofs.syntax.html#Arrow">Arrow</a> [in <a href="OpSemProofs.syntax.html">OpSemProofs.syntax</a>]<br/>
+<br/><br/><a name="constructor_C"></a><h2>C </h2>
+<a href="OpSemProofs.chain.html#chain_cons">chain_cons</a> [in <a href="OpSemProofs.chain.html">OpSemProofs.chain</a>]<br/>
+<a href="OpSemProofs.chain.html#chain_nil">chain_nil</a> [in <a href="OpSemProofs.chain.html">OpSemProofs.chain</a>]<br/>
+<a href="OpSemProofs.ctxequiv.html#c_lam">c_lam</a> [in <a href="OpSemProofs.ctxequiv.html">OpSemProofs.ctxequiv</a>]<br/>
+<a href="OpSemProofs.ctxequiv.html#c_plus_r">c_plus_r</a> [in <a href="OpSemProofs.ctxequiv.html">OpSemProofs.ctxequiv</a>]<br/>
+<a href="OpSemProofs.ctxequiv.html#c_plus_l">c_plus_l</a> [in <a href="OpSemProofs.ctxequiv.html">OpSemProofs.ctxequiv</a>]<br/>
+<a href="OpSemProofs.ctxequiv.html#c_factor">c_factor</a> [in <a href="OpSemProofs.ctxequiv.html">OpSemProofs.ctxequiv</a>]<br/>
+<a href="OpSemProofs.ctxequiv.html#c_app_a">c_app_a</a> [in <a href="OpSemProofs.ctxequiv.html">OpSemProofs.ctxequiv</a>]<br/>
+<a href="OpSemProofs.ctxequiv.html#c_app_f">c_app_f</a> [in <a href="OpSemProofs.ctxequiv.html">OpSemProofs.ctxequiv</a>]<br/>
+<br/><br/><a name="constructor_D"></a><h2>D </h2>
+<a href="OpSemProofs.syntax.html#dep_cons">dep_cons</a> [in <a href="OpSemProofs.syntax.html">OpSemProofs.syntax</a>]<br/>
+<a href="OpSemProofs.syntax.html#dep_nil">dep_nil</a> [in <a href="OpSemProofs.syntax.html">OpSemProofs.syntax</a>]<br/>
+<br/><br/><a name="constructor_E"></a><h2>E </h2>
+<a href="OpSemProofs.integration.html#ent_finite">ent_finite</a> [in <a href="OpSemProofs.integration.html">OpSemProofs.integration</a>]<br/>
+<a href="OpSemProofs.syntax.html#EVAL_plus">EVAL_plus</a> [in <a href="OpSemProofs.syntax.html">OpSemProofs.syntax</a>]<br/>
+<a href="OpSemProofs.syntax.html#EVAL_sample">EVAL_sample</a> [in <a href="OpSemProofs.syntax.html">OpSemProofs.syntax</a>]<br/>
+<a href="OpSemProofs.syntax.html#EVAL_factor">EVAL_factor</a> [in <a href="OpSemProofs.syntax.html">OpSemProofs.syntax</a>]<br/>
+<a href="OpSemProofs.syntax.html#EVAL_app">EVAL_app</a> [in <a href="OpSemProofs.syntax.html">OpSemProofs.syntax</a>]<br/>
+<a href="OpSemProofs.syntax.html#EVAL_val">EVAL_val</a> [in <a href="OpSemProofs.syntax.html">OpSemProofs.syntax</a>]<br/>
+<a href="OpSemProofs.determinism.html#eval_dec.eval_dec_not_ex">eval_dec.eval_dec_not_ex</a> [in <a href="OpSemProofs.determinism.html">OpSemProofs.determinism</a>]<br/>
+<a href="OpSemProofs.determinism.html#eval_dec.eval_dec_ex_unique">eval_dec.eval_dec_ex_unique</a> [in <a href="OpSemProofs.determinism.html">OpSemProofs.determinism</a>]<br/>
+<a href="OpSemProofs.syntax.html#e_plus">e_plus</a> [in <a href="OpSemProofs.syntax.html">OpSemProofs.syntax</a>]<br/>
+<a href="OpSemProofs.syntax.html#e_sample">e_sample</a> [in <a href="OpSemProofs.syntax.html">OpSemProofs.syntax</a>]<br/>
+<a href="OpSemProofs.syntax.html#e_factor">e_factor</a> [in <a href="OpSemProofs.syntax.html">OpSemProofs.syntax</a>]<br/>
+<a href="OpSemProofs.syntax.html#e_app">e_app</a> [in <a href="OpSemProofs.syntax.html">OpSemProofs.syntax</a>]<br/>
+<a href="OpSemProofs.syntax.html#e_lam">e_lam</a> [in <a href="OpSemProofs.syntax.html">OpSemProofs.syntax</a>]<br/>
+<a href="OpSemProofs.syntax.html#e_var">e_var</a> [in <a href="OpSemProofs.syntax.html">OpSemProofs.syntax</a>]<br/>
+<a href="OpSemProofs.syntax.html#e_real">e_real</a> [in <a href="OpSemProofs.syntax.html">OpSemProofs.syntax</a>]<br/>
+<br/><br/><a name="constructor_F"></a><h2>F </h2>
+<a href="OpSemProofs.ennr.html#finite">finite</a> [in <a href="OpSemProofs.ennr.html">OpSemProofs.ennr</a>]<br/>
+<br/><br/><a name="constructor_G"></a><h2>G </h2>
+<a href="OpSemProofs.relations.html#G_rel_cons">G_rel_cons</a> [in <a href="OpSemProofs.relations.html">OpSemProofs.relations</a>]<br/>
+<a href="OpSemProofs.relations.html#G_rel_nil">G_rel_nil</a> [in <a href="OpSemProofs.relations.html">OpSemProofs.relations</a>]<br/>
+<br/><br/><a name="constructor_I"></a><h2>I </h2>
+<a href="OpSemProofs.ennr.html#infinite">infinite</a> [in <a href="OpSemProofs.ennr.html">OpSemProofs.ennr</a>]<br/>
+<a href="OpSemProofs.integration.html#interchange">interchange</a> [in <a href="OpSemProofs.integration.html">OpSemProofs.integration</a>]<br/>
+<br/><br/><a name="constructor_L"></a><h2>L </h2>
+<a href="OpSemProofs.integration.html#leb_finite">leb_finite</a> [in <a href="OpSemProofs.integration.html">OpSemProofs.integration</a>]<br/>
+<a href="OpSemProofs.using_relations.html#Lift.mk">Lift.mk</a> [in <a href="OpSemProofs.using_relations.html">OpSemProofs.using_relations</a>]<br/>
+<br/><br/><a name="constructor_M"></a><h2>M </h2>
+<a href="OpSemProofs.relations.html#mk_V_rel_arrow">mk_V_rel_arrow</a> [in <a href="OpSemProofs.relations.html">OpSemProofs.relations</a>]<br/>
+<a href="OpSemProofs.syntax.html#mk_val">mk_val</a> [in <a href="OpSemProofs.syntax.html">OpSemProofs.syntax</a>]<br/>
+<a href="OpSemProofs.determinism.html#mk_dV_rel_arrow">mk_dV_rel_arrow</a> [in <a href="OpSemProofs.determinism.html">OpSemProofs.determinism</a>]<br/>
+<br/><br/><a name="constructor_P"></a><h2>P </h2>
+<a href="OpSemProofs.ctxequiv.html#Plug.mk">Plug.mk</a> [in <a href="OpSemProofs.ctxequiv.html">OpSemProofs.ctxequiv</a>]<br/>
+<br/><br/><a name="constructor_U"></a><h2>U </h2>
+<a href="OpSemProofs.ctxequiv.html#uc_lam">uc_lam</a> [in <a href="OpSemProofs.ctxequiv.html">OpSemProofs.ctxequiv</a>]<br/>
+<a href="OpSemProofs.ctxequiv.html#uc_plus_r">uc_plus_r</a> [in <a href="OpSemProofs.ctxequiv.html">OpSemProofs.ctxequiv</a>]<br/>
+<a href="OpSemProofs.ctxequiv.html#uc_plus_l">uc_plus_l</a> [in <a href="OpSemProofs.ctxequiv.html">OpSemProofs.ctxequiv</a>]<br/>
+<a href="OpSemProofs.ctxequiv.html#uc_factor">uc_factor</a> [in <a href="OpSemProofs.ctxequiv.html">OpSemProofs.ctxequiv</a>]<br/>
+<a href="OpSemProofs.ctxequiv.html#uc_app_a">uc_app_a</a> [in <a href="OpSemProofs.ctxequiv.html">OpSemProofs.ctxequiv</a>]<br/>
+<a href="OpSemProofs.ctxequiv.html#uc_app_f">uc_app_f</a> [in <a href="OpSemProofs.ctxequiv.html">OpSemProofs.ctxequiv</a>]<br/>
+<a href="OpSemProofs.syntax.html#u_var">u_var</a> [in <a href="OpSemProofs.syntax.html">OpSemProofs.syntax</a>]<br/>
+<a href="OpSemProofs.syntax.html#u_lam">u_lam</a> [in <a href="OpSemProofs.syntax.html">OpSemProofs.syntax</a>]<br/>
+<a href="OpSemProofs.syntax.html#u_real">u_real</a> [in <a href="OpSemProofs.syntax.html">OpSemProofs.syntax</a>]<br/>
+<a href="OpSemProofs.syntax.html#u_plus">u_plus</a> [in <a href="OpSemProofs.syntax.html">OpSemProofs.syntax</a>]<br/>
+<a href="OpSemProofs.syntax.html#u_sample">u_sample</a> [in <a href="OpSemProofs.syntax.html">OpSemProofs.syntax</a>]<br/>
+<a href="OpSemProofs.syntax.html#u_factor">u_factor</a> [in <a href="OpSemProofs.syntax.html">OpSemProofs.syntax</a>]<br/>
+<a href="OpSemProofs.syntax.html#u_app">u_app</a> [in <a href="OpSemProofs.syntax.html">OpSemProofs.syntax</a>]<br/>
+<br/><br/><a name="constructor_*"></a><h2>other </h2>
+<a href="OpSemProofs.syntax.html#e7b0d812dc6fa89f651429266ac01c95">ℝ</a> [in <a href="OpSemProofs.syntax.html">OpSemProofs.syntax</a>]<br/>
+<br/><br/><hr/>
+<h1>Axiom Index</h1>
+<a name="axiom_I"></a><h2>I </h2>
+<a href="OpSemProofs.integration.html#integration">integration</a> [in <a href="OpSemProofs.integration.html">OpSemProofs.integration</a>]<br/>
+<a href="OpSemProofs.integration.html#ed3afcd402abe270516a6ae3f8c8535f">integration_πL_πR</a> [in <a href="OpSemProofs.integration.html">OpSemProofs.integration</a>]<br/>
+<a href="OpSemProofs.integration.html#integration_of_indicator">integration_of_indicator</a> [in <a href="OpSemProofs.integration.html">OpSemProofs.integration</a>]<br/>
+<a href="OpSemProofs.integration.html#integration_linear">integration_linear</a> [in <a href="OpSemProofs.integration.html">OpSemProofs.integration</a>]<br/>
+<br/><br/><a name="axiom_L"></a><h2>L </h2>
+<a href="OpSemProofs.integration.html#lebesgue_pos_measure_interval">lebesgue_pos_measure_interval</a> [in <a href="OpSemProofs.integration.html">OpSemProofs.integration</a>]<br/>
+<a href="OpSemProofs.integration.html#lebesgue_pos_measure">lebesgue_pos_measure</a> [in <a href="OpSemProofs.integration.html">OpSemProofs.integration</a>]<br/>
+<br/><br/><a name="axiom_M"></a><h2>M </h2>
+<a href="OpSemProofs.integration.html#meas_bind_assoc">meas_bind_assoc</a> [in <a href="OpSemProofs.integration.html">OpSemProofs.integration</a>]<br/>
+<br/><br/><a name="axiom_R"></a><h2>R </h2>
+<a href="OpSemProofs.integration.html#riemann_def_of_lebesgue_integration">riemann_def_of_lebesgue_integration</a> [in <a href="OpSemProofs.integration.html">OpSemProofs.integration</a>]<br/>
+<br/><br/><a name="axiom_T"></a><h2>T </h2>
+<a href="OpSemProofs.integration.html#tonelli_sigma_finite">tonelli_sigma_finite</a> [in <a href="OpSemProofs.integration.html">OpSemProofs.integration</a>]<br/>
+<br/><br/><a name="axiom_*"></a><h2>other </h2>
+<a href="OpSemProofs.integration.html#0dfb6736089a821010aaeb3893e7247c">μEntropy</a> [in <a href="OpSemProofs.integration.html">OpSemProofs.integration</a>]<br/>
+<a href="OpSemProofs.integration.html#3c2349133d3a5b1d9ece88089b1acd9e">μEntropy_is_a_probability_measure</a> [in <a href="OpSemProofs.integration.html">OpSemProofs.integration</a>]<br/>
+<br/><br/><hr/>
+<h1>Inductive Index</h1>
+<a name="inductive_C"></a><h2>C </h2>
+<a href="OpSemProofs.chain.html#chain">chain</a> [in <a href="OpSemProofs.chain.html">OpSemProofs.chain</a>]<br/>
+<a href="OpSemProofs.ctxequiv.html#ctx_frame">ctx_frame</a> [in <a href="OpSemProofs.ctxequiv.html">OpSemProofs.ctxequiv</a>]<br/>
+<br/><br/><a name="inductive_D"></a><h2>D </h2>
+<a href="OpSemProofs.syntax.html#dep_list">dep_list</a> [in <a href="OpSemProofs.syntax.html">OpSemProofs.syntax</a>]<br/>
+<a href="OpSemProofs.determinism.html#dV_rel_arrow">dV_rel_arrow</a> [in <a href="OpSemProofs.determinism.html">OpSemProofs.determinism</a>]<br/>
+<br/><br/><a name="inductive_E"></a><h2>E </h2>
+<a href="OpSemProofs.ennr.html#ennr">ennr</a> [in <a href="OpSemProofs.ennr.html">OpSemProofs.ennr</a>]<br/>
+<a href="OpSemProofs.syntax.html#eval">eval</a> [in <a href="OpSemProofs.syntax.html">OpSemProofs.syntax</a>]<br/>
+<a href="OpSemProofs.determinism.html#eval_dec.eval_dec_result">eval_dec.eval_dec_result</a> [in <a href="OpSemProofs.determinism.html">OpSemProofs.determinism</a>]<br/>
+<a href="OpSemProofs.syntax.html#expr">expr</a> [in <a href="OpSemProofs.syntax.html">OpSemProofs.syntax</a>]<br/>
+<br/><br/><a name="inductive_G"></a><h2>G </h2>
+<a href="OpSemProofs.relations.html#G_rel">G_rel</a> [in <a href="OpSemProofs.relations.html">OpSemProofs.relations</a>]<br/>
+<br/><br/><a name="inductive_I"></a><h2>I </h2>
+<a href="OpSemProofs.integration.html#interchangable">interchangable</a> [in <a href="OpSemProofs.integration.html">OpSemProofs.integration</a>]<br/>
+<br/><br/><a name="inductive_K"></a><h2>K </h2>
+<a href="OpSemProofs.integration.html#KnownToBeSigmaFinite">KnownToBeSigmaFinite</a> [in <a href="OpSemProofs.integration.html">OpSemProofs.integration</a>]<br/>
+<br/><br/><a name="inductive_T"></a><h2>T </h2>
+<a href="OpSemProofs.syntax.html#Ty">Ty</a> [in <a href="OpSemProofs.syntax.html">OpSemProofs.syntax</a>]<br/>
+<br/><br/><a name="inductive_U"></a><h2>U </h2>
+<a href="OpSemProofs.syntax.html#u_expr">u_expr</a> [in <a href="OpSemProofs.syntax.html">OpSemProofs.syntax</a>]<br/>
+<a href="OpSemProofs.ctxequiv.html#u_ctx_frame">u_ctx_frame</a> [in <a href="OpSemProofs.ctxequiv.html">OpSemProofs.ctxequiv</a>]<br/>
+<br/><br/><a name="inductive_V"></a><h2>V </h2>
+<a href="OpSemProofs.syntax.html#val">val</a> [in <a href="OpSemProofs.syntax.html">OpSemProofs.syntax</a>]<br/>
+<a href="OpSemProofs.relations.html#V_rel_arrow">V_rel_arrow</a> [in <a href="OpSemProofs.relations.html">OpSemProofs.relations</a>]<br/>
+<br/><br/><hr/>
+<h1>Projection Index</h1>
+<a name="projection_I"></a><h2>I </h2>
+<a href="OpSemProofs.integration.html#interchange">interchange</a> [in <a href="OpSemProofs.integration.html">OpSemProofs.integration</a>]<br/>
+<br/><br/><a name="projection_L"></a><h2>L </h2>
+<a href="OpSemProofs.using_relations.html#Lift.lift1">Lift.lift1</a> [in <a href="OpSemProofs.using_relations.html">OpSemProofs.using_relations</a>]<br/>
+<a href="OpSemProofs.using_relations.html#Lift.lobj">Lift.lobj</a> [in <a href="OpSemProofs.using_relations.html">OpSemProofs.using_relations</a>]<br/>
+<br/><br/><a name="projection_P"></a><h2>P </h2>
+<a href="OpSemProofs.ctxequiv.html#Plug.plug">Plug.plug</a> [in <a href="OpSemProofs.ctxequiv.html">OpSemProofs.ctxequiv</a>]<br/>
+<br/><br/><hr/>
+<h1>Instance Index</h1>
+<a name="instance_A"></a><h2>A </h2>
+<a href="OpSemProofs.properties_of_relations.html#A_rel_transitive">A_rel_transitive</a> [in <a href="OpSemProofs.properties_of_relations.html">OpSemProofs.properties_of_relations</a>]<br/>
+<a href="OpSemProofs.properties_of_relations.html#A_rel_transitive'">A_rel_transitive'</a> [in <a href="OpSemProofs.properties_of_relations.html">OpSemProofs.properties_of_relations</a>]<br/>
+<a href="OpSemProofs.properties_of_relations.html#A_rel_symmetric">A_rel_symmetric</a> [in <a href="OpSemProofs.properties_of_relations.html">OpSemProofs.properties_of_relations</a>]<br/>
+<br/><br/><a name="instance_E"></a><h2>E </h2>
+<a href="OpSemProofs.utils.html#eq_pointwise">eq_pointwise</a> [in <a href="OpSemProofs.utils.html">OpSemProofs.utils</a>]<br/>
+<a href="OpSemProofs.using_relations.html#expr_lift">expr_lift</a> [in <a href="OpSemProofs.using_relations.html">OpSemProofs.using_relations</a>]<br/>
+<a href="OpSemProofs.properties_of_relations.html#E_rel_reflexive">E_rel_reflexive</a> [in <a href="OpSemProofs.properties_of_relations.html">OpSemProofs.properties_of_relations</a>]<br/>
+<a href="OpSemProofs.properties_of_relations.html#E_rel_transitive">E_rel_transitive</a> [in <a href="OpSemProofs.properties_of_relations.html">OpSemProofs.properties_of_relations</a>]<br/>
+<a href="OpSemProofs.properties_of_relations.html#E_rel_transitive'">E_rel_transitive'</a> [in <a href="OpSemProofs.properties_of_relations.html">OpSemProofs.properties_of_relations</a>]<br/>
+<a href="OpSemProofs.properties_of_relations.html#E_rel_symmetric">E_rel_symmetric</a> [in <a href="OpSemProofs.properties_of_relations.html">OpSemProofs.properties_of_relations</a>]<br/>
+<br/><br/><a name="instance_F"></a><h2>F </h2>
+<a href="OpSemProofs.utils.html#functional_ext_rewriting2">functional_ext_rewriting2</a> [in <a href="OpSemProofs.utils.html">OpSemProofs.utils</a>]<br/>
+<a href="OpSemProofs.utils.html#functional_ext_rewriting">functional_ext_rewriting</a> [in <a href="OpSemProofs.utils.html">OpSemProofs.utils</a>]<br/>
+<br/><br/><a name="instance_G"></a><h2>G </h2>
+<a href="OpSemProofs.properties_of_relations.html#G_rel_reflexive">G_rel_reflexive</a> [in <a href="OpSemProofs.properties_of_relations.html">OpSemProofs.properties_of_relations</a>]<br/>
+<a href="OpSemProofs.properties_of_relations.html#G_rel_transitive">G_rel_transitive</a> [in <a href="OpSemProofs.properties_of_relations.html">OpSemProofs.properties_of_relations</a>]<br/>
+<a href="OpSemProofs.properties_of_relations.html#G_rel_symmetric">G_rel_symmetric</a> [in <a href="OpSemProofs.properties_of_relations.html">OpSemProofs.properties_of_relations</a>]<br/>
+<br/><br/><a name="instance_I"></a><h2>I </h2>
+<a href="OpSemProofs.syntax.html#Ids_u_expr">Ids_u_expr</a> [in <a href="OpSemProofs.syntax.html">OpSemProofs.syntax</a>]<br/>
+<a href="OpSemProofs.integration.html#interchangable_sym">interchangable_sym</a> [in <a href="OpSemProofs.integration.html">OpSemProofs.integration</a>]<br/>
+<br/><br/><a name="instance_M"></a><h2>M </h2>
+<a href="OpSemProofs.integration.html#meas_option_interchangable">meas_option_interchangable</a> [in <a href="OpSemProofs.integration.html">OpSemProofs.integration</a>]<br/>
+<br/><br/><a name="instance_P"></a><h2>P </h2>
+<a href="OpSemProofs.ctxequiv.html#plug">plug</a> [in <a href="OpSemProofs.ctxequiv.html">OpSemProofs.ctxequiv</a>]<br/>
+<a href="OpSemProofs.ctxequiv.html#plug_frame">plug_frame</a> [in <a href="OpSemProofs.ctxequiv.html">OpSemProofs.ctxequiv</a>]<br/>
+<a href="OpSemProofs.utils.html#pointwise_eq_ext">pointwise_eq_ext</a> [in <a href="OpSemProofs.utils.html">OpSemProofs.utils</a>]<br/>
+<a href="OpSemProofs.integration.html#pushforward_interchangable">pushforward_interchangable</a> [in <a href="OpSemProofs.integration.html">OpSemProofs.integration</a>]<br/>
+<br/><br/><a name="instance_R"></a><h2>R </h2>
+<a href="OpSemProofs.utils.html#refl_respectful">refl_respectful</a> [in <a href="OpSemProofs.utils.html">OpSemProofs.utils</a>]<br/>
+<a href="OpSemProofs.properties_of_relations.html#rel_expr_reflexive">rel_expr_reflexive</a> [in <a href="OpSemProofs.properties_of_relations.html">OpSemProofs.properties_of_relations</a>]<br/>
+<a href="OpSemProofs.properties_of_relations.html#rel_expr_transitive">rel_expr_transitive</a> [in <a href="OpSemProofs.properties_of_relations.html">OpSemProofs.properties_of_relations</a>]<br/>
+<a href="OpSemProofs.properties_of_relations.html#rel_expr_symmetric">rel_expr_symmetric</a> [in <a href="OpSemProofs.properties_of_relations.html">OpSemProofs.properties_of_relations</a>]<br/>
+<a href="OpSemProofs.syntax.html#Rename_u_expr">Rename_u_expr</a> [in <a href="OpSemProofs.syntax.html">OpSemProofs.syntax</a>]<br/>
+<a href="OpSemProofs.ctxequiv.html#Rename_u_ctx">Rename_u_ctx</a> [in <a href="OpSemProofs.ctxequiv.html">OpSemProofs.ctxequiv</a>]<br/>
+<a href="OpSemProofs.ctxequiv.html#Rename_u_ctx_frame">Rename_u_ctx_frame</a> [in <a href="OpSemProofs.ctxequiv.html">OpSemProofs.ctxequiv</a>]<br/>
+<br/><br/><a name="instance_S"></a><h2>S </h2>
+<a href="OpSemProofs.integration.html#score_meas_interchangable">score_meas_interchangable</a> [in <a href="OpSemProofs.integration.html">OpSemProofs.integration</a>]<br/>
+<a href="OpSemProofs.integration.html#sigma_finite_is_interchangable">sigma_finite_is_interchangable</a> [in <a href="OpSemProofs.integration.html">OpSemProofs.integration</a>]<br/>
+<a href="OpSemProofs.using_relations.html#simple_ctx_frame_lift'">simple_ctx_frame_lift'</a> [in <a href="OpSemProofs.using_relations.html">OpSemProofs.using_relations</a>]<br/>
+<a href="OpSemProofs.using_relations.html#simple_plug">simple_plug</a> [in <a href="OpSemProofs.using_relations.html">OpSemProofs.using_relations</a>]<br/>
+<a href="OpSemProofs.utils.html#subrel_eq_respect">subrel_eq_respect</a> [in <a href="OpSemProofs.utils.html">OpSemProofs.utils</a>]<br/>
+<a href="OpSemProofs.syntax.html#SubstLemmas_u_expr">SubstLemmas_u_expr</a> [in <a href="OpSemProofs.syntax.html">OpSemProofs.syntax</a>]<br/>
+<a href="OpSemProofs.syntax.html#Subst_u_expr">Subst_u_expr</a> [in <a href="OpSemProofs.syntax.html">OpSemProofs.syntax</a>]<br/>
+<br/><br/><a name="instance_U"></a><h2>U </h2>
+<a href="OpSemProofs.using_relations.html#up_simple_ctx">up_simple_ctx</a> [in <a href="OpSemProofs.using_relations.html">OpSemProofs.using_relations</a>]<br/>
+<a href="OpSemProofs.ctxequiv.html#u_plug'">u_plug'</a> [in <a href="OpSemProofs.ctxequiv.html">OpSemProofs.ctxequiv</a>]<br/>
+<a href="OpSemProofs.ctxequiv.html#u_plug_frame">u_plug_frame</a> [in <a href="OpSemProofs.ctxequiv.html">OpSemProofs.ctxequiv</a>]<br/>
+<br/><br/><a name="instance_V"></a><h2>V </h2>
+<a href="OpSemProofs.properties_of_relations.html#V_rel_reflexive">V_rel_reflexive</a> [in <a href="OpSemProofs.properties_of_relations.html">OpSemProofs.properties_of_relations</a>]<br/>
+<a href="OpSemProofs.properties_of_relations.html#V_rel_transitive">V_rel_transitive</a> [in <a href="OpSemProofs.properties_of_relations.html">OpSemProofs.properties_of_relations</a>]<br/>
+<a href="OpSemProofs.properties_of_relations.html#V_rel_symmetric">V_rel_symmetric</a> [in <a href="OpSemProofs.properties_of_relations.html">OpSemProofs.properties_of_relations</a>]<br/>
+<br/><br/><hr/>
+<h1>Definition Index</h1>
+<a name="definition_A"></a><h2>A </h2>
+<a href="OpSemProofs.relations.html#apply_in">apply_in</a> [in <a href="OpSemProofs.relations.html">OpSemProofs.relations</a>]<br/>
+<a href="OpSemProofs.relations.html#A_rel">A_rel</a> [in <a href="OpSemProofs.relations.html">OpSemProofs.relations</a>]<br/>
+<a href="OpSemProofs.relations.html#A_rel'">A_rel'</a> [in <a href="OpSemProofs.relations.html">OpSemProofs.relations</a>]<br/>
+<br/><br/><a name="definition_B"></a><h2>B </h2>
+<a href="OpSemProofs.chain.html#bichain">bichain</a> [in <a href="OpSemProofs.chain.html">OpSemProofs.chain</a>]<br/>
+<a href="OpSemProofs.chain.html#bichain_to_list">bichain_to_list</a> [in <a href="OpSemProofs.chain.html">OpSemProofs.chain</a>]<br/>
+<a href="OpSemProofs.chain.html#bichain_fold_right">bichain_fold_right</a> [in <a href="OpSemProofs.chain.html">OpSemProofs.chain</a>]<br/>
+<a href="OpSemProofs.chain.html#bichain_cons">bichain_cons</a> [in <a href="OpSemProofs.chain.html">OpSemProofs.chain</a>]<br/>
+<a href="OpSemProofs.chain.html#bicurry">bicurry</a> [in <a href="OpSemProofs.chain.html">OpSemProofs.chain</a>]<br/>
+<a href="OpSemProofs.integration.html#bool_of_dec">bool_of_dec</a> [in <a href="OpSemProofs.integration.html">OpSemProofs.integration</a>]<br/>
+<br/><br/><a name="definition_C"></a><h2>C </h2>
+<a href="OpSemProofs.chain.html#chain_to_list">chain_to_list</a> [in <a href="OpSemProofs.chain.html">OpSemProofs.chain</a>]<br/>
+<a href="OpSemProofs.chain.html#chain_fold_left">chain_fold_left</a> [in <a href="OpSemProofs.chain.html">OpSemProofs.chain</a>]<br/>
+<a href="OpSemProofs.chain.html#chain_fold_right">chain_fold_right</a> [in <a href="OpSemProofs.chain.html">OpSemProofs.chain</a>]<br/>
+<a href="OpSemProofs.chain.html#chain_snoc">chain_snoc</a> [in <a href="OpSemProofs.chain.html">OpSemProofs.chain</a>]<br/>
+<a href="OpSemProofs.chain.html#chain_app">chain_app</a> [in <a href="OpSemProofs.chain.html">OpSemProofs.chain</a>]<br/>
+<a href="OpSemProofs.ctxequiv.html#ctx">ctx</a> [in <a href="OpSemProofs.ctxequiv.html">OpSemProofs.ctxequiv</a>]<br/>
+<a href="OpSemProofs.ctxequiv.html#ctx_equiv">ctx_equiv</a> [in <a href="OpSemProofs.ctxequiv.html">OpSemProofs.ctxequiv</a>]<br/>
+<a href="OpSemProofs.ctxequiv.html#c_hole">c_hole</a> [in <a href="OpSemProofs.ctxequiv.html">OpSemProofs.ctxequiv</a>]<br/>
+<br/><br/><a name="definition_D"></a><h2>D </h2>
+<a href="OpSemProofs.using_relations.html#dep_ids">dep_ids</a> [in <a href="OpSemProofs.using_relations.html">OpSemProofs.using_relations</a>]<br/>
+<a href="OpSemProofs.using_relations.html#dep_ids'">dep_ids'</a> [in <a href="OpSemProofs.using_relations.html">OpSemProofs.using_relations</a>]<br/>
+<a href="OpSemProofs.syntax.html#dep_env_allT">dep_env_allT</a> [in <a href="OpSemProofs.syntax.html">OpSemProofs.syntax</a>]<br/>
+<a href="OpSemProofs.syntax.html#dep_map">dep_map</a> [in <a href="OpSemProofs.syntax.html">OpSemProofs.syntax</a>]<br/>
+<a href="OpSemProofs.syntax.html#dep_lookup">dep_lookup</a> [in <a href="OpSemProofs.syntax.html">OpSemProofs.syntax</a>]<br/>
+<a href="OpSemProofs.determinism.html#dE_rel">dE_rel</a> [in <a href="OpSemProofs.determinism.html">OpSemProofs.determinism</a>]<br/>
+<a href="OpSemProofs.determinism.html#dE_rel'">dE_rel'</a> [in <a href="OpSemProofs.determinism.html">OpSemProofs.determinism</a>]<br/>
+<a href="OpSemProofs.determinism.html#dG_rel">dG_rel</a> [in <a href="OpSemProofs.determinism.html">OpSemProofs.determinism</a>]<br/>
+<a href="OpSemProofs.integration.html#dirac">dirac</a> [in <a href="OpSemProofs.integration.html">OpSemProofs.integration</a>]<br/>
+<a href="OpSemProofs.determinism.html#dV_rel">dV_rel</a> [in <a href="OpSemProofs.determinism.html">OpSemProofs.determinism</a>]<br/>
+<a href="OpSemProofs.determinism.html#dV_rel_real">dV_rel_real</a> [in <a href="OpSemProofs.determinism.html">OpSemProofs.determinism</a>]<br/>
+<br/><br/><a name="definition_E"></a><h2>E </h2>
+<a href="OpSemProofs.syntax.html#empty_env">empty_env</a> [in <a href="OpSemProofs.syntax.html">OpSemProofs.syntax</a>]<br/>
+<a href="OpSemProofs.integration.html#empty_meas">empty_meas</a> [in <a href="OpSemProofs.integration.html">OpSemProofs.integration</a>]<br/>
+<a href="OpSemProofs.ennr.html#ennr_ge">ennr_ge</a> [in <a href="OpSemProofs.ennr.html">OpSemProofs.ennr</a>]<br/>
+<a href="OpSemProofs.ennr.html#ennr_le">ennr_le</a> [in <a href="OpSemProofs.ennr.html">OpSemProofs.ennr</a>]<br/>
+<a href="OpSemProofs.ennr.html#ennr_gt">ennr_gt</a> [in <a href="OpSemProofs.ennr.html">OpSemProofs.ennr</a>]<br/>
+<a href="OpSemProofs.ennr.html#ennr_lt">ennr_lt</a> [in <a href="OpSemProofs.ennr.html">OpSemProofs.ennr</a>]<br/>
+<a href="OpSemProofs.ennr.html#ennr_semiring">ennr_semiring</a> [in <a href="OpSemProofs.ennr.html">OpSemProofs.ennr</a>]<br/>
+<a href="OpSemProofs.ennr.html#ennr_mult">ennr_mult</a> [in <a href="OpSemProofs.ennr.html">OpSemProofs.ennr</a>]<br/>
+<a href="OpSemProofs.ennr.html#ennr_plus">ennr_plus</a> [in <a href="OpSemProofs.ennr.html">OpSemProofs.ennr</a>]<br/>
+<a href="OpSemProofs.ennr.html#ennr_1">ennr_1</a> [in <a href="OpSemProofs.ennr.html">OpSemProofs.ennr</a>]<br/>
+<a href="OpSemProofs.ennr.html#ennr_0">ennr_0</a> [in <a href="OpSemProofs.ennr.html">OpSemProofs.ennr</a>]<br/>
+<a href="OpSemProofs.entropy.html#Entropy">Entropy</a> [in <a href="OpSemProofs.entropy.html">OpSemProofs.entropy</a>]<br/>
+<a href="OpSemProofs.syntax.html#Env">Env</a> [in <a href="OpSemProofs.syntax.html">OpSemProofs.syntax</a>]<br/>
+<a href="OpSemProofs.syntax.html#erase">erase</a> [in <a href="OpSemProofs.syntax.html">OpSemProofs.syntax</a>]<br/>
+<a href="OpSemProofs.syntax.html#erase_wt_env">erase_wt_env</a> [in <a href="OpSemProofs.syntax.html">OpSemProofs.syntax</a>]<br/>
+<a href="OpSemProofs.syntax.html#erase_wt_expr_env">erase_wt_expr_env</a> [in <a href="OpSemProofs.syntax.html">OpSemProofs.syntax</a>]<br/>
+<a href="OpSemProofs.ctxequiv.html#erase_ctx">erase_ctx</a> [in <a href="OpSemProofs.ctxequiv.html">OpSemProofs.ctxequiv</a>]<br/>
+<a href="OpSemProofs.ctxequiv.html#erase_ctx_frame">erase_ctx_frame</a> [in <a href="OpSemProofs.ctxequiv.html">OpSemProofs.ctxequiv</a>]<br/>
+<a href="OpSemProofs.syntax.html#erase'">erase'</a> [in <a href="OpSemProofs.syntax.html">OpSemProofs.syntax</a>]<br/>
+<a href="OpSemProofs.relations.html#ev">ev</a> [in <a href="OpSemProofs.relations.html">OpSemProofs.relations</a>]<br/>
+<a href="OpSemProofs.relations.html#eval_in">eval_in</a> [in <a href="OpSemProofs.relations.html">OpSemProofs.relations</a>]<br/>
+<a href="OpSemProofs.integration.html#Event">Event</a> [in <a href="OpSemProofs.integration.html">OpSemProofs.integration</a>]<br/>
+<a href="OpSemProofs.relations.html#ew">ew</a> [in <a href="OpSemProofs.relations.html">OpSemProofs.relations</a>]<br/>
+<a href="OpSemProofs.syntax.html#expr_of_val">expr_of_val</a> [in <a href="OpSemProofs.syntax.html">OpSemProofs.syntax</a>]<br/>
+<a href="OpSemProofs.relations.html#E_rel">E_rel</a> [in <a href="OpSemProofs.relations.html">OpSemProofs.relations</a>]<br/>
+<a href="OpSemProofs.relations.html#E_rel'">E_rel'</a> [in <a href="OpSemProofs.relations.html">OpSemProofs.relations</a>]<br/>
+<br/><br/><a name="definition_F"></a><h2>F </h2>
+<a href="OpSemProofs.relations.html#factor_in">factor_in</a> [in <a href="OpSemProofs.relations.html">OpSemProofs.relations</a>]<br/>
+<a href="OpSemProofs.utils.html#fromOption">fromOption</a> [in <a href="OpSemProofs.utils.html">OpSemProofs.utils</a>]<br/>
+<a href="OpSemProofs.integration.html#full_event">full_event</a> [in <a href="OpSemProofs.integration.html">OpSemProofs.integration</a>]<br/>
+<br/><br/><a name="definition_I"></a><h2>I </h2>
+<a href="OpSemProofs.utils.html#id">id</a> [in <a href="OpSemProofs.utils.html">OpSemProofs.utils</a>]<br/>
+<a href="OpSemProofs.integration.html#ifte">ifte</a> [in <a href="OpSemProofs.integration.html">OpSemProofs.integration</a>]<br/>
+<a href="OpSemProofs.integration.html#indicator">indicator</a> [in <a href="OpSemProofs.integration.html">OpSemProofs.integration</a>]<br/>
+<a href="OpSemProofs.using_relations.html#is_u_simple">is_u_simple</a> [in <a href="OpSemProofs.using_relations.html">OpSemProofs.using_relations</a>]<br/>
+<a href="OpSemProofs.using_relations.html#is_pure">is_pure</a> [in <a href="OpSemProofs.using_relations.html">OpSemProofs.using_relations</a>]<br/>
+<a href="OpSemProofs.syntax.html#is_val">is_val</a> [in <a href="OpSemProofs.syntax.html">OpSemProofs.syntax</a>]<br/>
+<br/><br/><a name="definition_J"></a><h2>J </h2>
+<a href="OpSemProofs.entropy.html#join">join</a> [in <a href="OpSemProofs.entropy.html">OpSemProofs.entropy</a>]<br/>
+<a href="OpSemProofs.entropy.html#join'">join'</a> [in <a href="OpSemProofs.entropy.html">OpSemProofs.entropy</a>]<br/>
+<br/><br/><a name="definition_L"></a><h2>L </h2>
+<a href="OpSemProofs.using_relations.html#lift1">lift1</a> [in <a href="OpSemProofs.using_relations.html">OpSemProofs.using_relations</a>]<br/>
+<a href="OpSemProofs.syntax.html#lookup">lookup</a> [in <a href="OpSemProofs.syntax.html">OpSemProofs.syntax</a>]<br/>
+<br/><br/><a name="definition_M"></a><h2>M </h2>
+<a href="OpSemProofs.integration.html#Meas">Meas</a> [in <a href="OpSemProofs.integration.html">OpSemProofs.integration</a>]<br/>
+<a href="OpSemProofs.integration.html#meas_option">meas_option</a> [in <a href="OpSemProofs.integration.html">OpSemProofs.integration</a>]<br/>
+<a href="OpSemProofs.integration.html#meas_bind">meas_bind</a> [in <a href="OpSemProofs.integration.html">OpSemProofs.integration</a>]<br/>
+<br/><br/><a name="definition_O"></a><h2>O </h2>
+<a href="OpSemProofs.using_relations.html#open_subst1">open_subst1</a> [in <a href="OpSemProofs.using_relations.html">OpSemProofs.using_relations</a>]<br/>
+<a href="OpSemProofs.utils.html#option_bind">option_bind</a> [in <a href="OpSemProofs.utils.html">OpSemProofs.utils</a>]<br/>
+<a href="OpSemProofs.utils.html#option_ap">option_ap</a> [in <a href="OpSemProofs.utils.html">OpSemProofs.utils</a>]<br/>
+<a href="OpSemProofs.integration.html#option_meas">option_meas</a> [in <a href="OpSemProofs.integration.html">OpSemProofs.integration</a>]<br/>
+<a href="OpSemProofs.utils.html#option0">option0</a> [in <a href="OpSemProofs.utils.html">OpSemProofs.utils</a>]<br/>
+<br/><br/><a name="definition_P"></a><h2>P </h2>
+<a href="OpSemProofs.relations.html#plus_in">plus_in</a> [in <a href="OpSemProofs.relations.html">OpSemProofs.relations</a>]<br/>
+<a href="OpSemProofs.integration.html#preimage">preimage</a> [in <a href="OpSemProofs.integration.html">OpSemProofs.integration</a>]<br/>
+<a href="OpSemProofs.integration.html#pushforward">pushforward</a> [in <a href="OpSemProofs.integration.html">OpSemProofs.integration</a>]<br/>
+<br/><br/><a name="definition_R"></a><h2>R </h2>
+<a href="OpSemProofs.relations.html#related_exprs">related_exprs</a> [in <a href="OpSemProofs.relations.html">OpSemProofs.relations</a>]<br/>
+<a href="OpSemProofs.determinism.html#related_expr">related_expr</a> [in <a href="OpSemProofs.determinism.html">OpSemProofs.determinism</a>]<br/>
+<a href="OpSemProofs.syntax.html#rewrite_v_lam">rewrite_v_lam</a> [in <a href="OpSemProofs.syntax.html">OpSemProofs.syntax</a>]<br/>
+<a href="OpSemProofs.syntax.html#rewrite_v_real">rewrite_v_real</a> [in <a href="OpSemProofs.syntax.html">OpSemProofs.syntax</a>]<br/>
+<br/><br/><a name="definition_S"></a><h2>S </h2>
+<a href="OpSemProofs.integration.html#score_meas">score_meas</a> [in <a href="OpSemProofs.integration.html">OpSemProofs.integration</a>]<br/>
+<a href="OpSemProofs.using_relations.html#simple_ctx_frame_lift">simple_ctx_frame_lift</a> [in <a href="OpSemProofs.using_relations.html">OpSemProofs.using_relations</a>]<br/>
+<a href="OpSemProofs.using_relations.html#simple_ctx">simple_ctx</a> [in <a href="OpSemProofs.using_relations.html">OpSemProofs.using_relations</a>]<br/>
+<a href="OpSemProofs.using_relations.html#simple_ctx_frame">simple_ctx_frame</a> [in <a href="OpSemProofs.using_relations.html">OpSemProofs.using_relations</a>]<br/>
+<br/><br/><a name="definition_T"></a><h2>T </h2>
+<a href="OpSemProofs.syntax.html#ty_subst1">ty_subst1</a> [in <a href="OpSemProofs.syntax.html">OpSemProofs.syntax</a>]<br/>
+<br/><br/><a name="definition_U"></a><h2>U </h2>
+<a href="OpSemProofs.ctxequiv.html#uc_hole">uc_hole</a> [in <a href="OpSemProofs.ctxequiv.html">OpSemProofs.ctxequiv</a>]<br/>
+<a href="OpSemProofs.integration.html#unif_score_meas">unif_score_meas</a> [in <a href="OpSemProofs.integration.html">OpSemProofs.integration</a>]<br/>
+<a href="OpSemProofs.using_relations.html#unsimple">unsimple</a> [in <a href="OpSemProofs.using_relations.html">OpSemProofs.using_relations</a>]<br/>
+<a href="OpSemProofs.using_relations.html#up_simple_ctx'">up_simple_ctx'</a> [in <a href="OpSemProofs.using_relations.html">OpSemProofs.using_relations</a>]<br/>
+<a href="OpSemProofs.ctxequiv.html#u_plug">u_plug</a> [in <a href="OpSemProofs.ctxequiv.html">OpSemProofs.ctxequiv</a>]<br/>
+<a href="OpSemProofs.ctxequiv.html#u_ctx">u_ctx</a> [in <a href="OpSemProofs.ctxequiv.html">OpSemProofs.ctxequiv</a>]<br/>
+<br/><br/><a name="definition_V"></a><h2>V </h2>
+<a href="OpSemProofs.syntax.html#val_arrow_rect">val_arrow_rect</a> [in <a href="OpSemProofs.syntax.html">OpSemProofs.syntax</a>]<br/>
+<a href="OpSemProofs.using_relations.html#var_0">var_0</a> [in <a href="OpSemProofs.using_relations.html">OpSemProofs.using_relations</a>]<br/>
+<a href="OpSemProofs.relations.html#V_rel">V_rel</a> [in <a href="OpSemProofs.relations.html">OpSemProofs.relations</a>]<br/>
+<a href="OpSemProofs.relations.html#V_rel_real">V_rel_real</a> [in <a href="OpSemProofs.relations.html">OpSemProofs.relations</a>]<br/>
+<a href="OpSemProofs.syntax.html#v_lam">v_lam</a> [in <a href="OpSemProofs.syntax.html">OpSemProofs.syntax</a>]<br/>
+<a href="OpSemProofs.syntax.html#v_real">v_real</a> [in <a href="OpSemProofs.syntax.html">OpSemProofs.syntax</a>]<br/>
+<br/><br/><a name="definition_W"></a><h2>W </h2>
+<a href="OpSemProofs.syntax.html#weaken">weaken</a> [in <a href="OpSemProofs.syntax.html">OpSemProofs.syntax</a>]<br/>
+<a href="OpSemProofs.syntax.html#wt_env">wt_env</a> [in <a href="OpSemProofs.syntax.html">OpSemProofs.syntax</a>]<br/>
+<br/><br/><a name="definition_*"></a><h2>other </h2>
+<a href="OpSemProofs.relations.html#a1155692e3f69913320174f980c7eaf1">μ</a> [in <a href="OpSemProofs.relations.html">OpSemProofs.relations</a>]<br/>
+<a href="OpSemProofs.entropy.html#31bf0b12546409e15021243132fc7574">π</a> [in <a href="OpSemProofs.entropy.html">OpSemProofs.entropy</a>]<br/>
+<a href="OpSemProofs.entropy.html#31c76a36555cdb7bda2afea8f8b43fb5">πL</a> [in <a href="OpSemProofs.entropy.html">OpSemProofs.entropy</a>]<br/>
+<a href="OpSemProofs.entropy.html#2f5d93f1fe57e714be44f811695b8b4e">πL_n</a> [in <a href="OpSemProofs.entropy.html">OpSemProofs.entropy</a>]<br/>
+<a href="OpSemProofs.entropy.html#3f47f6a7fc05e816047de1ebd2a32693">πR</a> [in <a href="OpSemProofs.entropy.html">OpSemProofs.entropy</a>]<br/>
+<a href="OpSemProofs.entropy.html#6677286d0940501a2e83ff8bb3d27013">πR_n</a> [in <a href="OpSemProofs.entropy.html">OpSemProofs.entropy</a>]<br/>
+<a href="OpSemProofs.entropy.html#971eb5e4646db967b76d8e1df6479825">π_leftover</a> [in <a href="OpSemProofs.entropy.html">OpSemProofs.entropy</a>]<br/>
+<a href="OpSemProofs.entropy.html#2fe603edf83c8dec6d60e8ad17b3bb61">π_n_leftover</a> [in <a href="OpSemProofs.entropy.html">OpSemProofs.entropy</a>]<br/>
+<a href="OpSemProofs.entropy.html#8d545b848d66b8e7e32685f333266ba3">π_n</a> [in <a href="OpSemProofs.entropy.html">OpSemProofs.entropy</a>]<br/>
+<br/><br/><hr/>
+<h1>Record Index</h1>
+<a name="record_I"></a><h2>I </h2>
+<a href="OpSemProofs.integration.html#interchangable">interchangable</a> [in <a href="OpSemProofs.integration.html">OpSemProofs.integration</a>]<br/>
+<br/><br/><a name="record_L"></a><h2>L </h2>
+<a href="OpSemProofs.using_relations.html#Lift.type">Lift.type</a> [in <a href="OpSemProofs.using_relations.html">OpSemProofs.using_relations</a>]<br/>
+<br/><br/><a name="record_P"></a><h2>P </h2>
+<a href="OpSemProofs.ctxequiv.html#Plug.type">Plug.type</a> [in <a href="OpSemProofs.ctxequiv.html">OpSemProofs.ctxequiv</a>]<br/>
+<br/><br/><hr/><table>
+<tr>
+<td>Global Index</td>
+<td><a href="indexpage.html#global_A">A</a></td>
+<td><a href="indexpage.html#global_B">B</a></td>
+<td><a href="indexpage.html#global_C">C</a></td>
+<td><a href="indexpage.html#global_D">D</a></td>
+<td><a href="indexpage.html#global_E">E</a></td>
+<td><a href="indexpage.html#global_F">F</a></td>
+<td><a href="indexpage.html#global_G">G</a></td>
+<td>H</td>
+<td><a href="indexpage.html#global_I">I</a></td>
+<td><a href="indexpage.html#global_J">J</a></td>
+<td><a href="indexpage.html#global_K">K</a></td>
+<td><a href="indexpage.html#global_L">L</a></td>
+<td><a href="indexpage.html#global_M">M</a></td>
+<td>N</td>
+<td><a href="indexpage.html#global_O">O</a></td>
+<td><a href="indexpage.html#global_P">P</a></td>
+<td>Q</td>
+<td><a href="indexpage.html#global_R">R</a></td>
+<td><a href="indexpage.html#global_S">S</a></td>
+<td><a href="indexpage.html#global_T">T</a></td>
+<td><a href="indexpage.html#global_U">U</a></td>
+<td><a href="indexpage.html#global_V">V</a></td>
+<td><a href="indexpage.html#global_W">W</a></td>
+<td>X</td>
+<td>Y</td>
+<td>Z</td>
+<td>_</td>
+<td><a href="indexpage.html#global_*">other</a></td>
+<td>(414 entries)</td>
+</tr>
+<tr>
+<td>Notation Index</td>
+<td>A</td>
+<td>B</td>
+<td>C</td>
+<td>D</td>
+<td>E</td>
+<td>F</td>
+<td>G</td>
+<td>H</td>
+<td>I</td>
+<td>J</td>
+<td>K</td>
+<td>L</td>
+<td>M</td>
+<td>N</td>
+<td>O</td>
+<td>P</td>
+<td>Q</td>
+<td>R</td>
+<td>S</td>
+<td>T</td>
+<td>U</td>
+<td>V</td>
+<td>W</td>
+<td>X</td>
+<td>Y</td>
+<td>Z</td>
+<td>_</td>
+<td><a href="indexpage.html#notation_*">other</a></td>
+<td>(30 entries)</td>
+</tr>
+<tr>
+<td>Module Index</td>
+<td>A</td>
+<td>B</td>
+<td>C</td>
+<td>D</td>
+<td><a href="indexpage.html#module_E">E</a></td>
+<td>F</td>
+<td>G</td>
+<td>H</td>
+<td>I</td>
+<td>J</td>
+<td>K</td>
+<td><a href="indexpage.html#module_L">L</a></td>
+<td>M</td>
+<td>N</td>
+<td>O</td>
+<td><a href="indexpage.html#module_P">P</a></td>
+<td>Q</td>
+<td>R</td>
+<td>S</td>
+<td>T</td>
+<td>U</td>
+<td>V</td>
+<td>W</td>
+<td>X</td>
+<td>Y</td>
+<td>Z</td>
+<td>_</td>
+<td>other</td>
+<td>(3 entries)</td>
+</tr>
+<tr>
+<td>Library Index</td>
+<td>A</td>
+<td>B</td>
+<td><a href="indexpage.html#library_C">C</a></td>
+<td><a href="indexpage.html#library_D">D</a></td>
+<td><a href="indexpage.html#library_E">E</a></td>
+<td>F</td>
+<td>G</td>
+<td>H</td>
+<td><a href="indexpage.html#library_I">I</a></td>
+<td>J</td>
+<td>K</td>
+<td>L</td>
+<td>M</td>
+<td>N</td>
+<td>O</td>
+<td><a href="indexpage.html#library_P">P</a></td>
+<td>Q</td>
+<td><a href="indexpage.html#library_R">R</a></td>
+<td><a href="indexpage.html#library_S">S</a></td>
+<td>T</td>
+<td><a href="indexpage.html#library_U">U</a></td>
+<td>V</td>
+<td>W</td>
+<td>X</td>
+<td>Y</td>
+<td>Z</td>
+<td>_</td>
+<td>other</td>
+<td>(11 entries)</td>
+</tr>
+<tr>
+<td>Lemma Index</td>
+<td><a href="indexpage.html#lemma_A">A</a></td>
+<td><a href="indexpage.html#lemma_B">B</a></td>
+<td><a href="indexpage.html#lemma_C">C</a></td>
+<td><a href="indexpage.html#lemma_D">D</a></td>
+<td><a href="indexpage.html#lemma_E">E</a></td>
+<td><a href="indexpage.html#lemma_F">F</a></td>
+<td>G</td>
+<td>H</td>
+<td><a href="indexpage.html#lemma_I">I</a></td>
+<td><a href="indexpage.html#lemma_J">J</a></td>
+<td>K</td>
+<td><a href="indexpage.html#lemma_L">L</a></td>
+<td><a href="indexpage.html#lemma_M">M</a></td>
+<td>N</td>
+<td>O</td>
+<td><a href="indexpage.html#lemma_P">P</a></td>
+<td>Q</td>
+<td><a href="indexpage.html#lemma_R">R</a></td>
+<td><a href="indexpage.html#lemma_S">S</a></td>
+<td><a href="indexpage.html#lemma_T">T</a></td>
+<td><a href="indexpage.html#lemma_U">U</a></td>
+<td><a href="indexpage.html#lemma_V">V</a></td>
+<td><a href="indexpage.html#lemma_W">W</a></td>
+<td>X</td>
+<td>Y</td>
+<td>Z</td>
+<td>_</td>
+<td><a href="indexpage.html#lemma_*">other</a></td>
+<td>(134 entries)</td>
+</tr>
+<tr>
+<td>Constructor Index</td>
+<td><a href="indexpage.html#constructor_A">A</a></td>
+<td>B</td>
+<td><a href="indexpage.html#constructor_C">C</a></td>
+<td><a href="indexpage.html#constructor_D">D</a></td>
+<td><a href="indexpage.html#constructor_E">E</a></td>
+<td><a href="indexpage.html#constructor_F">F</a></td>
+<td><a href="indexpage.html#constructor_G">G</a></td>
+<td>H</td>
+<td><a href="indexpage.html#constructor_I">I</a></td>
+<td>J</td>
+<td>K</td>
+<td><a href="indexpage.html#constructor_L">L</a></td>
+<td><a href="indexpage.html#constructor_M">M</a></td>
+<td>N</td>
+<td>O</td>
+<td><a href="indexpage.html#constructor_P">P</a></td>
+<td>Q</td>
+<td>R</td>
+<td>S</td>
+<td>T</td>
+<td><a href="indexpage.html#constructor_U">U</a></td>
+<td>V</td>
+<td>W</td>
+<td>X</td>
+<td>Y</td>
+<td>Z</td>
+<td>_</td>
+<td><a href="indexpage.html#constructor_*">other</a></td>
+<td>(51 entries)</td>
+</tr>
+<tr>
+<td>Axiom Index</td>
+<td>A</td>
+<td>B</td>
+<td>C</td>
+<td>D</td>
+<td>E</td>
+<td>F</td>
+<td>G</td>
+<td>H</td>
+<td><a href="indexpage.html#axiom_I">I</a></td>
+<td>J</td>
+<td>K</td>
+<td><a href="indexpage.html#axiom_L">L</a></td>
+<td><a href="indexpage.html#axiom_M">M</a></td>
+<td>N</td>
+<td>O</td>
+<td>P</td>
+<td>Q</td>
+<td><a href="indexpage.html#axiom_R">R</a></td>
+<td>S</td>
+<td><a href="indexpage.html#axiom_T">T</a></td>
+<td>U</td>
+<td>V</td>
+<td>W</td>
+<td>X</td>
+<td>Y</td>
+<td>Z</td>
+<td>_</td>
+<td><a href="indexpage.html#axiom_*">other</a></td>
+<td>(11 entries)</td>
+</tr>
+<tr>
+<td>Inductive Index</td>
+<td>A</td>
+<td>B</td>
+<td><a href="indexpage.html#inductive_C">C</a></td>
+<td><a href="indexpage.html#inductive_D">D</a></td>
+<td><a href="indexpage.html#inductive_E">E</a></td>
+<td>F</td>
+<td><a href="indexpage.html#inductive_G">G</a></td>
+<td>H</td>
+<td><a href="indexpage.html#inductive_I">I</a></td>
+<td>J</td>
+<td><a href="indexpage.html#inductive_K">K</a></td>
+<td>L</td>
+<td>M</td>
+<td>N</td>
+<td>O</td>
+<td>P</td>
+<td>Q</td>
+<td>R</td>
+<td>S</td>
+<td><a href="indexpage.html#inductive_T">T</a></td>
+<td><a href="indexpage.html#inductive_U">U</a></td>
+<td><a href="indexpage.html#inductive_V">V</a></td>
+<td>W</td>
+<td>X</td>
+<td>Y</td>
+<td>Z</td>
+<td>_</td>
+<td>other</td>
+<td>(16 entries)</td>
+</tr>
+<tr>
+<td>Projection Index</td>
+<td>A</td>
+<td>B</td>
+<td>C</td>
+<td>D</td>
+<td>E</td>
+<td>F</td>
+<td>G</td>
+<td>H</td>
+<td><a href="indexpage.html#projection_I">I</a></td>
+<td>J</td>
+<td>K</td>
+<td><a href="indexpage.html#projection_L">L</a></td>
+<td>M</td>
+<td>N</td>
+<td>O</td>
+<td><a href="indexpage.html#projection_P">P</a></td>
+<td>Q</td>
+<td>R</td>
+<td>S</td>
+<td>T</td>
+<td>U</td>
+<td>V</td>
+<td>W</td>
+<td>X</td>
+<td>Y</td>
+<td>Z</td>
+<td>_</td>
+<td>other</td>
+<td>(4 entries)</td>
+</tr>
+<tr>
+<td>Instance Index</td>
+<td><a href="indexpage.html#instance_A">A</a></td>
+<td>B</td>
+<td>C</td>
+<td>D</td>
+<td><a href="indexpage.html#instance_E">E</a></td>
+<td><a href="indexpage.html#instance_F">F</a></td>
+<td><a href="indexpage.html#instance_G">G</a></td>
+<td>H</td>
+<td><a href="indexpage.html#instance_I">I</a></td>
+<td>J</td>
+<td>K</td>
+<td>L</td>
+<td><a href="indexpage.html#instance_M">M</a></td>
+<td>N</td>
+<td>O</td>
+<td><a href="indexpage.html#instance_P">P</a></td>
+<td>Q</td>
+<td><a href="indexpage.html#instance_R">R</a></td>
+<td><a href="indexpage.html#instance_S">S</a></td>
+<td>T</td>
+<td><a href="indexpage.html#instance_U">U</a></td>
+<td><a href="indexpage.html#instance_V">V</a></td>
+<td>W</td>
+<td>X</td>
+<td>Y</td>
+<td>Z</td>
+<td>_</td>
+<td>other</td>
+<td>(41 entries)</td>
+</tr>
+<tr>
+<td>Definition Index</td>
+<td><a href="indexpage.html#definition_A">A</a></td>
+<td><a href="indexpage.html#definition_B">B</a></td>
+<td><a href="indexpage.html#definition_C">C</a></td>
+<td><a href="indexpage.html#definition_D">D</a></td>
+<td><a href="indexpage.html#definition_E">E</a></td>
+<td><a href="indexpage.html#definition_F">F</a></td>
+<td>G</td>
+<td>H</td>
+<td><a href="indexpage.html#definition_I">I</a></td>
+<td><a href="indexpage.html#definition_J">J</a></td>
+<td>K</td>
+<td><a href="indexpage.html#definition_L">L</a></td>
+<td><a href="indexpage.html#definition_M">M</a></td>
+<td>N</td>
+<td><a href="indexpage.html#definition_O">O</a></td>
+<td><a href="indexpage.html#definition_P">P</a></td>
+<td>Q</td>
+<td><a href="indexpage.html#definition_R">R</a></td>
+<td><a href="indexpage.html#definition_S">S</a></td>
+<td><a href="indexpage.html#definition_T">T</a></td>
+<td><a href="indexpage.html#definition_U">U</a></td>
+<td><a href="indexpage.html#definition_V">V</a></td>
+<td><a href="indexpage.html#definition_W">W</a></td>
+<td>X</td>
+<td>Y</td>
+<td>Z</td>
+<td>_</td>
+<td><a href="indexpage.html#definition_*">other</a></td>
+<td>(110 entries)</td>
+</tr>
+<tr>
+<td>Record Index</td>
+<td>A</td>
+<td>B</td>
+<td>C</td>
+<td>D</td>
+<td>E</td>
+<td>F</td>
+<td>G</td>
+<td>H</td>
+<td><a href="indexpage.html#record_I">I</a></td>
+<td>J</td>
+<td>K</td>
+<td><a href="indexpage.html#record_L">L</a></td>
+<td>M</td>
+<td>N</td>
+<td>O</td>
+<td><a href="indexpage.html#record_P">P</a></td>
+<td>Q</td>
+<td>R</td>
+<td>S</td>
+<td>T</td>
+<td>U</td>
+<td>V</td>
+<td>W</td>
+<td>X</td>
+<td>Y</td>
+<td>Z</td>
+<td>_</td>
+<td>other</td>
+<td>(3 entries)</td>
+</tr>
+</table>
+</div>
+<div id="footer">
+  Generated by <a href="http://coq.inria.fr/">coqdoc</a> and improved with <a href="https://github.com/tebbi/coqdocjs">CoqdocJS</a>
+</div>
+</div>
+</body>
+
+</html>
