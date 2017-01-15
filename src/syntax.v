@@ -797,16 +797,6 @@ Inductive eval (σ : Entropy) : forall {τ} (e : expr · τ) (v : val τ) (w : R
 where "'EVAL' σ ⊢ e ⇓ v , w" := (@eval σ _ e v w)
 .
 
-(** A rewording of EVAL_val that's sometimes easier to apply. *)
-Definition EVAL_val' (σ : Entropy) {τ} (e : expr · τ) (v : val τ) :
-  e = v ->
-  (EVAL σ ⊢ e ⇓ v, 1).
-Proof.
-  intros.
-  rewrite H.
-  apply EVAL_val.
-Qed.
-
 (** [inversion] has a hard time recognizing that [EVAL_val] is the only
     constructor that evaluates a value, so we use lemma instead. *)
 Lemma invert_eval_val {σ τ} {v v' : val τ} {w} :

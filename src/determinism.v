@@ -1,17 +1,17 @@
-Require Import Reals.
-Require Import List.
-Require Import Ensembles.
-Require Import Coq.Logic.FunctionalExtensionality.
-Require Import Coq.Logic.ProofIrrelevance.
-Require Import Coq.Logic.JMeq.
-Require Import Coq.Program.Equality.
-Require Import Coq.Program.Basics.
-Require Import Coq.fourier.Fourier.
-Require Import syntax.
-Require Import utils.
-Require Import micromega.Lia.
+(** This file is very boring. It simply says that our language is deterministic,
+    and we could have written evaluation as a parital function if our
+    implementation language allowed general recursion.
 
-Import EqNotations.
+    ----
+
+    The only exports of interest from this file will be contained in the module
+    [eval_dec] at the very bottom. *)
+
+Require Import Coq.Reals.Reals.
+Require Import Coq.Lists.List.
+
+Require Import utils.
+Require Import syntax.
 
 Local Open Scope ennr.
 
@@ -57,20 +57,27 @@ Definition dG_rel Γ (ρ : wt_env Γ) : Type :=
 Lemma apply_dG_rel {Γ ρ} :
   dG_rel Γ ρ ->
   forall x τ (v : val τ),
-    lookup Γ x = Some τ ->
-    dep_lookup ρ x = Some (existT _ τ v) ->
+    erase v = erase_wt_env ρ x ->
     dV_rel τ v.
 Proof.
   intros.
-  revert Γ ρ H H0 X.
+  revert Γ ρ H X.
   induction x; intros. {
-    destruct ρ; inversion H; subst.
-    simpl in *.
-    dependent destruction H0.
+    dep_destruct ρ. {
+      destruct_val v; subst; discriminate.
+    }
     destruct X.
+    cbn in H.
+    pose proof (expr_type_unique _ _ H).
+    subst.
+    elim_erase_eqs.
+    apply val_eq in H.
+    subst.
     auto.
   } {
-    destruct ρ; inversion H; subst.
+    dep_destruct ρ. {
+      destruct_val v; subst; discriminate.
+    }
     simpl in *.
     eapply IHx; eauto.
     destruct X.
@@ -99,14 +106,13 @@ Proof.
   elim_sig_exprs.
 
   split; [repeat constructor |]. {
-    apply EPure'.
-    apply erase_injective.
-    auto.
+    elim_erase_eqs.
+    rewrite rewrite_v_real.
+    apply EVAL_val.
   } {
     intros.
     destruct_val v'.
     dep_destruct H.
-    simpl.
     auto.
   }
 Qed.
@@ -116,13 +122,12 @@ Lemma compat_var Γ x τ Hx :
 Proof.
   left.
 
-  destruct (env_search ρ Hx) as [v ρv].
+  destruct (env_search_subst ρ Hx) as [v ?].
+  exists (v, 1).
 
   elim_sig_exprs.
-  pose proof (lookup_subst _ ρv).
   elim_erase_eqs.
 
-  exists (v, 1).
   split; [repeat constructor |]; auto. {
     eapply apply_dG_rel; eauto.
   } {
@@ -155,8 +160,8 @@ Proof.
 
     exact Hbody.
   } {
-    apply EPure'.
-    auto.
+    rewrite rewrite_v_lam.
+    apply EVAL_val.
   } {
     intros.
     change (EVAL σ ⊢ v_lam e ⇓ v', w') in H.
@@ -373,7 +378,6 @@ Proof.
 Qed.
 
 Module eval_dec.
-
   Inductive eval_dec_result {τ} (e : expr · τ) (σ : Entropy) :=
   | eval_dec_ex_unique
       (v : val τ) (w : R+) (ev : EVAL σ ⊢ e ⇓ v, w)

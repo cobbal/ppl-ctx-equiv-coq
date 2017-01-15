@@ -5,3 +5,4 @@ src/utils.v
 src/entropy.v
 src/integration.v
 src/syntax.v
+src/determinism.v
