@@ -1,3 +1,11 @@
+(** Entropy is the source of all randomness in an evaluation. The particular
+    representation we choose is the Hilbert cube #(ℕ → [0, 1])#. In particular,
+    the properties we use on it are that an entropy source can be split into two
+    entropy sources through the operations [πL] and [πR], which are defined here
+    and axiomatized to be IID in [integration_πL_πR]. When it actually comes to
+    using an entropy [σ], it is also convenient to split it into arbitrarily
+    many indepent parts, as (π 0 σ), (π 1 σ), ... *)
+
 Require Import Reals.
 Require Import utils.
 
@@ -5,8 +13,15 @@ Local Open Scope R.
 
 Definition Entropy := nat -> {r : R | 0 <= r <= 1}.
 
+(** The projection functions don't muck with any real numbers, just shuffle
+    indices around. [πL_n] and the like are the exact index shuffling needed for
+    [πL] and the like. *)
 Definition πL_n : nat -> nat := fun n => (n + n)%nat.
 Definition πR_n : nat -> nat := fun n => S (n + n)%nat.
+
+(** [join] is the inverse of projections, that is [σ = join (πL σ) (πR σ)]. This
+    is later proved as [join_πL_πR]. This is finally automated in the tactic
+    [π_join]. *)
 Definition join' {A} (L R : nat -> A) : nat -> A :=
   fun n =>
     if Nat.even n
@@ -48,6 +63,7 @@ Proof.
 Qed.
 
 Lemma join_πL_πR σ : join (πL σ) (πR σ) = σ.
+Proof.
   extensionality n.
   unfold join, join', πL, πR, πL_n, πR_n, compose.
   destruct (Nat.Even_or_Odd n). {

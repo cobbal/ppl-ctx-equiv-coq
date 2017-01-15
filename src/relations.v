@@ -10,13 +10,12 @@ Require Import Coq.Setoids.Setoid.
 Require Import syntax.
 Require Import utils.
 Require Import Coq.Classes.Morphisms.
+Require Import integration.
 Import EqNotations.
 Require determinism.
 Import determinism.eval_dec.
 
 Local Open Scope ennr.
-
-Definition Event X := X -> bool.
 
 Definition ev {τ} (e : expr · τ) σ : option (val τ) :=
   match eval_dec e σ with
@@ -30,110 +29,9 @@ Definition ew {τ} (e : expr · τ) σ : R+ :=
   | eval_dec_not_ex _ => 0
   end.
 
-(* ifte is a function version of "if then else" so that f_equal can deal with it *)
-Definition ifte {X} (a : bool) (b c : X) := if a then b else c.
-Definition indicator {X} (b : Event X) : X -> R+ := fun x => ifte (b x) 1 0.
-
-Definition Meas A := (Event A -> R+).
-
 Definition eval_in {τ} (e : expr · τ) σ : Meas (val τ) :=
   fun A =>
     option0 (indicator A <$> ev e σ) * ew e σ.
-
-Axiom μEntropy : Meas Entropy.
-
-Axiom integration : forall {A}, (A -> R+) -> Meas A -> R+.
-
-(* show (∫ f dμ = ∫ g dμ) by showing pointwise equality *)
-Ltac integrand_extensionality x :=
-  refine (f_equal2 integration _ eq_refl); extensionality x.
-
-Axiom integration_linear :
-  forall {A} (μ : Meas A) (s0 s1 : R+) (f0 f1 : A -> R+),
-    s0 * integration f0 μ + s1 * integration f1 μ =
-    integration (fun x => s0 * f0 x + s1 * f1 x) μ.
-
-Lemma integration_linear_mult_r :
-  forall {A} (μ : Meas A) (s : R+) (f : A -> R+),
-    integration f μ * s =
-    integration (fun x => f x * s) μ.
-Proof.
-  intros.
-
-  replace (integration f μ * s)
-  with (s * integration f μ + 0 * integration f μ)
-    by ring.
-
-  rewrite integration_linear.
-  integrand_extensionality x.
-  ring.
-Qed.
-
-Lemma integration_linear_mult_l :
-  forall {A} (μ : Meas A) (s : R+) (f : A -> R+),
-    s * integration f μ =
-    integration (fun x => s * f x) μ.
-Proof.
-  intros.
-  rewrite ennr_mul_comm.
-  rewrite integration_linear_mult_r.
-  integrand_extensionality x.
-  ring.
-Qed.
-
-Definition bool_of_dec {A B} : sumbool A B -> bool :=
-  fun x => if x then true else false.
-
-Axiom lebesgue_pos_measure : Meas R+.
-Axiom lebesgue_pos_measure_interval :
-  forall (r : R+),
-    lebesgue_pos_measure (fun x => bool_of_dec (r [>] x)) = r.
-
-Axiom riemann_def_of_lebesgue_integration :
-  forall {A} μ (f : A -> R+),
-    integration f μ =
-    integration
-      (fun t => μ (fun x => bool_of_dec (f x [>] t)))
-      lebesgue_pos_measure.
-
-Axiom integration_of_indicator :
-  forall {A}
-         (m : Meas A)
-         (f : Event A),
-    integration (fun x => indicator f x) m = m f.
-
-Definition meas_bind {A B} (μ : Meas A) (f : A -> Meas B) : Meas B :=
-  fun ev => integration (fun a => f a ev) μ.
-Infix ">>=" := meas_bind (at level 20).
-
-Definition fold_bind {A B} (μ : Meas A) (f : A -> Meas B) V :
-  integration (fun a => f a V) μ = (μ >>= f) V := eq_refl.
-
-Definition dirac {A} (v : A) : Meas A :=
-  fun e => indicator e v.
-
-Lemma meas_id_left {A B} b (f : A -> Meas B) :
-  dirac b >>= f = f b.
-Proof.
-  extensionality ev.
-  unfold ">>=".
-  unfold dirac.
-  rewrite riemann_def_of_lebesgue_integration.
-  setoid_rewrite integration_of_indicator.
-  apply lebesgue_pos_measure_interval.
-Qed.
-
-Lemma meas_id_right {A} (μ : Meas A) :
-  μ >>= dirac = μ.
-Proof.
-  extensionality ev.
-  apply integration_of_indicator.
-Qed.
-
-Lemma meas_bind_assoc {A B C} (μ : Meas A) (f : A -> Meas B) (g : B -> Meas C) :
-  (μ >>= f) >>= g = μ >>= (fun x => f x >>= g).
-Proof.
-Admitted.
 
 Definition μ {τ} (e : expr · τ) : Meas (val τ) :=
   μEntropy >>= eval_in e.
@@ -197,14 +95,14 @@ Proof.
   intros.
   revert Γ ρ0 ρ1 H H0 H1 H2.
   induction x; intros. {
-    d_destruct (Γ, H0).
-    d_destruct (ρ0, ρ1, H1, H2).
-    d_destruct H.
+    dep_destruct (Γ, H0).
+    dep_destruct (ρ0, ρ1, H1, H2).
+    dep_destruct H.
     auto.
   } {
-    d_destruct (Γ, H0).
-    d_destruct (ρ0, ρ1, H1, H2).
-    d_destruct H.
+    dep_destruct (Γ, H0).
+    dep_destruct (ρ0, ρ1, H1, H2).
+    dep_destruct H.
     eapply IHx; eauto.
   }
 Qed.
@@ -231,7 +129,7 @@ Ltac decide_eval' e σ v w ex u :=
   destruct (eval_dec e σ) as [v w ex u | not_ex];
   subst focus_ev focus_ew;
   [| try solve [ econtradict not_ex
-               | ennr
+               | Finite
                | ring]
   ].
 
@@ -249,22 +147,6 @@ Ltac what_equality_am_I_proving :=
   | [ |- @eq ?t ?l ?r ] => idtac "proving" l "=" r "at type" t
   | _ => idtac "it doesn't look like your goal is an equality"
   end.
-
-(* TODO: rewrite as μEntropy(True) = 1 and linearity *)
-Axiom int_const_entropy :
-  forall (v : R+)
-         (f : Entropy -> R+),
-    (forall x, f x = v) ->
-    integration f μEntropy = v.
-
-Lemma is_val_of_is_pure {τ} (e : expr · τ) :
-  is_pure e ->
-  is_val e.
-Proof.
-  intros.
-  destruct e; try contradiction H; trivial.
-  discriminate H0.
-Qed.
 
 Lemma val_is_atomic {τ} (v : val τ) A σ :
   eval_in v σ A =
@@ -284,7 +166,7 @@ Lemma val_is_dirac {τ} (v : val τ) :
 Proof.
   extensionality A.
   unfold μ, dirac; simpl.
-  apply int_const_entropy; intro σ.
+  apply integration_const_entropy; intro σ.
   erewrite val_is_atomic.
   reflexivity.
 Qed.
@@ -301,8 +183,8 @@ Lemma compat_real Γ r :
 Proof.
   repeat intro.
   elim_sig_exprs.
-  d_destruct (e, He).
-  d_destruct (e0, He0).
+  dep_destruct (e, He).
+  dep_destruct (e0, He0).
 
   change (μ (v_real r) A0 = μ (v_real r) A1).
   rewrite val_is_dirac.
@@ -341,8 +223,8 @@ Lemma compat_lam Γ τa τr body0 body1 :
 Proof.
   repeat intro.
   elim_sig_exprs.
-  d_destruct (e, He).
-  d_destruct (e0, He0).
+  dep_destruct (e, He).
+  dep_destruct (e0, He0).
 
   rewrite 2 lam_is_dirac.
 
@@ -366,130 +248,36 @@ Proof.
   apply H.
 Qed.
 
-Inductive SigmaFinite : forall {A}, Meas A -> Prop :=
-| ent_finite : SigmaFinite μEntropy
-| leb_finite : SigmaFinite lebesgue_pos_measure.
-Hint Constructors SigmaFinite.
-
-Lemma tonelli_sigma_finite :
-  forall {A B} (f : A -> B -> R+) (μx : Meas A) (μy : Meas B),
-    SigmaFinite μx ->
-    SigmaFinite μy ->
-    integration (fun x => integration (fun y => f x y) μy) μx =
-    integration (fun y => integration (fun x => f x y) μx) μy.
-Admitted.
-
-Definition preimage {A B C} (f : A -> B) : (B -> C) -> (A -> C) :=
-  fun eb a => eb (f a).
-
-(* Lemma 3 *)
-Lemma coarsening :
-  forall {X}
-         (M : relation (Event X))
-         (μ0 μ1 : Meas X)
-         (f0 f1 : X -> R+)
-         (μs_agree : forall A0 A1, M A0 A1 -> μ0 A0 = μ1 A1)
-         (f_is_M_measurable :
-            forall (B : Event R+),
-              M (preimage f0 B) (preimage f1 B)),
-    integration f0 μ0 = integration f1 μ1.
+Theorem μe_as_pushforard {τ} (e : expr · τ) :
+  μ e = meas_option (pushforward (score_meas (ew e) μEntropy) (ev e)).
 Proof.
   intros.
+
+  extensionality A.
+  unfold μ, meas_bind, meas_option, pushforward, score_meas, compose, preimage, eval_in.
   setoid_rewrite riemann_def_of_lebesgue_integration.
-
   integrand_extensionality t.
-  apply μs_agree.
+  f_equal.
+  extensionality σ.
 
-  specialize (f_is_M_measurable (fun fx => bool_of_dec (fx [>] t))).
-  unfold preimage in f_is_M_measurable.
-  exact f_is_M_measurable.
+  unfold indicator.
+  rewrite ennr_mul_comm.
+  destruct ev; auto.
 Qed.
 
-(* Lemma 5 *)
-Axiom integration_πL_πR : forall (g : Entropy -> Entropy -> R+),
-    integration (fun σ => g (πL σ) (πR σ)) μEntropy =
-    integration (fun σL => integration (fun σR => g σL σR) μEntropy) μEntropy.
-
-Lemma bind_πL_πR {B} (g : Entropy -> Entropy -> Meas B) :
-  μEntropy >>= (fun σ => g (πL σ) (πR σ)) =
-  μEntropy >>= (fun σL => μEntropy >>= (fun σR => g σL σR)).
+Lemma μ_interchangable τ0 τ1 (e0 : expr · τ0) (e1 : expr · τ1) : interchangable (μ e0) (μ e1).
 Proof.
-  extensionality ev.
-  unfold ">>=".
-  rewrite <- integration_πL_πR.
-  auto.
-Qed.
+  repeat intro.
+  rewrite 2 μe_as_pushforard.
 
-Lemma pick_3_and_leftover {B}
-      (g : Entropy -> Entropy -> Entropy -> Entropy -> Meas B) :
-  μEntropy >>= (fun σ => g (π 0 σ) (π 1 σ) (π 2 σ) (π_leftover 3 σ)) =
-  μEntropy >>= (fun σ0 =>
-  μEntropy >>= (fun σ1 =>
-  μEntropy >>= (fun σ2 =>
-  μEntropy >>= (fun σR =>
-                  g σ0 σ1 σ2 σR)))).
-Proof.
-  unfold π, π_leftover.
-
-  extensionality A.
-
-  transitivity
-    ((μEntropy >>=
-               (fun σ0 =>
-                  μEntropy >>=
-                           (fun σ =>
-                              g σ0 (πL σ) (πL (πR σ)) (πR (πR σ))))) A). {
-    rewrite <- bind_πL_πR.
-    auto.
-  }
-
-  integrand_extensionality σ0.
-  transitivity
-    ((μEntropy >>=
-               (fun σ1 =>
-                  μEntropy >>=
-                           (fun σ => g σ0 σ1 (πL σ) (πR σ)))) A). {
-    rewrite <- bind_πL_πR.
-      auto.
-  }
-
-  integrand_extensionality σ1.
-  rewrite <- bind_πL_πR.
-  auto.
-Qed.
-
-Lemma pick_3_entropies {B}
-      (g : Entropy -> Entropy -> Entropy -> Meas B) :
-  μEntropy >>= (fun σ => g (π 0 σ) (π 1 σ) (π 2 σ)) =
-  μEntropy >>= (fun σ0 =>
-  μEntropy >>= (fun σ1 =>
-  μEntropy >>= (fun σ2 =>
-                  g σ0 σ1 σ2))).
-Proof.
-  rewrite (pick_3_and_leftover (fun (σ0 σ1 σ2 σR : Entropy) => g σ0 σ1 σ2)).
-
-  extensionality A.
-
-  integrand_extensionality σ0.
-  integrand_extensionality σ1.
-  integrand_extensionality σ2.
-  setoid_rewrite int_const_entropy; auto.
-Qed.
-
-Lemma pick_2_entropies {B}
-      (g : Entropy -> Entropy -> Meas B) :
-  μEntropy >>= (fun σ => g (π 0 σ) (π 1 σ)) =
-  μEntropy >>= (fun σ0 =>
-  μEntropy >>= (fun σ1 =>
-                  g σ0 σ1)).
-Proof.
-  rewrite (pick_3_entropies (fun (σ0 σ1 σ2 : Entropy) => g σ0 σ1)).
-
-  extensionality A.
-
-  integrand_extensionality σ0.
-  integrand_extensionality σ1.
-  setoid_rewrite int_const_entropy; auto.
+  apply meas_option_interchangable.
+  apply pushforward_interchangable.
+  apply score_meas_interchangable.
+  apply interchangable_sym.
+  apply meas_option_interchangable.
+  apply pushforward_interchangable.
+  apply score_meas_interchangable.
+  apply sigma_finite_is_interchangable; auto.
 Qed.
 
 Theorem μe_eq_μEntropy :
@@ -519,9 +307,7 @@ Proof.
     setoid_rewrite integration_of_indicator.
     apply lebesgue_pos_measure_interval.
   } {
-    setoid_replace 0 with (0 * 0) by ring.
-    rewrite <- integration_linear_mult_r.
-    ring.
+    apply integration_of_0.
   }
 Qed.
 
@@ -584,7 +370,7 @@ Proof.
       simpl.
 
       destruct (ul _ _ ex0_1), (ur _ _ ex0_2); subst.
-      d_destruct (H, H1).
+      dep_destruct (H, H1).
 
       unfold plus_in; simpl.
       ring.
@@ -630,7 +416,7 @@ Proof.
   destruct_val vr1.
 
   hnf in Hvl, Hvr.
-  d_destruct (Hvl, Hvr).
+  dep_destruct (Hvl, Hvr).
   unfold plus_in; simpl.
 
   unfold indicator.
@@ -652,8 +438,8 @@ Proof.
   specialize (Hr _ _ Hρ).
 
   elim_sig_exprs.
-  d_destruct (e3, He3).
-  d_destruct (e4, He4).
+  dep_destruct (e3, He3).
+  dep_destruct (e4, He4).
   elim_erase_eqs.
 
   apply work_of_plus; auto.
@@ -664,32 +450,13 @@ Definition apply_in {τa τr}
         (va : val τa)
         (σ : Entropy)
   : Meas (val τr) :=
-  val_arrow_rect
-    (const (Meas (val τr)))
-    (fun body => eval_in (proj1_sig (ty_subst1 body va)) σ)
-    vf.
-
-(* ugly, ugly proof, relies on internals of WT_Val_arrow_rect *)
-Lemma elim_apply_in {τa τr} (body : expr (τa :: ·) τr) :
-  forall (va : val τa),
-    apply_in (v_lam body) va =
-    eval_in (proj1_sig (ty_subst1 body va)).
-Proof.
-  intros.
-
-  extensionality σ.
-  simpl.
-  unfold solution_left, solution_right, simplification_heq.
-  unfold eq_rect_r.
-  simpl.
-
-  replace (eq_sym _) with (@eq_refl _ (e_lam body)); auto.
-  apply UIP_dec.
-  apply expr_eq_dec.
-Qed.
-
-(* ok, let's never look inside apply_in ever again. It's too ugly *)
-Global Opaque apply_in.
+  match (vf : expr _ _) in (expr _ τ)
+        return (τ = τa ~> τr -> Meas (val τr))
+  with
+  | e_lam body => fun H => ltac:(inject H; refine (eval_in (proj1_sig (ty_subst1 body va)) σ))
+  | _ => (* this will never happen, but "0" is easier to use than ex_falso here *)
+    fun _ => empty_meas _
+  end eq_refl.
 
 Lemma by_μe_eq_μEntropy_app {τa τr}
       (ef : expr · (τa ~> τr))
@@ -713,17 +480,17 @@ Proof.
 
     unfold eval_in.
     decide_eval (e_app ef ea) σ as [vr wr exr ur]; simpl. {
-      d_destruct exr; try absurd_val.
+      dep_destruct exr; try absurd_val.
       rename va into va'.
       decide_eval ef (π 0 σ) as [vf wf exf uf].
       decide_eval ea (π 1 σ) as [va wa exa ua].
       simpl.
 
       destruct_val vf.
-      rewrite elim_apply_in.
+      cbn.
 
       destruct (uf _ _ exr1), (ua _ _ exr2); subst.
-      d_destruct H.
+      dep_destruct H.
 
       unfold eval_in.
 
@@ -737,7 +504,7 @@ Proof.
       simpl.
 
       destruct_val vf.
-      rewrite elim_apply_in.
+      cbn.
 
       unfold eval_in.
 
@@ -756,9 +523,9 @@ Proof.
 
     decide_eval ef σf as [vf wf exf uf]; simpl. {
       decide_eval ea σa as [va wa exa ua]; simpl; auto.
-      apply int_const_entropy; auto.
+      apply integration_const_entropy; auto.
     } {
-      apply int_const_entropy; auto.
+      apply integration_const_entropy; auto.
     }
   }
 Qed.
@@ -813,8 +580,8 @@ Proof.
   specialize (Ha _ _ Hρ).
 
   elim_sig_exprs.
-  d_destruct (e3, He3).
-  d_destruct (e4, He4).
+  dep_destruct (e3, He3).
+  dep_destruct (e4, He4).
   elim_erase_eqs.
 
   apply work_of_app; auto.
@@ -859,14 +626,14 @@ Proof.
 
   decide_eval (e_factor e) σ as [vr wr exr ur]; simpl. {
     destruct_val vr.
-    d_destruct exr; try absurd_val.
+    dep_destruct exr; try absurd_val.
 
     decide_eval as [ve we exe ue].
     destruct (ue _ _ exr); subst.
 
     unfold factor_in; simpl.
     destruct Rle_dec; [| contradiction].
-    replace (finite r r0) with (finite r rpos) by ennr.
+    replace (finite r r0) with (finite r rpos) by Finite.
     ring.
   } {
     decide_eval as [ve we exe ue].
@@ -899,7 +666,7 @@ Proof.
   destruct_val v0.
   destruct_val v1.
   simpl in *.
-  d_destruct Hv.
+  dep_destruct Hv.
 
   unfold factor_in; simpl.
   destruct Rle_dec; auto.
@@ -919,8 +686,8 @@ Proof.
   specialize (H _ _ Hρ).
 
   elim_sig_exprs.
-  d_destruct (e3, He3).
-  d_destruct (e4, He4).
+  dep_destruct (e3, He3).
+  dep_destruct (e4, He4).
   elim_erase_eqs.
 
   apply work_of_factor; auto.

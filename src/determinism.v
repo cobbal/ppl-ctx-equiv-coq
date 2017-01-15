@@ -19,9 +19,9 @@ Definition dE_rel' τ (dV_rel_τ : val τ -> Type) (e : expr · τ) : Type :=
   forall σ,
     {vw : (val τ * R+) &
           let (v, w) := vw in
-          (dV_rel_τ v)
-            ⨉ (EVAL σ ⊢ e ⇓ v, w)
-            ⨉ (forall v' w', (EVAL σ ⊢ e ⇓ v', w') -> v' = v /\ w' = w)
+          (dV_rel_τ v
+           * (EVAL σ ⊢ e ⇓ v, w)
+           * (forall v' w', (EVAL σ ⊢ e ⇓ v', w') -> v' = v /\ w' = w))%type
     } +
     ({vw : (val τ * R+) &
            let (v, w) := vw in EVAL σ ⊢ e ⇓ v, w}
@@ -105,7 +105,7 @@ Proof.
   } {
     intros.
     destruct_val v'.
-    d_destruct H.
+    dep_destruct H.
     simpl.
     auto.
   }
@@ -140,7 +140,7 @@ Proof.
   left.
 
   elim_sig_exprs.
-  d_destruct (e, He).
+  dep_destruct (e, He).
 
   exists (v_lam e, 1).
   constructor; [constructor |]. {
@@ -177,7 +177,7 @@ Proof.
   specialize (Hea ρ Hρ (π 1 σ)).
 
   elim_sig_exprs.
-  d_destruct (e1, He1).
+  dep_destruct (e1, He1).
   elim_erase_eqs.
 
   destruct Hef as [[[vf wf] [[Hvf EVAL_f] uf]] | not_ex]. {
@@ -192,11 +192,11 @@ Proof.
 
         constructor; [repeat econstructor |]; eauto.
         intros.
-        d_destruct H; try absurd_val.
+        dep_destruct H; try absurd_val.
 
         destruct (uf _ _ H).
         destruct (ua _ _ H0); subst.
-        d_destruct H2.
+        dep_destruct H2.
 
         destruct (ur _ _ H1); subst.
         auto.
@@ -206,11 +206,11 @@ Proof.
         contradict not_ex.
         destruct X as [[? ?] ?].
 
-        d_destruct y; try absurd_val.
+        dep_destruct y; try absurd_val.
 
         destruct (uf _ _ y1).
         destruct (ua _ _ y2); subst.
-        d_destruct H.
+        dep_destruct H.
 
         eexists (_, _); eauto.
       }
@@ -220,7 +220,7 @@ Proof.
       contradict not_ex.
       destruct X as [[? ?] ?].
 
-      d_destruct y; try absurd_val.
+      dep_destruct y; try absurd_val.
 
       eexists (_, _); eauto.
     }
@@ -230,7 +230,7 @@ Proof.
     contradict not_ex.
     destruct X as [[? ?] ?].
 
-    d_destruct y; try absurd_val.
+    dep_destruct y; try absurd_val.
 
     eexists (_, _); eauto.
   }
@@ -245,7 +245,7 @@ Proof.
   specialize (He ρ Hρ σ).
 
   elim_sig_exprs.
-  d_destruct (e1, He1).
+  dep_destruct (e1, He1).
   elim_erase_eqs.
 
   destruct He as [[[v w] [[Hv EVAL_e] u]] | not_ex]. {
@@ -256,22 +256,22 @@ Proof.
       exists (v_real r, finite r r0 * w).
       constructor; [repeat econstructor |]; eauto.
       intros.
-      d_destruct H; try absurd_val.
+      dep_destruct H; try absurd_val.
 
       destruct (u _ _ H); subst.
-      d_destruct H0.
+      dep_destruct H0.
       split; auto.
       f_equal.
-      ennr.
+      Finite.
     } {
       right.
       intros.
 
       destruct X as [[? ?] ?].
 
-      d_destruct y; try absurd_val.
+      dep_destruct y; try absurd_val.
       destruct (u _ _ y); subst.
-      d_destruct H.
+      dep_destruct H.
       contradiction rpos.
     }
   } {
@@ -280,7 +280,7 @@ Proof.
     contradict not_ex.
 
     destruct X as [[? ?] ?].
-    d_destruct y; try absurd_val.
+    dep_destruct y; try absurd_val.
     eexists (_, _); eauto.
   }
 Qed.
@@ -292,13 +292,13 @@ Proof.
   left.
 
   elim_sig_exprs.
-  d_destruct (e, He).
+  dep_destruct (e, He).
 
   eexists (_, _).
   constructor; [repeat econstructor |]; eauto.
   intros.
 
-  d_destruct H; try absurd_val.
+  dep_destruct H; try absurd_val.
   simpl.
   auto.
 Qed.
@@ -314,7 +314,7 @@ Proof.
   specialize (Her ρ Hρ (π 1 σ)).
 
   elim_sig_exprs.
-  d_destruct (e1, He1).
+  dep_destruct (e1, He1).
   elim_erase_eqs.
 
   destruct Hel as [[[vl wl] [[Hvl EVAL_l] ul]] | not_ex]. {
@@ -327,7 +327,7 @@ Proof.
       constructor; [repeat econstructor |]; eauto.
       intros.
 
-      d_destruct H; try absurd_val.
+      dep_destruct H; try absurd_val.
 
       destruct (ul _ _ H); subst.
       destruct (ur _ _ H0); subst.
@@ -342,7 +342,7 @@ Proof.
       contradict not_ex.
 
       destruct X as [[? ?] ?].
-      d_destruct y; try absurd_val.
+      dep_destruct y; try absurd_val.
 
       eexists (_, _); eauto.
     }
@@ -353,7 +353,7 @@ Proof.
     contradict not_ex.
 
     destruct X as [[? ?] ?].
-    d_destruct y; try absurd_val.
+    dep_destruct y; try absurd_val.
 
     eexists (_, _); eauto.
   }

@@ -1,3 +1,7 @@
 -R ./auto-subst/theories Autosubst -R ./src OpSemProofs
 
 src/ennr.v
+src/utils.v
+src/entropy.v
+src/integration.v
+src/syntax.v

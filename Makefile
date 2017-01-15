@@ -1,3 +1,11 @@
+EXTRA_DIR:=coqdocjs/extra
+COQDOCFLAGS:= \
+  --external 'https://www.ps.uni-saarland.de/autosubst/doc/' autosubst \
+  --toc --toc-depth 2 --html --interpolate \
+  --index indexpage --no-lib-name --parse-comments \
+  --with-header $(EXTRA_DIR)/header.html --with-footer $(EXTRA_DIR)/footer.html
+export COQDOCFLAGS
+
 all: coq
 
 auto-subst:
@@ -6,10 +14,11 @@ auto-subst:
 	mv auto-subst-unpack auto-subst
 
 coq: Makefile.coq
-	$(MAKE) -f Makefile.coq
+	@$(MAKE) -f Makefile.coq
 
-live-html: Makefile.coq html/live.js
-	$(MAKE) -f Makefile.coq COQDOCFLAGS="-interpolate -utf8 --no-lib-name" html
+html: Makefile.coq
+	@$(MAKE) -f Makefile.coq html
+	cp $(EXTRA_DIR)/resources/* html
 
 Makefile.coq: auto-subst Makefile _CoqProject src/*.v
 	coq_makefile -f _CoqProject -o Makefile.coq

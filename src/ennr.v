@@ -1,12 +1,17 @@
-(** This file defines the extended non-negative real type [ennr] representing a
-    number in the interval #[0, ∞]#. *)
+(** printing ennr #R<sup><small>+</small></sup># *)
 
-Require Import Basics.
-Require Import Reals.
+(** This file defines the extended non-negative real type [ennr] representing a
+    number in the interval #[0, ∞]#. We will define integrals to be over [ennr]
+    as we are only interested in integrating measures and markov kernels.
+
+    This file lifts several useful definitions and theorems from [R], and proves
+    that [ennr] forms a semiring so that the [ring] tactic will apply. *)
+
+Require Import Coq.Program.Basics.
+Require Import Coq.Reals.Reals.
 Require Import Coq.fourier.Fourier.
 Require Import Coq.setoid_ring.Ring_theory.
-Require Import Morphisms.
-Require Import ProofIrrelevance.
+Require Import Coq.Logic.ProofIrrelevance.
 
 Delimit Scope ennr_scope with ennr.
 
@@ -16,10 +21,28 @@ Export RingSyntax.
 
 Inductive ennr :=
 | finite (r : R) (r_pos : 0 <= r)
-| infinite
-.
+| infinite.
 Notation "R+" := ennr : type_scope.
 
+(** * Equality *)
+
+(** Equality between finite [ennr]s is shown to be exactly equality on [R]
+    through the genererous help of [proof_irrelevance]. It would probably be
+    possible to prove the important results without relying on proof
+    irrelevance, but it simplifies things greatly here. *)
+Lemma finite_inj r0 r0_pos r1 r1_pos :
+  r0 = r1 ->
+  finite r0 r0_pos = finite r1 r1_pos.
+Proof.
+  intros.
+  subst.
+  f_equal.
+  apply proof_irrelevance.
+Qed.
+Hint Immediate finite_inj.
+Ltac Finite := apply finite_inj; try solve [cbn; ring].
+
+(** * [ennr] is a semiring *)
 Program Definition ennr_0 := finite 0 (Rle_refl _).
 Program Definition ennr_1 := finite 1 Rle_0_1.
 Notation "0" := ennr_0.
@@ -46,38 +69,26 @@ Definition ennr_mult (a b : R+) : R+ :=
   end.
 Infix "*" := ennr_mult.
 
-Lemma finite_inj r0 r0_pos r1 r1_pos :
-  r0 = r1 ->
-  finite r0 r0_pos = finite r1 r1_pos.
-Proof.
-  intros.
-  subst.
-  f_equal.
-  apply proof_irrelevance.
-Qed.
-Hint Immediate finite_inj.
-
-Ltac ennr := apply finite_inj; try (simpl; ring).
 
 Lemma ennr_add_0_l : forall n, 0 + n = n.
 Proof.
-  destruct n; auto; ennr.
+  destruct n; auto; Finite.
 Qed.
 
 Lemma ennr_add_comm : forall n m, n + m = m + n.
 Proof.
-  destruct n, m; auto; ennr.
+  destruct n, m; auto; Finite.
 Qed.
 
 Lemma ennr_add_assoc : forall n m p, n + (m + p) = (n + m) + p.
 Proof.
-  destruct n, m, p; auto; ennr.
+  destruct n, m, p; auto; Finite.
 Qed.
 
 Lemma ennr_mul_1_l : forall n, 1 * n = n.
 Proof.
   destruct n; simpl; auto.
-  - ennr.
+  - Finite.
   - destruct Req_EM_T; simpl; auto.
     fourier.
 Qed.
@@ -85,7 +96,7 @@ Qed.
 Lemma ennr_mul_0_l : forall n, 0 * n = 0.
 Proof.
   destruct n; simpl; auto.
-  - ennr.
+  - Finite.
   - destruct Req_EM_T; simpl; auto.
     contradict n.
     auto.
@@ -93,7 +104,7 @@ Qed.
 
 Lemma ennr_mul_comm : forall n m, n * m = m * n.
 Proof.
-  destruct n, m; auto; ennr.
+  destruct n, m; auto; Finite.
 Qed.
 
 Lemma ennr_mul_assoc : forall n m p, n * (m * p) = (n * m) * p.
@@ -116,7 +127,7 @@ Proof.
     subst;
     auto;
     solve
-      [ ennr
+      [ Finite
       | contradict n; ring
       | contradict n0; ring
       | contradict H; eauto
@@ -129,7 +140,7 @@ Proof.
     repeat (try destruct Req_EM_T; simpl);
     subst;
     auto;
-    try ennr.
+    try Finite.
   {
     contradict n.
     rewrite e.
@@ -159,6 +170,9 @@ Definition ennr_semiring :=
     ennr_mul_assoc
     ennr_distr_l
 .
+Add Ring ennr_semiring : ennr_semiring.
+
+(** * Misc definitions and facts about [ennr]. *)
 
 Definition ennr_lt (a b : R+) : Prop :=
   match a, b with
@@ -179,10 +193,6 @@ Proof.
   destruct a, b; simpl; auto.
   apply Rgt_dec.
 Qed.
-
-Notation "a  '[>]'  b" := (ennr_gt_dec a b) (at level 70, no associativity).
-
-Add Ring ennr_semiring : ennr_semiring.
 
 Lemma ennr_mul_1_r : forall n, n * 1 = n.
 Proof.

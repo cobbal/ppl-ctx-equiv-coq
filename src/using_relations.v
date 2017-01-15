@@ -285,6 +285,12 @@ Next Obligation.
   }
 Qed.
 
+Definition is_pure (e : u_expr) : Prop :=
+  match e with
+  | u_real _ | u_lam _ _ | u_var _ => True
+  | _ => False
+  end.
+
 Lemma beta_value {Γ τ τv}
       (e : expr (τv :: Γ) τ)
       (v : expr Γ τv) :
