@@ -86,12 +86,6 @@ Proof.
   }
 Qed.
 
-Fixpoint π_n (n : nat) : nat -> nat :=
-  match n with
-  | O => πL_n
-  | S n' => πR_n ∘ π_n n'
-  end.
-
 Fixpoint π (n : nat) (σ : Entropy) : Entropy :=
   match n with
   | O => πL σ
@@ -99,32 +93,12 @@ Fixpoint π (n : nat) (σ : Entropy) : Entropy :=
   end.
 Arguments π _ _ _ : simpl never.
 
-(* πR^n *)
-Fixpoint π_n_leftover (n : nat) : nat -> nat :=
-  match n with
-  | O => id
-  | S n' => πR_n ∘ π_n_leftover n'
-  end.
-
 Fixpoint π_leftover (n : nat) (σ : Entropy) : Entropy :=
   match n with
   | O => σ
   | S n' => π_leftover n' (πR σ)
   end.
 Arguments π_leftover _ _ _ : simpl never.
-
-
-Lemma π_π_n_correspond (σ : Entropy) (i : nat) :
-  σ ∘ π_n i = π i σ.
-Proof.
-  revert σ.
-  induction i; auto; intros.
-  simpl in *.
-  unfold π.
-  fold π.
-  rewrite <- IHi.
-  auto.
-Qed.
 
 Lemma π_O_join (σl σr : Entropy) : π 0 (join σl σr) = σl.
 Proof.

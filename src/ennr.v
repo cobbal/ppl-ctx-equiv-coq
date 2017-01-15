@@ -193,10 +193,3 @@ Proof.
   destruct a, b; simpl; auto.
   apply Rgt_dec.
 Qed.
-
-Lemma ennr_mul_1_r : forall n, n * 1 = n.
-Proof.
-  intros.
-  rewrite ennr_mul_comm.
-  apply ennr_mul_1_l.
-Qed.

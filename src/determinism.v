@@ -395,9 +395,7 @@ Module eval_dec.
   Theorem eval_dec {τ} (e : expr · τ) σ : eval_dec_result e σ.
   Proof.
     pose proof (fundamental_property e dep_nil I) as fp.
-
-    elim_sig_exprs.
-    elim_erase_eqs.
+    rewrite close_nil in fp.
 
     destruct (fp σ). {
       destruct s as [[v w] [[? ?] ?]].

@@ -1,3 +1,6 @@
+(** In this file, we define contexts, contextual equivalence, and show that the
+    logical relation [related_exprs] is sound with respect to contextual
+    equivalence. *)
 Require Import utils.
 Require Import syntax.
 Require Import relations.
@@ -6,27 +9,15 @@ Require Import micromega.Lia.
 Require Import List.
 Require Export chain.
 
-(* A context is a chain (see chain.v) of context frames. As before with expr, we
-   define a (mostly) erased version and an injective erasure function from the
-   fully typed context *)
 
-Inductive u_ctx_frame :=
-| uc_app_f (ua : u_expr)
-| uc_app_a (uf : u_expr)
-| uc_factor
-| uc_plus_l (ur : u_expr)
-| uc_plus_r (ul : u_expr)
-| uc_lam (τa : Ty)
-.
+(** * Contexts
 
-Definition u_ctx := list u_ctx_frame.
-Definition uc_hole : u_ctx := nil.
+    A context is a [chain] of context frames.
 
-(* The notation below for types of frames and contexts should be thought of as
-   "contexts take terms sitting in a hole typed `Γh ⊢ τh` and translate them to
-   sit at type `Γo ⊢ τo`". The outermost chain_cons is the outermost context
-   frame here. *)
-
+    The notations below for types of frames and contexts should be thought of as
+    "contexts take terms sitting in a hole typed `Γh ⊢ τh` and translate them to
+    sit at type `Γo ⊢ τo`". The outermost chain_cons is the outermost context
+    frame here. *)
 Reserved Notation "'FRAME' Γo ⊢ [ Γh ⊢ τh ] : τo"
          (at level 70, Γo, Γh, τh, τo at level 200, no associativity).
 Reserved Notation "'CTX' Γo ⊢ [ Γh ⊢ τh ] : τo"
@@ -55,8 +46,25 @@ Definition ctx := bichain ctx_frame.
 Notation "'CTX' Γo ⊢ [ Γh ⊢ τh ] : τo" := (ctx Γo τo Γh τh).
 Definition c_hole {Γ τ} : (CTX Γ ⊢ [Γ ⊢ τ] : τ) := chain_nil.
 
+(* As before with expr, we define a (mostly) erased version of contexts and an
+   injective erasure function from the fully typed context. *)
+Inductive u_ctx_frame :=
+| uc_app_f (ua : u_expr)
+| uc_app_a (uf : u_expr)
+| uc_factor
+| uc_plus_l (ur : u_expr)
+| uc_plus_r (ul : u_expr)
+| uc_lam (τa : Ty)
+.
+
+Definition u_ctx := list u_ctx_frame.
+Definition uc_hole : u_ctx := nil.
+
 Set Typeclasses Unique Instances.
 
+(** We can't instantiate all of autosubst's machinery for contexts, since they
+    can't be variables, but we can at least define renaming. We could define
+    substitution too, but the need for it hasn't come up yet. *)
 Instance Rename_u_ctx_frame : Rename u_ctx_frame :=
   fun σ f =>
     match f with
@@ -75,8 +83,20 @@ Instance Rename_u_ctx : Rename u_ctx :=
     | f :: U' => rename σ f :: Rename_u_ctx σ U'
     end.
 
+(** ** The [Plug] typeclass *)
+(** [Plug] should be thought of as a typeclass for plugging something into a
+    context-like object using the syntax "[C⟨e⟩]". The machinery needed to do
+    this is slightly more convoluted than it would be in Haskell. *)
+
+(** Things we want to be able to plug (both for typed and untyped):
+    - expressions into context frames
+    - expressions into contexts
+    - contexts into context
+ *)
+(** It would be possible to define even more combinations with frames, but they
+    aren't yet needed. *)
 Module Plug.
-  Class type obj hole res :=
+  Class Plug obj hole res :=
     mk {
         plug : obj -> hole -> res
       }.
@@ -88,7 +108,7 @@ Notation "C ⟨ e ⟩" := (Plug.plug C e)
   (at level 2, e at level 200, left associativity,
    format "C ⟨ e ⟩" ).
 
-Instance u_plug_frame : Plug.type u_ctx_frame u_expr u_expr :=
+Instance u_plug_frame : Plug.Plug u_ctx_frame u_expr u_expr :=
   { plug f e :=
       match f with
       | uc_app_f ea => u_app e ea
@@ -106,10 +126,10 @@ Fixpoint u_plug (U : u_ctx) (e : u_expr) : u_expr :=
   | f :: U' => f⟨u_plug U' e⟩
   end.
 
-Instance u_plug' : Plug.type u_ctx u_expr u_expr := { plug := u_plug }.
+Instance u_plug' : Plug.Plug u_ctx u_expr u_expr := { plug := u_plug }.
 
 Instance plug_frame {Γo τo Γh τh}
-  : Plug.type (FRAME Γo ⊢ [Γh ⊢ τh] : τo) (expr Γh τh) (expr Γo τo) :=
+  : Plug.Plug (FRAME Γo ⊢ [Γh ⊢ τh] : τo) (expr Γh τh) (expr Γo τo) :=
   { plug f :=
       match f in (FRAME Γo' ⊢ [Γh' ⊢ τh'] : τo')
             return (expr Γh' τh' -> expr Γo' τo') with
@@ -123,16 +143,8 @@ Instance plug_frame {Γo τo Γh τh}
   }.
 
 Instance plug {Γo τo Γh τh}
-  : Plug.type (CTX Γo ⊢ [Γh ⊢ τh] : τo) (expr Γh τh) (expr Γo τo) :=
+  : Plug.Plug (CTX Γo ⊢ [Γh ⊢ τh] : τo) (expr Γh τh) (expr Γo τo) :=
   { plug C e := bichain_fold_right (fun _ _ _ _ C e => C⟨e⟩) e C }.
-
-Lemma plug_cons {Γo τo Γm τm Γi τi}
-      (f : (FRAME Γo ⊢ [Γm ⊢ τm] : τo))
-      C (e : expr Γi τi) :
-  (f :::: C)⟨e⟩ = f⟨C⟨e⟩⟩.
-Proof.
-  trivial.
-Qed.
 
 Definition erase_ctx_frame {Γo τo Γh τh} (f : (FRAME Γo ⊢ [Γh ⊢ τh] : τo))
   : u_ctx_frame :=
@@ -250,6 +262,11 @@ Proof.
   }
 Qed.
 
+Definition plug_cons {Γo τo Γm τm Γi τi}
+      (f : (FRAME Γo ⊢ [Γm ⊢ τm] : τo))
+      C (e : expr Γi τi) :
+  (f :::: C)⟨e⟩ = f⟨C⟨e⟩⟩ := eq_refl.
+
 Lemma compat_plug {Γo τo Γh τh}
       (C : CTX Γo ⊢ [Γh ⊢ τh] : τo)
       e0 e1 :
@@ -260,7 +277,7 @@ Proof.
   dependent induction C using bichain_rect. {
     exact He.
   } {
-    rewrite !plug_cons.
+    change (EXP xA ⊢ x⟨C⟨e0⟩⟩ ≈ x⟨C⟨e1⟩⟩ : yA).
     apply compat_plug1.
     auto.
   }

@@ -1,5 +1,5 @@
 Require Import Coq.Reals.Reals.
-Require Import Coq.Lists.List.
+Require Export Coq.Lists.List.
 
 Require Export Autosubst.Autosubst.
 
@@ -229,6 +229,7 @@ Ltac inject_erased :=
      | [ H : erase ?e = u_real _ |- _ ] => go e H
      | [ H : erase ?e = u_lam _ _ |- _ ] => go e H
      | [ H : erase ?e = u_var _ |- _ ] => go e H
+     | [ H : erase ?e = ids _ |- _ ] => go e H
      end.
 
 (** [elim_erase_eqs]'s main objective is to eliminate hypothesis of the form
@@ -550,12 +551,6 @@ Fixpoint weaken {Γ τ} (e : expr Γ τ) Γw : expr (Γ ++ Γw) τ :=
   | e_plus el er => e_plus (weaken el Γw) (weaken er Γw)
   end.
 
-Lemma weaken_eq {Γ τ} (e : expr Γ τ) Γw :
-  erase e = erase (weaken e Γw).
-Proof.
-  induction e; simpl; f_equal; auto.
-Qed.
-
 (** The definition of typed substitution borrows from
     https://www.ps.uni-saarland.de/autosubst/doc/Plain.Demo.html *)
 
@@ -738,6 +733,15 @@ Proof.
   apply ty_subst.
 Qed.
 
+Lemma close_nil (ρ : wt_env ·) {τ} (e : expr · τ) :
+  proj1_sig (close ρ e) = e.
+Proof.
+  dep_destruct ρ.
+  elim_sig_exprs.
+  elim_erase_eqs.
+  reflexivity.
+Qed.
+
 (** Since most day-to-day substitution is done by β, it's nice to have a small
     helper function to substitute exactly one value into a lambda body. *)
 Definition ty_subst1 {τa τr}
@@ -747,23 +751,7 @@ Definition ty_subst1 {τa τr}
     erase e' = (erase e).[erase v /] }
   := ty_subst e · (dep_cons (v : expr · τa) dep_nil).
 
-Lemma body_subst {Γ τa τr} (ρ : wt_env Γ)
-      (body : expr (τa :: Γ) τr) :
-  { body' : expr (τa :: ·) τr |
-    erase body' = (erase body).[up (erase_wt_env ρ)] }.
-Proof.
-  pose proof ty_subst body (τa :: ·).
-
-  destruct (up_expr_env (dep_map (@expr_of_val) ρ) τa).
-  destruct (X x).
-  exists x0.
-  rewrite e0.
-  apply subst_only_matters_up_to_env.
-  intros.
-  erewrite e; eauto.
-  rewrite erase_envs_equiv.
-  auto.
-Qed.
+(** * Evaluation *)
 
 (** Evaluation is defined as a big-step relation. While it would have been nicer
     to instead define it as a partial function so that it's determinism is more
@@ -796,6 +784,8 @@ Inductive eval (σ : Entropy) : forall {τ} (e : expr · τ) (v : val τ) (w : R
     (EVAL σ ⊢ e_plus e0 e1 ⇓ v_real (r0 + r1), w0 * w1)
 where "'EVAL' σ ⊢ e ⇓ v , w" := (@eval σ _ e v w)
 .
+
+(** Misc lemmas *)
 
 (** [inversion] has a hard time recognizing that [EVAL_val] is the only
     constructor that evaluates a value, so we use lemma instead. *)

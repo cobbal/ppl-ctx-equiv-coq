@@ -51,6 +51,9 @@ Ltac dep_destruct xs :=
   | ?a => dependent destruction a
   end.
 
+(** [econtradict] is like [contradict], but with more existentials. *)
+Ltac econtradict e := exfalso; eapply e; repeat econstructor; eauto.
+
 (** This instance uses functional extensionality to allow the [setoid_rewrite]
     tactic to rewrite terms under a lambda.
 

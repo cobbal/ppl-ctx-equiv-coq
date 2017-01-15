@@ -75,10 +75,8 @@ Axiom riemann_def_of_lebesgue_integration :
 (** This assumption is usually presented as the first step in the definition of
     the Lebesgue integral. *)
 Axiom integration_of_indicator :
-  forall {A}
-         (m : Meas A)
-         (f : Event A),
-    integration (fun x => indicator f x) m = m f.
+  forall {A} (μ : Meas A) (f : Event A),
+    integration (indicator f) μ = μ f.
 
 (** (Lemma 5 in paper) This axiom states that entropy can be split into 2 IID
     entropies. *)
@@ -122,12 +120,15 @@ Axiom tonelli_sigma_finite :
 (** ** Measure combinators *)
 
 Definition empty_meas A : Meas A := fun a => 0.
+Arguments empty_meas _ _ /.
 
 Definition dirac {A} (v : A) : Meas A :=
   fun e => indicator e v.
+Arguments dirac {_} _ _ /.
 
 Definition preimage {A B C} (f : A -> B) : (B -> C) -> (A -> C) :=
   fun eb a => eb (f a).
+Arguments preimage {_ _ _} _ _ _ /.
 
 Definition pushforward {A B} (μ : Meas A) (f : A -> B) : Meas B :=
   μ ∘ preimage f.
@@ -149,9 +150,9 @@ Definition meas_option {A} (μo : Meas (option A)) : Meas A :=
 Definition score_meas {X} (w : X -> R+) (μ : Meas X) : Meas X :=
   μ >>= (fun x A => w x * indicator A x).
 
-(** TODO: do we still need this defn? *)
 Definition unif_score_meas {X} (s : R+) (μ : Meas X) : Meas X :=
-  fun A => s * μ A.
+  fun A => μ A * s.
+Arguments unif_score_meas {_} _ _ _ /.
 
 
 (** ** Lemmas about integrals *)
@@ -280,7 +281,7 @@ Class interchangable {A B} (μa : Meas A) (μb : Meas B) : Prop :=
 
 (** [interchangable] is a symmetric relation. Unfortunately we can't use the
     [Symmetry] typeclass because it's a relation between different types. *)
-Instance interchangable_sym {A B} (μa : Meas A) (μb : Meas B) :
+Definition interchangable_sym {A B} (μa : Meas A) (μb : Meas B) :
   interchangable μa μb ->
   interchangable μb μa.
 Proof.
@@ -319,7 +320,7 @@ Proof.
   rewrite meas_id_left.
   integrand_extensionality y.
   rewrite meas_id_left.
-  trivial.
+  reflexivity.
 Qed.
 
 Instance pushforward_interchangable {X Y} (μ : Meas X) (f : X -> Y) :
@@ -355,6 +356,22 @@ Proof.
   destruct o; cbn; auto.
   setoid_rewrite integration_of_0.
   trivial.
+Qed.
+
+Lemma bind_interchangable {X Z} (μ : Meas X) (f : X -> Meas Z) :
+  forall {Y} (μy : Meas Y),
+    interchangable μ μy ->
+    (forall x, interchangable (f x) μy) ->
+    interchangable (μ >>= f) μy.
+Proof.
+  repeat intro.
+  setoid_rewrite meas_bind_assoc.
+  rewrite <- H.
+
+  f_equal.
+  extensionality x.
+
+  apply H0.
 Qed.
 
 (** ** Other lemmas *)

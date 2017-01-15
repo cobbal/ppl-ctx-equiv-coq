@@ -28,6 +28,35 @@ Notation "e0 +! e1" := (e_plus e0 e1).
 Definition var_0 {τ Γ} : expr (τ :: Γ) τ :=
   e_var O (eq_refl : lookup (τ :: Γ) O = Some τ).
 
+(** Since our program measure is just a re-weighted pushforward, it's interchangable *)
+Theorem μe_as_pushforard {τ} (e : expr · τ) :
+  μ e = meas_option (pushforward (score_meas (ew e) μEntropy) (ev e)).
+Proof.
+  intros.
+
+  extensionality A.
+  unfold μ, meas_bind, meas_option, pushforward, score_meas, compose, preimage, eval_in.
+  setoid_rewrite riemann_def_of_lebesgue_integration.
+  integrand_extensionality t.
+  f_equal.
+  extensionality σ.
+
+  unfold indicator.
+  rewrite ennr_mul_comm.
+  destruct ev; auto.
+Qed.
+
+Instance μ_interchangable {τ0 τ1} (e0 : expr · τ0) (e1 : expr · τ1) : interchangable (μ e0) (μ e1).
+Proof.
+  repeat intro.
+  rewrite 2 μe_as_pushforard.
+
+  apply meas_option_interchangable, pushforward_interchangable, score_meas_interchangable.
+  apply interchangable_sym.
+  apply meas_option_interchangable, pushforward_interchangable, score_meas_interchangable.
+  apply sigma_finite_is_interchangable; auto.
+Qed.
+
 Lemma πL_same_integral f :
   integration (f ∘ πL) μEntropy = integration f μEntropy.
 Proof.
@@ -67,13 +96,12 @@ Qed.
 Lemma add_zero_related (e : expr · ℝ) :
   (EXP · ⊢ e_real 0 +! e ≈ e : ℝ).
 Proof.
-  apply relate_exprs.
-  intros.
+  apply relate_exprs; intros.
 
   elim_sig_exprs.
   elim_erase_eqs.
 
-  rewrite by_μe_eq_μEntropy_plus.
+  rewrite plus_as_transformer.
   setoid_rewrite (val_is_dirac (v_real 0)).
   rewrite meas_id_left.
 
@@ -94,13 +122,12 @@ Qed.
 Lemma add_comm_related Γ (e0 e1 : expr Γ ℝ) :
   (EXP Γ ⊢ e0 +! e1 ≈ e1 +! e0 : ℝ).
 Proof.
-  apply relate_exprs.
-  intros.
+  apply relate_exprs; intros.
 
   elim_sig_exprs.
   elim_erase_eqs.
 
-  rewrite 2 by_μe_eq_μEntropy_plus.
+  rewrite 2 plus_as_transformer.
   rewrite μ_interchangable.
   integrand_extensionality v1.
   integrand_extensionality v0.
@@ -216,6 +243,27 @@ Definition is_pure (e : u_expr) : Prop :=
   | _ => False
   end.
 
+Lemma closed_pure_is_val {Γ τ} {e : expr Γ τ} :
+  is_pure e ->
+  forall ρ,
+    is_val (proj1_sig (close ρ e)).
+Proof.
+  intros.
+
+  elim_sig_exprs.
+  destruct e;
+    try contradiction H;
+    cbn in He0;
+    try elim_erase_eqs;
+    auto.
+
+  destruct (env_search_subst ρ H0) as [v Hv].
+  elim_erase_eqs.
+
+  destruct v.
+  auto.
+Qed.
+
 Lemma lam_is_dirac {τa τr} (e : expr (τa :: ·) τr) : μ (λ, e) = dirac (v_lam e).
 Proof.
   rewrite <- val_is_dirac.
@@ -230,31 +278,18 @@ Lemma beta_value {Γ τ τv}
 Proof.
   intros v_val.
 
-  apply relate_exprs.
-  intros.
+  apply relate_exprs; intros.
+
+  pose proof closed_pure_is_val v_val ρ.
 
   elim_sig_exprs.
   elim_erase_eqs.
 
-  rewrite by_μe_eq_μEntropy_app.
+  rewrite apply_as_transformer.
   rewrite lam_is_dirac.
   rewrite meas_id_left.
   cbn.
-
-  assert (is_val e0_2). {
-    revert H1 v_val; clear; intros.
-
-    destruct v;
-      try contradiction v_val;
-      try solve [destruct e0_2; try discriminate; auto].
-
-    destruct (env_search_subst ρ H) as [v Hv].
-    cbn in *.
-    elim_erase_eqs.
-
-    destruct v.
-    auto.
-  }
+  rewrite <- H2 in H.
 
   setoid_rewrite (val_is_dirac (mk_val _ H)).
   rewrite meas_id_left.
@@ -262,9 +297,9 @@ Proof.
   elim_sig_exprs.
   elim_erase_eqs.
 
-  enough (e0 = e1) by (subst; auto).
+  enough (e0 = e2) by (subst; auto).
   apply erase_injective.
-  rewrite He1, He0.
+  rewrite He2, He0.
   asimpl.
   apply subst_only_matters_up_to_env.
   intros.
@@ -279,33 +314,32 @@ Lemma apply_id_equiv {Γ τ} (e : expr Γ τ) :
   (EXP Γ ⊢ (λ, var_0) @ e ≈ e : τ).
 Proof.
   intro He.
-
-  apply relate_exprs.
-  intros.
+  apply relate_exprs; intros.
 
   elim_sig_exprs.
   elim_erase_eqs.
 
-  rewrite by_μe_eq_μEntropy_app.
+  dep_destruct e0_1; try discriminate.
+  inject H2.
+
+  rewrite apply_as_transformer.
   rewrite lam_is_dirac.
   rewrite meas_id_left.
 
   set (fun _ => _ >>= _).
   enough (m = dirac). {
-    rewrite H.
+    rewrite H0.
     rewrite meas_id_right.
     auto.
   }
   subst m.
+  clear e0_2 H1.
 
   extensionality v.
   cbn.
   fold_μ.
 
   elim_sig_exprs.
-  elim_erase_eqs.
-
-  asimpl in He0.
   elim_erase_eqs.
 
   apply val_is_dirac.
@@ -361,7 +395,7 @@ Qed.
 Set Typeclasses Unique Instances.
 
 Instance simple_plug Γ τo τh :
-  Plug.type (SIMPLE Γ ⊢ [τh] : τo) (expr Γ τh) (expr Γ τo) :=
+  Plug.Plug (SIMPLE Γ ⊢ [τh] : τo) (expr Γ τh) (expr Γ τo) :=
   { plug S e := (unsimple S)⟨e⟩ }.
 
 Module Lift.
@@ -374,31 +408,10 @@ Module Lift.
 End Lift.
 Definition lift1 {o t} := @Lift.lift1 o t.
 
-(* Notation "e ^ τ" := (lift1 τ e). *)
 Notation "e ^ τ" := (lift1 τ e) (only printing).
-(* temporary brute force way to make the typeclass resolution be less searchy
-   and more find the obvious instancy. *)
+(* The ltac:exact is needed to keep typeclasses from having trouble *)
 Notation "e ^ τ" := ltac:(exact (lift1 τ e)) (only parsing).
 Notation "e ↑" := (rename (+1) e) (at level 3).
-
-(* Instance ren_lift {A} {r : Rename A} : Liftable (const A) := *)
-(*   { lift1 Γ τ e := rename (+1) (e : A) }. *)
-
-(* Lemma ctx_rename_compose (S : Ctx) (f g : nat -> nat) : *)
-(*   rename f (rename g S) = rename (f ∘ g) S. *)
-(* Proof. *)
-(*   unfold rename. *)
-(*   revert f g. *)
-(*   induction S; intros; simpl; rewrite ?IHS, ?H; auto; try autosubst. *)
-(*   f_equal. *)
-(*   assert (upren f ∘ upren g = upren (f ∘ g)). { *)
-(*     compute. *)
-(*     extensionality x. *)
-(*     destruct x; auto. *)
-(*   } *)
-(*   rewrite <- H. *)
-(*   auto. *)
-(* Qed. *)
 
 Instance expr_lift Γ τ : Lift.type (expr Γ τ) :=
   Lift.mk (fun τ0 e => proj1_sig (expr_ren (+1) e (τ0 :: Γ) eq_refl)).
@@ -442,31 +455,20 @@ Fixpoint up_simple_ctx' {Γ τe τo} τ0
 Instance up_simple_ctx Γ τe τo : Lift.type (SIMPLE Γ ⊢ [τe] : τo) :=
   Lift.mk up_simple_ctx'.
 
-Lemma pure_of_val {τ} (v : val τ) : is_pure v.
-Proof.
-  destruct v using wt_val_rect; subst; simpl; trivial.
-Qed.
-
 Lemma single_frame_case_app_l {Γ τe τa τo}
       (ea : expr Γ τa)
-      (f : expr Γ (τe ~> τa ~> τo))
+      (f_body : expr (τe :: Γ) (τa ~> τo))
       (e : expr Γ τe) :
-  is_val f ->
   let S1 := (c_app_f (τr := τo) ea) in
-  (EXP Γ ⊢ (λ, (S1^τe)⟨(f^τe) @ var_0⟩) @ e ≈ S1⟨f @ e⟩ : τo).
+  (EXP Γ ⊢ (λ, (S1^τe)⟨((λ, f_body)^τe) @ var_0⟩) @ e ≈ S1⟨(λ, f_body) @ e⟩ : τo).
 Proof.
-  intros f_val.
-  simpl.
-
   apply relate_exprs.
   intros.
-  elim_sig_exprs.
 
-  dep_destruct f; inversion_clear f_val.
-  simpl in *.
+  elim_sig_exprs.
   elim_erase_eqs.
 
-  rewrite !by_μe_eq_μEntropy_app.
+  rewrite !apply_as_transformer.
   rewrite !lam_is_dirac.
   rewrite !meas_id_left.
 
@@ -474,11 +476,12 @@ Proof.
   integrand_extensionality va.
 
   cbn.
+  repeat fold_μ.
   elim_sig_exprs.
   elim_erase_eqs.
 
   repeat fold_μ.
-  rewrite !by_μe_eq_μEntropy_app.
+  rewrite !apply_as_transformer.
   rewrite lam_is_dirac, val_is_dirac.
   rewrite !meas_id_left.
   cbn.
@@ -487,9 +490,10 @@ Proof.
   elim_erase_eqs.
   fold_μ.
 
-  asimpl in He0.
   asimpl in He1.
+  asimpl in He0.
   asimpl in H2.
+
   elim_erase_eqs.
 
   reflexivity.
@@ -497,24 +501,18 @@ Qed.
 
 Lemma single_frame_case_app_r {Γ τe τa τo}
       (ef : expr Γ (τa ~> τo))
-      (f : expr Γ (τe ~> τa))
+      (f_body : expr (τe :: Γ) τa)
       (e : expr Γ τe) :
-  is_val f ->
   let S1 := c_app_a ef in
-  (EXP Γ ⊢ (λ, (S1^τe)⟨(f^τe) @ var_0⟩) @ e ≈ S1⟨f @ e⟩ : τo).
+  (EXP Γ ⊢ (λ, (S1^τe)⟨((λ, f_body)^τe) @ var_0⟩) @ e ≈ S1⟨(λ, f_body) @ e⟩ : τo).
 Proof.
-  intros f_val.
-  simpl.
-
   apply relate_exprs.
   intros.
-  elim_sig_exprs.
 
-  expr_destruct f; inversion_clear f_val.
-  simpl in *.
+  elim_sig_exprs.
   elim_erase_eqs.
 
-  rewrite !by_μe_eq_μEntropy_app.
+  rewrite !apply_as_transformer.
   rewrite !lam_is_dirac.
   rewrite !meas_id_left.
 
@@ -527,7 +525,7 @@ Proof.
   elim_erase_eqs.
   repeat fold_μ.
 
-  rewrite !by_μe_eq_μEntropy_app.
+  rewrite !apply_as_transformer.
   rewrite lam_is_dirac.
   rewrite val_is_dirac.
   rewrite !meas_id_left.
@@ -546,25 +544,19 @@ Proof.
 Qed.
 
 Lemma single_frame_case_factor {Γ τe}
-      (f : expr Γ (τe ~> ℝ))
+      (f_body : expr (τe :: Γ) ℝ)
       (e : expr Γ τe) :
-  is_val f ->
   let S1 := c_factor in
-  (EXP Γ ⊢ (λ, (S1^τe)⟨(f^τe) @ var_0⟩) @ e ≈ S1⟨f @ e⟩ : ℝ).
+  (EXP Γ ⊢ (λ, (S1^τe)⟨((λ, f_body)^τe) @ var_0⟩) @ e ≈ S1⟨(λ, f_body) @ e⟩ : ℝ).
 Proof.
-  intros f_val.
-  simpl.
-
   apply relate_exprs.
   intros.
-  elim_sig_exprs.
 
-  expr_destruct f; inversion_clear f_val.
-  simpl in *.
+  elim_sig_exprs.
   elim_erase_eqs.
 
-  rewrite by_μe_eq_μEntropy_factor.
-  rewrite !by_μe_eq_μEntropy_app.
+  rewrite factor_as_transformer.
+  rewrite !apply_as_transformer.
   rewrite !lam_is_dirac.
   rewrite !meas_id_left.
 
@@ -576,8 +568,8 @@ Proof.
   elim_erase_eqs.
   repeat fold_μ.
 
-  rewrite by_μe_eq_μEntropy_factor.
-  rewrite !by_μe_eq_μEntropy_app.
+  rewrite factor_as_transformer.
+  rewrite !apply_as_transformer.
   rewrite lam_is_dirac.
   rewrite val_is_dirac.
   rewrite !meas_id_left.
@@ -596,25 +588,19 @@ Qed.
 
 Lemma single_frame_case_plus_l {Γ τe}
       (er : expr Γ ℝ)
-      (f : expr Γ (τe ~> ℝ))
+      (f_body : expr (τe :: Γ) ℝ)
       (e : expr Γ τe) :
-  is_val f ->
   let S1 := c_plus_l er in
-  (EXP Γ ⊢ (λ, (S1^τe)⟨(f^τe) @ var_0⟩) @ e ≈ S1⟨f @ e⟩ : ℝ).
+  (EXP Γ ⊢ (λ, (S1^τe)⟨((λ, f_body)^τe) @ var_0⟩) @ e ≈ S1⟨(λ, f_body) @ e⟩ : ℝ).
 Proof.
-  intros f_val.
-  simpl.
-
   apply relate_exprs.
   intros.
-  elim_sig_exprs.
 
-  expr_destruct f; inversion_clear f_val.
-  simpl in *.
+  elim_sig_exprs.
   elim_erase_eqs.
 
-  rewrite by_μe_eq_μEntropy_plus.
-  rewrite !by_μe_eq_μEntropy_app.
+  rewrite plus_as_transformer.
+  rewrite !apply_as_transformer.
   rewrite !lam_is_dirac.
   rewrite !meas_id_left.
 
@@ -626,8 +612,8 @@ Proof.
   elim_erase_eqs.
   repeat fold_μ.
 
-  rewrite by_μe_eq_μEntropy_plus.
-  rewrite !by_μe_eq_μEntropy_app.
+  rewrite plus_as_transformer.
+  rewrite !apply_as_transformer.
   rewrite lam_is_dirac.
   rewrite val_is_dirac.
   rewrite !meas_id_left.
@@ -647,25 +633,18 @@ Qed.
 
 Lemma single_frame_case_plus_r {Γ τe}
       (el : expr Γ ℝ)
-      (f : expr Γ (τe ~> ℝ))
+      (f_body : expr (τe :: Γ) ℝ)
       (e : expr Γ τe) :
-  is_val f ->
   let S1 := c_plus_r el in
-  (EXP Γ ⊢ (λ, (S1^τe)⟨(f^τe) @ var_0⟩) @ e ≈ S1⟨f @ e⟩ : ℝ).
+  (EXP Γ ⊢ (λ, (S1^τe)⟨((λ, f_body)^τe) @ var_0⟩) @ e ≈ S1⟨(λ, f_body) @ e⟩ : ℝ).
 Proof.
-  intros f_val.
-  simpl.
+  apply relate_exprs; intros.
 
-  apply relate_exprs.
-  intros.
   elim_sig_exprs.
-
-  expr_destruct f; inversion_clear f_val.
-  simpl in *.
   elim_erase_eqs.
 
-  rewrite by_μe_eq_μEntropy_plus.
-  rewrite !by_μe_eq_μEntropy_app.
+  rewrite plus_as_transformer.
+  rewrite !apply_as_transformer.
   rewrite !lam_is_dirac.
   rewrite !meas_id_left.
 
@@ -678,8 +657,8 @@ Proof.
   elim_erase_eqs.
   repeat fold_μ.
 
-  rewrite by_μe_eq_μEntropy_plus.
-  rewrite !by_μe_eq_μEntropy_app.
+  rewrite plus_as_transformer.
+  rewrite !apply_as_transformer.
   rewrite lam_is_dirac.
   rewrite val_is_dirac.
   rewrite !meas_id_left.
@@ -706,6 +685,15 @@ Proof.
   change (erase x⟨C⟨e⟩⟩ = (erase_ctx_frame x)⟨(erase_ctx C)⟨erase e⟩⟩).
   rewrite <- IHC.
   destruct x; reflexivity.
+Qed.
+
+Definition erase_simple_ctx {Γ τi τo} (S : (SIMPLE Γ ⊢ [τi] : τo)) : u_ctx :=
+  erase_ctx (unsimple S).
+
+Lemma erase_simple_plug {Γ τi τo} (S : (SIMPLE Γ ⊢ [τi] : τo)) e :
+  erase S⟨e⟩ = (erase_simple_ctx S)⟨erase e⟩.
+Proof.
+  apply erase_plug.
 Qed.
 
 Lemma erase_up_simple_ctx {Γ τo τi} (S : SIMPLE Γ ⊢ [τi] : τo) :
@@ -747,13 +735,6 @@ Proof.
     auto.
 Qed.
 
-Lemma rename_u_simple (U : u_ctx) σ :
-  is_u_simple U -> is_u_simple (rename σ U).
-Proof.
-  intros.
-  induction U; auto.
-  destruct a; auto.
-Qed.
 
 Lemma plug_app {Γ τo τm τi}
       (Co : (SIMPLE Γ ⊢ [τm] : τo))
@@ -764,7 +745,7 @@ Proof.
   induction Co; auto.
   change (p⟨Co⟨Ci⟨e⟩⟩⟩ = p⟨(Co +++ Ci)⟨e⟩⟩).
   rewrite IHCo.
-  auto.
+  reflexivity.
 Qed.
 
 Lemma up_cons {Γ τi τm τo}
@@ -817,6 +798,38 @@ Proof.
   }
 Qed.
 
+
+Lemma pred_up {Γ τi τo} (S : SIMPLE Γ ⊢ [τi] : τo) (τu : Ty) :
+  rename pred (erase_simple_ctx (S ^ τu)) = erase_simple_ctx S.
+Proof.
+  assert (ren ((+1) >>> pred) = ids) by auto.
+  assert (forall e : u_expr, rename pred e↑ = e). {
+    intros.
+    asimpl.
+    rewrite H.
+    autosubst.
+  }
+
+  induction S; auto.
+  rewrite (up_cons p S).
+  unfold erase_simple_ctx.
+  cbn [unsimple].
+  rewrite !erase_cons.
+  cbn -[lift1].
+  f_equal; auto.
+
+  clear IHS.
+
+  dependent destruction p using simple_ctx_frame_rect;
+    simpl;
+    try elim_sig_exprs;
+    rewrite ?He1, ?He0, ?H;
+    f_equal;
+    asimpl;
+    rewrite ?H;
+    autosubst.
+Qed.
+
 (* theorem 24 *)
 Theorem subst_into_simple {Γ τe τo}
         (S : SIMPLE Γ ⊢ [τe] : τo)
@@ -827,30 +840,29 @@ Proof.
     cbn.
     apply apply_id_equiv.
   } {
-    unfold simple_ctx_frame in p.
     change (simple_ctx Γ B C) in S.
     rename A into τo, B into τm, C into τi.
+
+    specialize (IHS e).
+    change (EXP Γ ⊢ (λ, (p ^ τi)⟨(S ^ τi)⟨var_0⟩⟩) @ e ≈ p⟨S⟨e⟩⟩ : τo).
+
     transitivity ((λ, (p^τi)⟨(λ, ((S^τi)^τi)⟨var_0⟩) @ var_0⟩) @ e). {
       (* "by theorem 22" *)
       eapply compat_app; [| reflexivity].
       apply compat_lam.
 
+      apply compat_plug1.
+      clear p.
+
       pose proof beta_value (((S^τi)^τi)⟨var_0⟩) var_0 I.
-
-      setoid_rewrite up_cons.
-      rewrite (simple_cons_plug (p^τi) (S^τi)).
-
-      eapply compat_plug1.
-
-      repeat destruct open_subst1; simpl in *.
+      destruct open_subst1.
+      unfold proj1_sig in H.
       rewrite H.
-      clear H.
 
       enough ((S^τi)⟨var_0⟩ = x) by (subst; reflexivity).
       apply erase_injective.
       rewrite e0.
-      setoid_rewrite erase_plug.
-      simpl.
+
       clear.
 
       replace (u_var 0 .: ids) with (ren pred); swap 1 2. {
@@ -859,32 +871,11 @@ Proof.
       }
       rewrite <- rename_subst.
 
-      rewrite rename_simple_u_plug; [| apply erase_simple]. {
-        f_equal.
-
-        change (erase_ctx (unsimple (S^τi)) =
-                rename pred (erase_ctx (unsimple ((S^τi)^τi)))).
-
-        assert (forall e : u_expr, rename pred e↑ = e). {
-          intros.
-          asimpl.
-          replace (ren ((+1) >>> pred)) with ids by auto.
-          autosubst.
-        }
-
-        induction S; auto.
-        rewrite (up_cons p S).
-        rewrite (up_cons (p^C) (S^C)).
-        cbn [unsimple].
-        rewrite !erase_cons.
-        cbn -[lift1].
-        dependent destruction p using simple_ctx_frame_rect;
-          cbn;
-          try elim_sig_exprs;
-          rewrite ?He1, ?He0, ?H;
-          f_equal;
-          autosubst.
-      }
+      cbn.
+      setoid_rewrite erase_plug.
+      rewrite rename_simple_u_plug; [| apply erase_simple].
+      setoid_rewrite pred_up.
+      reflexivity.
     }
 
     transitivity (p⟨(λ, (S^τi)⟨var_0⟩) @ e⟩). {
@@ -927,24 +918,16 @@ Proof.
         destruct a; cbn; rewrite ?H; auto.
       }
 
-      assert (is_val f) by exact I.
-      clearbody f.
-
-      change (simple_ctx_frame Γ τo τm) in p.
       dependent destruction p using simple_ctx_frame_rect.
-      - apply single_frame_case_app_l; auto.
-      - apply single_frame_case_app_r; auto.
-      - apply single_frame_case_factor; auto.
-      - apply single_frame_case_plus_l; auto.
-      - apply single_frame_case_plus_r; auto.
+      - apply single_frame_case_app_l.
+      - apply single_frame_case_app_r.
+      - apply single_frame_case_factor.
+      - apply single_frame_case_plus_l.
+      - apply single_frame_case_plus_r.
     }
 
-    cbn [Plug.plug simple_plug].
-    rewrite unsimple_cons.
-    rewrite plug_cons.
-
     apply compat_plug1.
-    apply IHS.
+    exact IHS.
   }
 Qed.
 

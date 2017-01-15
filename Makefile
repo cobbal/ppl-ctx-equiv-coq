@@ -28,8 +28,13 @@ clean:: Makefile.coq
 	rm -f Makefile.coq
 	rm -f lia.cache
 	rm -rf dep-graph
-	rm -f src/dep.vo src/dep.glob
-	rm -f html all.pdf
+	rm -f src/*.vo src/*.glob src/*.v.d
+	rm -f all.pdf
+
+pages: html
+	mkdir -p pages
+	rm -f pages/*
+	cp html/* pages/
 
 graph: dep-graph/graph.pdf
 
@@ -39,8 +44,9 @@ dep-graph/graph.pdf: dep-graph/graph.dot
 dep-graph/graph.dot: dep-graph/graph.dpd
 	dpd2dot -o $@ $^
 
-dep-graph/graph.dpd: dep.v coq
+dep-graph/graph.dpd: src/dep.v coq
 	mkdir -p dep-graph
-	coqc -R ./auto-subst/theories Autosubst -R . OpSemProofs dep.v
+	coqc -R ./auto-subst/theories Autosubst -R ./src OpSemProofs src/dep.v
+
 
 .PHONY: all coq graph
