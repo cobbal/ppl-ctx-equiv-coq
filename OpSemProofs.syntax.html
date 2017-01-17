@@ -325,6 +325,7 @@ dep_destruct is often slow, do don't use unless we need
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;| [ <span class="id" title="var">H</span> : <a class="idref" href="OpSemProofs.syntax.html#erase"><span class="id" title="definition">erase</span></a> ?<span class="id" title="var">e</span> <a class="idref" href="http://coq.inria.fr/distrib/8.6/stdlib/Coq.Init.Logic.html#1c39bf18749e5cc609e83c0a0ba5a372"><span class="id" title="notation">=</span></a> <a class="idref" href="OpSemProofs.syntax.html#u_real"><span class="id" title="constructor">u_real</span></a> <span class="id" title="var">_</span> |- <span class="id" title="var">_</span> ] =&gt; <span class="id" title="var">go</span> <span class="id" title="var">e</span> <span class="id" title="var">H</span><br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;| [ <span class="id" title="var">H</span> : <a class="idref" href="OpSemProofs.syntax.html#erase"><span class="id" title="definition">erase</span></a> ?<span class="id" title="var">e</span> <a class="idref" href="http://coq.inria.fr/distrib/8.6/stdlib/Coq.Init.Logic.html#1c39bf18749e5cc609e83c0a0ba5a372"><span class="id" title="notation">=</span></a> <a class="idref" href="OpSemProofs.syntax.html#u_lam"><span class="id" title="constructor">u_lam</span></a> <span class="id" title="var">_</span> <span class="id" title="var">_</span> |- <span class="id" title="var">_</span> ] =&gt; <span class="id" title="var">go</span> <span class="id" title="var">e</span> <span class="id" title="var">H</span><br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;| [ <span class="id" title="var">H</span> : <a class="idref" href="OpSemProofs.syntax.html#erase"><span class="id" title="definition">erase</span></a> ?<span class="id" title="var">e</span> <a class="idref" href="http://coq.inria.fr/distrib/8.6/stdlib/Coq.Init.Logic.html#1c39bf18749e5cc609e83c0a0ba5a372"><span class="id" title="notation">=</span></a> <a class="idref" href="OpSemProofs.syntax.html#u_var"><span class="id" title="constructor">u_var</span></a> <span class="id" title="var">_</span> |- <span class="id" title="var">_</span> ] =&gt; <span class="id" title="var">go</span> <span class="id" title="var">e</span> <span class="id" title="var">H</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;| [ <span class="id" title="var">H</span> : <a class="idref" href="OpSemProofs.syntax.html#erase"><span class="id" title="definition">erase</span></a> ?<span class="id" title="var">e</span> <a class="idref" href="http://coq.inria.fr/distrib/8.6/stdlib/Coq.Init.Logic.html#1c39bf18749e5cc609e83c0a0ba5a372"><span class="id" title="notation">=</span></a> <span class="id" title="definition">ids</span> <span class="id" title="var">_</span> |- <span class="id" title="var">_</span> ] =&gt; <span class="id" title="var">go</span> <span class="id" title="var">e</span> <span class="id" title="var">H</span><br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">end</span>.<br/>
 
 <br/>
@@ -987,7 +988,11 @@ Since most day-to-day substitution is done by β, it's nice to have a small
 </div>
 
 <div class="doc">
-Evaluation is defined as a big-step relation. While it would have been nicer
+<a name="lab18"></a><h1 class="section">Evaluation</h1>
+
+<div class="paragraph"> </div>
+
+ Evaluation is defined as a big-step relation. While it would have been nicer
     to instead define it as a partial function so that it's determinism is more
     obvious, the complicated recursion done by application means that
     determinism is instead done by logical relation in a more difficult manner.
@@ -1025,7 +1030,10 @@ Evaluation is defined as a big-step relation. While it would have been nicer
 </div>
 
 <div class="doc">
-<span class="inlinecode"><span class="id" title="tactic">inversion</span></span> has a hard time recognizing that <span class="inlinecode"><a class="idref" href="OpSemProofs.syntax.html#EVAL_val"><span class="id" title="constructor">EVAL_val</span></a></span> is the only
+Misc lemmas 
+<div class="paragraph"> </div>
+
+ <span class="inlinecode"><span class="id" title="tactic">inversion</span></span> has a hard time recognizing that <span class="inlinecode"><a class="idref" href="OpSemProofs.syntax.html#EVAL_val"><span class="id" title="constructor">EVAL_val</span></a></span> is the only
     constructor that evaluates a value, so we use lemma instead. 
 </div>
 <div class="code">
