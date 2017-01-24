@@ -49,4 +49,4 @@ dep-graph/graph.dpd: src/dep.v coq
 	coqc -R ./auto-subst/theories Autosubst -R ./src OpSemProofs src/dep.v
 
 
-.PHONY: all coq graph
+.PHONY: all coq graph html
