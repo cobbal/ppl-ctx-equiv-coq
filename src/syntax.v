@@ -172,75 +172,6 @@ Qed.
 Arguments erase_injective {_ _ _ _} _.
 
 
-(** *** Tactics
-
-    Some tactics useful for making use of equalities between erased expressions.
-    *)
-
-Ltac inject_erase_directly :=
-  match goal with
-  | [ H : erase ?x = erase ?y |- _ ] =>
-    apply erase_injective in H;
-    try subst x
-  end.
-
-Ltac match_erase_eqs :=
-  let H := fresh "H" in
-  let H' := fresh "H" in
-  match goal with
-  | [H0 : erase ?x = ?s, H1 : erase ?y = ?s |- _ ] =>
-    pose proof (eq_trans H0 (eq_sym H1)) as H;
-    let z := type of y in
-    match type of x with
-    | z => idtac
-    | expr · ?τ =>
-      pose proof (expr_type_unique _ _ H) as H';
-      (subst τ || dep_destruct H')
-    end;
-    apply erase_injective in H;
-    subst x
-  end;
-  clear_dups.
-
-Ltac subst_erase_eq :=
-  match goal with
-  | [ H : erase ?e = _, H' : context [ erase ?e ] |- _ ] =>
-    rewrite H in H';
-      try clear H e
-  end.
-
-(** dep_destruct is often slow, do don't use unless we need *)
-(* TODO: speed up even more for exprs *)
-Ltac expr_destruct e :=
-  match type of e with
-  | expr _ (_ ~> _) => dep_destruct e
-  | expr _ ℝ => dep_destruct e
-  | expr _ _ => destruct e
-  end.
-
-Ltac inject_erased :=
-  let go e H :=
-      expr_destruct e; inject H
-  in match goal with
-     | [ H : erase ?e = u_app _ _ |- _ ] => go e H
-     | [ H : erase ?e = u_factor _ |- _ ] => go e H
-     | [ H : erase ?e = u_sample |- _ ] => go e H
-     | [ H : erase ?e = u_plus _ _ |- _ ] => go e H
-     | [ H : erase ?e = u_real _ |- _ ] => go e H
-     | [ H : erase ?e = u_lam _ _ |- _ ] => go e H
-     | [ H : erase ?e = u_var _ |- _ ] => go e H
-     | [ H : erase ?e = ids _ |- _ ] => go e H
-     end.
-
-(** [elim_erase_eqs]'s main objective is to eliminate hypothesis of the form
-    [erase e = ...] *)
-Ltac elim_erase_eqs :=
-  progress repeat (subst_erase_eq
-                   || inject_erase_directly
-                   || match_erase_eqs
-                   || inject_erased);
-  clear_dups.
-
 (** * Values
 
     While it would be nice to define values and exprs as mutually inductive
@@ -374,7 +305,91 @@ Ltac absurd_val :=
     contradiction (for_absurd_val (eq_sym H))
   end.
 
-(** * Using [sig] to program by tactics *)
+(** *** Tactics
+
+    Some tactics useful for making use of equalities between erased expressions.
+    *)
+
+Ltac inject_erase_directly :=
+  match goal with
+  | [ H : erase ?x = erase ?y |- _ ] =>
+    match type of x with
+    | (expr _ ?τx) =>
+      match type of y with
+      | (expr _ τx) =>
+        apply erase_injective in H;
+          try subst x
+      | (expr _ ?τy) =>
+        let H' := fresh "H" in
+        pose proof (expr_type_unique _ _ H) as H';
+          (subst τx || dep_destruct H');
+          apply erase_injective in H;
+          try subst x
+      end
+    end
+  end.
+
+Ltac match_erase_eqs :=
+  let H := fresh "H" in
+  let H' := fresh "H" in
+  match goal with
+  | [H0 : erase ?x = ?s, H1 : erase ?y = ?s |- _ ] =>
+    pose proof (eq_trans H0 (eq_sym H1)) as H;
+    let z := type of y in
+    let kill_τ τ :=
+        pose proof (expr_type_unique _ _ H) as H';
+        (subst τ || dep_destruct H') in
+    match type of x with
+    | z => idtac
+    | val ?τ => kill_τ τ
+    | expr · ?τ => kill_τ τ
+    end;
+    apply erase_injective in H;
+    subst x
+  end;
+  clear_dups.
+
+Ltac subst_erase_eq :=
+  match goal with
+  | [ H : erase ?e = _, H' : context [ erase ?e ] |- _ ] =>
+    rewrite H in H';
+      try clear H e
+  end.
+
+(** dep_destruct is often slow, do don't use unless we need *)
+(* TODO: speed up even more for exprs *)
+Ltac expr_destruct e :=
+  match type of e with
+  | expr _ (_ ~> _) => dep_destruct e
+  | expr _ ℝ => dep_destruct e
+  | expr _ _ => destruct e
+  end.
+
+Ltac inject_erased :=
+  let go e H :=
+      expr_destruct e; inject H
+  in match goal with
+     | [ H : erase ?e = u_app _ _ |- _ ] => go e H
+     | [ H : erase ?e = u_factor _ |- _ ] => go e H
+     | [ H : erase ?e = u_sample |- _ ] => go e H
+     | [ H : erase ?e = u_plus _ _ |- _ ] => go e H
+     | [ H : erase ?e = u_real _ |- _ ] => go e H
+     | [ H : erase ?e = u_lam _ _ |- _ ] => go e H
+     | [ H : erase ?e = u_var _ |- _ ] => go e H
+     | [ H : erase ?e = ids _ |- _ ] => go e H
+     end.
+
+(** [elim_erase_eqs]'s main objective is to eliminate hypothesis of the form
+    [erase e = ...] *)
+Ltac elim_erase_eqs :=
+  progress repeat (subst_erase_eq
+                   || inject_erase_directly
+                   || match_erase_eqs
+                   || inject_erased);
+  clear_dups.
+
+
+(** ** Using [sig] to program by tactics *)
 
 (** As types get more dependent and pattern matching in Gallina becomes more
     challenging, we will make use of an idiom to define functions. If we want to
