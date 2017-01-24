@@ -1,11 +1,11 @@
 Require Import Coq.Program.Basics.
 Import EqNotations.
 
-(* A chain (elsewhere called a type-aligned list) is like a list, but with
-   dependent types that must link between consequetive pairs. If a list is a
-   free monoid, maybe this is a free category? Anyway, it's a useful way to
-   represent a typed context since it's composable on both the inside and the
-   outside. *)
+(** A chain (elsewhere called a type-aligned list) is like a list, but with
+    dependent types that must link between consequetive pairs. If a list is a
+    free monoid, maybe this is a free category? Anyway, it's a useful way to
+    represent a typed context since it's composable on both the inside and the
+    outside. *)
 Inductive chain {X} {P : X -> X -> Type} : X -> X -> Type :=
 | chain_nil {A : X} : chain A A
 | chain_cons {A B C : X} :
@@ -19,10 +19,10 @@ Infix ":::" := chain_cons (at level 60, right associativity).
 Fixpoint chain_app {X} {P : X -> X -> Type} {A B C}
          (c : chain P A B) (c' : chain P B C) : chain P A C :=
   match c in (chain _ A' B') return (B = B' -> chain P A' C) with
-  | chain_nil => fun HB => rew[fun B => chain P B C] HB in c'
+  | chain_nil => fun HB => rew [fun B => chain P B C] HB in c'
   | x ::: xs =>
     fun HB =>
-      x ::: chain_app xs (rew[fun B => chain P B C] HB in c')
+      x ::: chain_app xs (rew [fun B => chain P B C] HB in c')
   end eq_refl.
 Infix "+++" := chain_app (right associativity, at level 60).
 
@@ -76,8 +76,8 @@ Definition chain_fold_left {X} {P : X -> X -> Type}
         chain_fold_left (f a (rew <-[fun a => P a _] HA in x)) c'
     end eq_refl.
 
-(* this could be expressed in terms of fold_right, but intermediate steps in
-   computation look nicer if it's spelled out as a fixpoint. *)
+(** this could be expressed in terms of fold_right, but intermediate steps in
+    computation look nicer if it's spelled out as a fixpoint. *)
 Definition chain_to_list {X} {P : X -> X -> Type}
            {L : Type}
            (f : forall {A B : X}, P A B -> L)

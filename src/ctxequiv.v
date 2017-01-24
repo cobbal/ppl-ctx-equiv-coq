@@ -5,19 +5,18 @@ Require Import utils.
 Require Import syntax.
 Require Import relations.
 Require Import properties_of_relations.
-Require Import micromega.Lia.
-Require Import List.
+Require Import Coq.micromega.Lia.
+Require Import Coq.Lists.List.
 Require Export chain.
-
 
 (** * Contexts
 
-    A context is a [chain] of context frames.
+    A context is represented as a [chain] of context frames.
 
     The notations below for types of frames and contexts should be thought of as
-    "contexts take terms sitting in a hole typed `Γh ⊢ τh` and translate them to
-    sit at type `Γo ⊢ τo`". The outermost chain_cons is the outermost context
-    frame here. *)
+    "contexts take terms sitting in a hole typed '[Γh ⊢ τh]' and translate them
+    to expressions at type '[Γo ⊢ τo]'". The outermost chain_cons is the
+    outermost context frame here. *)
 Reserved Notation "'FRAME' Γo ⊢ [ Γh ⊢ τh ] : τo"
          (at level 70, Γo, Γh, τh, τo at level 200, no associativity).
 Reserved Notation "'CTX' Γo ⊢ [ Γh ⊢ τh ] : τo"
@@ -46,8 +45,8 @@ Definition ctx := bichain ctx_frame.
 Notation "'CTX' Γo ⊢ [ Γh ⊢ τh ] : τo" := (ctx Γo τo Γh τh).
 Definition c_hole {Γ τ} : (CTX Γ ⊢ [Γ ⊢ τ] : τ) := chain_nil.
 
-(* As before with expr, we define a (mostly) erased version of contexts and an
-   injective erasure function from the fully typed context. *)
+(** As before with [expr], we define a (mostly) erased version of contexts and
+    an injective erasure function from the fully typed context. *)
 Inductive u_ctx_frame :=
 | uc_app_f (ua : u_expr)
 | uc_app_a (uf : u_expr)
