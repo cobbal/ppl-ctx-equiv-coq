@@ -220,8 +220,8 @@ Proof.
 Qed.
 
 Ltac coarsen v :=
-  let v0 := fresh v in
-  let v1 := fresh v in
+  let v0 := fresh v "0" in
+  let v1 := fresh v "1" in
   let Hv := fresh "H" v in
   apply coarsen_helper; [tauto |]; intros v0 v1 Hv.
 
@@ -267,25 +267,22 @@ Theorem μe_eq_μEntropy :
 Proof.
   intros.
 
-  unfold μ, ">>=".
-
-  extensionality A.
-
-  rewrite riemann_def_of_lebesgue_integration.
-  rewrite tonelli_sigma_finite; auto.
-  unfold eval_in.
-
+  setoid_rewrite meas_bind_assoc.
   integrand_extensionality σ.
 
-  rewrite <- integration_linear_mult_r.
+  unfold eval_in.
+  setoid_rewrite ennr_mul_comm.
+  rewrite integration_linear_in_meas.
   f_equal.
 
-  destruct (ev _ _); cbn. {
-    setoid_rewrite integration_of_indicator.
-    rewrite lebesgue_pos_measure_interval.
+  destruct ev; cbn. {
+    fold (dirac v).
+    rewrite meas_id_left.
     reflexivity.
   } {
-    apply integration_of_0.
+    fold (empty_meas (val τ)).
+    rewrite bind_empty.
+    reflexivity.
   }
 Qed.
 
@@ -305,7 +302,7 @@ Lemma μe_eq_μEntropy2 {τ0 τ1 B}
                                   * ew e1 σ1 * ew e0 σ0)).
 Proof.
   extensionality A.
-  setoid_rewrite μe_eq_μEntropy; eauto.
+  setoid_rewrite μe_eq_μEntropy.
   rewrite μe_eq_μEntropy.
   integrand_extensionality σ0.
 
@@ -361,7 +358,6 @@ Proof.
   }
 Qed.
 
-
 Lemma apply_as_transformer {τa τr}
       (ef : expr · (τa ~> τr))
       (ea : expr · τa) :
@@ -370,7 +366,6 @@ Lemma apply_as_transformer {τa τr}
 Proof.
   extensionality A.
 
-  rewrite μe_eq_μEntropy2.
   set (x σf σa σbody A :=
          option0 ((fun vf va => apply_in vf va σbody A)
                     <$> ev ef σf
@@ -378,7 +373,7 @@ Proof.
                  * ew ea σa * ew ef σf).
   transitivity ((μEntropy >>= (fun σ => x (π 0 σ) (π 1 σ) (π 2 σ))) A). {
     subst x.
-    simpl.
+    cbn.
 
     integrand_extensionality σ.
 
@@ -417,16 +412,15 @@ Proof.
     }
   } {
     rewrite pick_3_entropies.
+    rewrite μe_eq_μEntropy2.
     integrand_extensionality σf.
     integrand_extensionality σa.
     subst x.
-    simpl.
-    unfold ">>=".
-    rewrite <- 2 integration_linear_mult_r.
+    cbn.
+    repeat setoid_rewrite <- integration_linear_mult_r.
     do 2 f_equal.
 
-    decide_eval ef σf as [vf wf exf uf]; [| apply integration_of_0].
-    decide_eval ea σa as [va wa exa ua]; [| apply integration_of_0].
+    repeat destruct ev; try solve [apply integration_of_0].
     cbn.
     reflexivity.
   }
@@ -490,25 +484,28 @@ Lemma compat_var Γ x τ
   EXP Γ ⊢ e_var x Hx ≈ e_var x Hx : τ.
 Proof.
   repeat intro.
-  elim_sig_exprs.
 
   destruct (env_search_subst ρ0 Hx) as [v0 ρ0x].
   destruct (env_search_subst ρ1 Hx) as [v1 ρ1x].
-
   pose proof (apply_G_rel Hρ Hx ρ0x ρ1x).
+
+  elim_sig_exprs.
   elim_erase_eqs.
 
   rewrite 2 val_is_dirac.
   unfold dirac, indicator.
   f_equal.
-  exact (HA _ _ H).
+  apply HA.
+  exact H.
 Qed.
 
 Lemma compat_lam Γ τa τr body0 body1 :
   (EXP (τa :: Γ) ⊢ body0 ≈ body1 : τr) ->
   (EXP Γ ⊢ e_lam body0 ≈ e_lam body1 : (τa ~> τr)).
 Proof.
+  intros Hbody.
   repeat intro.
+
   elim_sig_exprs.
   elim_erase_eqs.
 
@@ -522,7 +519,7 @@ Proof.
   constructor.
   intros.
 
-  specialize (H (dep_cons va0 ρ0) (dep_cons va1 ρ1) (G_rel_cons H0 Hρ)).
+  specialize (Hbody (dep_cons va0 ρ0) (dep_cons va1 ρ1) (G_rel_cons H Hρ)).
 
   elim_sig_exprs.
   elim_erase_eqs.
@@ -530,7 +527,7 @@ Proof.
   asimpl in He4.
   elim_erase_eqs.
 
-  apply H.
+  exact Hbody.
 Qed.
 
 Lemma compat_plus Γ el0 er0 el1 er1 :
@@ -539,15 +536,12 @@ Lemma compat_plus Γ el0 er0 el1 er1 :
   (EXP Γ ⊢ e_plus el0 er0 ≈ e_plus el1 er1 : ℝ).
 Proof.
   intros Hl Hr.
-
   repeat intro.
 
   specialize (Hl _ _ Hρ).
   specialize (Hr _ _ Hρ).
 
   elim_sig_exprs.
-  dep_destruct (e3, He3).
-  dep_destruct (e4, He4).
   elim_erase_eqs.
 
   clear el0 el1 er0 er1 He He0 He1 He2.
@@ -557,17 +551,13 @@ Proof.
   coarsen vl.
   coarsen vr.
 
-  destruct_val vl.
+  destruct Hvl, Hvr.
   destruct_val vl0.
-  destruct_val vr.
   destruct_val vr0.
-
-  inject Hvl.
-  inject Hvr.
 
   cbn.
   unfold indicator.
-  erewrite HA; eauto.
+  erewrite HA; auto.
   reflexivity.
 Qed.
 
@@ -577,7 +567,6 @@ Lemma compat_app Γ τa τr ef0 ef1 ea0 ea1 :
   (EXP Γ ⊢ e_app ef0 ea0 ≈ e_app ef1 ea1 : τr).
 Proof.
   intros Hf Ha.
-
   repeat intro.
 
   specialize (Hf _ _ Hρ).
@@ -595,7 +584,7 @@ Proof.
 
   destruct Hvf as [? ? Hvf].
   cbn; repeat fold_μ.
-  apply Hvf; auto.
+  apply Hvf; assumption.
 Qed.
 
 Lemma compat_sample Γ :
@@ -617,21 +606,22 @@ Lemma compat_factor Γ e0 e1:
   (EXP Γ ⊢ e0 ≈ e1 : ℝ) ->
   (EXP Γ ⊢ e_factor e0 ≈ e_factor e1 : ℝ).
 Proof.
+  intros He.
   repeat intro.
 
-  specialize (H _ _ Hρ).
+  specialize (He _ _ Hρ).
 
   elim_sig_exprs.
   elim_erase_eqs.
 
-  clear e0 e1 He He2.
+  clear e0 e1 He0 He2.
 
   rewrite 2 factor_as_transformer.
 
   coarsen v.
 
   destruct Hv.
-  destruct_val v.
+  destruct_val v0.
 
   cbn.
   destruct Rle_dec; auto.
@@ -655,27 +645,4 @@ Proof.
   - apply compat_factor; auto.
   - apply compat_sample.
   - apply compat_plus; auto.
-Qed.
-
-Print Assumptions fundamental_property.
-
-Lemma fundamental_property_of_values {τ} (v : val τ) :
-  V_rel τ v v.
-Proof.
-  intros.
-
-  destruct v using wt_val_rect; subst; simpl in *. {
-    reflexivity.
-  } {
-    constructor.
-    repeat intro.
-
-    pose proof fundamental_property body as fp.
-    specialize (fp _ _ (G_rel_cons H G_rel_nil)).
-
-    elim_sig_exprs.
-    elim_erase_eqs.
-
-    apply fp; auto.
-  }
 Qed.

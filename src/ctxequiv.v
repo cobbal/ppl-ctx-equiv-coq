@@ -297,11 +297,10 @@ Proof.
 
   pose proof compat_plug C e0 e1 re.
   specialize (H _ _ G_rel_nil).
-  elim_sig_exprs.
-  elim_erase_eqs.
+  rewrite 2 close_nil in H.
 
   apply H.
   repeat intro.
   inject Hv.
-  trivial.
+  reflexivity.
 Qed.

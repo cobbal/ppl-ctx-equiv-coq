@@ -25,32 +25,6 @@ Notation "'λ,' e" := (e_lam e) (at level 69, right associativity).
 Notation "e0 @ e1" := (e_app e0 e1) (at level 68, left associativity).
 Notation "e0 +! e1" := (e_plus e0 e1).
 
-Definition e_let {Γ τ0 τ1} (e0 : expr Γ τ0) (e1 : expr (τ0 :: Γ) τ1) := (λ, e1) @ e0.
-
-Check apply_in.
-Goal forall {τ0 τ1} (e0 : expr · τ0) (e1 : expr _ τ1),
-    μ (e_let e0 e1) =
-    μ e0 >>= (fun va => μ (proj1_sig (ty_subst1 e1 va))).
-Proof.
-  intros.
-  unfold e_let.
-  rewrite apply_as_transformer.
-  rewrite rewrite_v_lam.
-  rewrite val_is_dirac.
-  rewrite meas_id_left.
-  auto.
-Qed.
-
-Lemma compat_let {Γ τ τr} e0 e1 er0 er1 :
-  (EXP Γ ⊢ e0 ≈ e1 : τ) ->
-  (EXP (τ :: Γ) ⊢ er0 ≈ er1 : τr) ->
-  (EXP Γ ⊢ e_let e0 er0 ≈ e_let e1 er1 : τr).
-Proof.
-  intros.
-  apply compat_app; auto.
-  apply compat_lam; auto.
-Qed.
-
 Definition var_0 {τ Γ} : expr (τ :: Γ) τ :=
   e_var O (eq_refl : lookup (τ :: Γ) O = Some τ).
 Definition var_1 {τ0 τ1 Γ} : expr (τ0 :: τ1 :: Γ) τ1 :=
@@ -83,6 +57,21 @@ Proof.
   apply interchangable_sym.
   apply meas_option_interchangable, pushforward_interchangable, score_meas_interchangable.
   apply sigma_finite_is_interchangable; auto.
+Qed.
+
+(** Alternative proof *)
+Lemma μ_interchangable' {τ0 τ1} (e0 : expr · τ0) (e1 : expr · τ1) : interchangable (μ e0) (μ e1).
+Proof.
+  repeat intro.
+  setoid_rewrite μe_eq_μEntropy2.
+  rewrite sigma_finite_is_interchangable; auto.
+
+  extensionality A.
+  integrand_extensionality σ0.
+  integrand_extensionality σ1.
+  rewrite <- !ennr_mul_assoc.
+  f_equal; try ring.
+  repeat destruct ev; cbn; auto.
 Qed.
 
 Lemma πL_same_integral f :
@@ -121,17 +110,90 @@ Proof.
   }
 Qed.
 
+Lemma subst_val {τ B} (v : val τ) (f : val τ -> Meas B) :
+  μ v >>= f = f v.
+Proof.
+  rewrite val_is_dirac.
+  apply meas_id_left.
+Qed.
+
+Lemma subst_lam {τa τr B} e (f : val (τa ~> τr) -> Meas B) :
+  μ (λ, e) >>= f = f (v_lam e).
+Proof.
+  rewrite rewrite_v_lam.
+  apply subst_val.
+Qed.
+
+Lemma subst_real {B} r (f : val ℝ -> Meas B) :
+  μ (e_real r) >>= f = f (v_real r).
+Proof.
+  rewrite rewrite_v_real.
+  apply subst_val.
+Qed.
+
+Definition e_let {Γ τ0 τ1} (e0 : expr Γ τ0) (e1 : expr (τ0 :: Γ) τ1) := (λ, e1) @ e0.
+
+Goal forall {τ0 τ1} (e0 : expr · τ0) (e1 : expr _ τ1),
+    μ (e_let e0 e1) =
+    μ e0 >>= (fun va => μ (proj1_sig (ty_subst1 e1 va))).
+Proof.
+  intros.
+  unfold e_let.
+  rewrite apply_as_transformer.
+  rewrite rewrite_v_lam.
+  rewrite val_is_dirac.
+  rewrite meas_id_left.
+  auto.
+Qed.
+
+Lemma compat_let {Γ τ τr} e0 e1 er0 er1 :
+  (EXP Γ ⊢ e0 ≈ e1 : τ) ->
+  (EXP (τ :: Γ) ⊢ er0 ≈ er1 : τr) ->
+  (EXP Γ ⊢ e_let e0 er0 ≈ e_let e1 er1 : τr).
+Proof.
+  intros.
+  apply compat_app; auto.
+  apply compat_lam; auto.
+Qed.
+
+Definition let_in {τ τr} (v : val τ) (body : expr (τ :: ·) τr) :
+  Entropy -> Meas (val τr) :=
+  eval_in (proj1_sig (ty_subst1 body v)).
+Arguments let_in /.
+
+Lemma let_as_transformer {τ τr} (e : expr · τ) (b : expr (τ :: ·) τr) :
+  μ (e_let e b) = μ e >>= (fun v => μEntropy >>= let_in v b).
+Proof.
+  setoid_rewrite apply_as_transformer.
+  rewrite subst_lam.
+  reflexivity.
+Qed.
+
+Ltac fold_let :=
+  match goal with
+  | [ |- context [(λ, ?b) @ ?e]] => fold (e_let e b)
+  | [ H : context [(λ, ?b) @ ?e] |- _] => fold (e_let e b)
+  end.
+
+(* TODO: find a real name *)
+Ltac munge :=
+  progress repeat (cbn;
+                   rewrite ?subst_val, ?subst_lam, ?subst_real;
+                   try elim_sig_exprs;
+                   try elim_erase_eqs;
+                   repeat fold_μ;
+                   repeat fold_let
+                  ).
+
+(** Now the actual theorems *)
 Lemma add_zero_related (e : expr · ℝ) :
   (EXP · ⊢ e_real 0 +! e ≈ e : ℝ).
 Proof.
   apply relate_exprs; intros.
 
-  elim_sig_exprs.
-  elim_erase_eqs.
-
+  munge.
   rewrite plus_as_transformer.
-  setoid_rewrite (val_is_dirac (v_real 0)).
-  rewrite meas_id_left.
+  rewrite subst_real.
 
   assert (plus_in (v_real 0) = dirac). {
     clear.
@@ -152,9 +214,7 @@ Lemma add_comm_related Γ (e0 e1 : expr Γ ℝ) :
 Proof.
   apply relate_exprs; intros.
 
-  elim_sig_exprs.
-  elim_erase_eqs.
-
+  munge.
   rewrite 2 plus_as_transformer.
   rewrite μ_interchangable.
   integrand_extensionality v1.
@@ -164,7 +224,7 @@ Proof.
   destruct_val v1.
   cbn.
   rewrite Rplus_comm.
-  auto.
+  reflexivity.
 Qed.
 
 Program Fixpoint dep_ids' (Γ0 Γ1 : Env Ty) : dep_list (expr (Γ0 ++ Γ1)) Γ1 :=
@@ -292,13 +352,42 @@ Proof.
   auto.
 Qed.
 
-Lemma lam_is_dirac {τa τr} (e : expr (τa :: ·) τr) : μ (λ, e) = dirac (v_lam e).
+Lemma beta_value {Γ τ τv}
+      (e : expr (τv :: Γ) τ)
+      (v : expr Γ τv) :
+  is_pure v ->
+  (EXP Γ ⊢ e_let v e ≈ proj1_sig (open_subst1 e v) : τ).
 Proof.
-  rewrite <- val_is_dirac.
-  reflexivity.
+  intro v_val.
+
+  apply relate_exprs; intros.
+
+  pose proof closed_pure_is_val v_val ρ.
+
+  munge.
+  rewrite <- H2 in H.
+  set (v' := mk_val e1_2 H).
+  replace e1_2 with (v' : expr _ _) in * by auto.
+  clearbody v'.
+  clear H.
+
+  rewrite let_as_transformer.
+  rewrite subst_val.
+
+  munge.
+  f_equal.
+
+  apply erase_injective.
+  rewrite He0, He2.
+  asimpl.
+  apply subst_only_matters_up_to_env.
+  intros.
+
+  destruct x; auto; cbn in *.
+  erewrite dep_ids_ids; eauto.
 Qed.
 
-Lemma beta_value {Γ τ τv}
+Lemma beta_value' {Γ τ τv}
       (e : expr (τv :: Γ) τ)
       (v : expr Γ τv) :
   is_pure v ->
@@ -310,33 +399,81 @@ Proof.
 
   pose proof closed_pure_is_val v_val ρ.
 
-  elim_sig_exprs.
-  elim_erase_eqs.
-
-  rewrite apply_as_transformer.
-  rewrite lam_is_dirac.
-  rewrite meas_id_left.
-  cbn.
+  munge.
   rewrite <- H2 in H.
+  set (v' := mk_val e1_2 H).
+  replace e1_2 with (v' : expr _ _) in * by auto.
+  clearbody v'.
+  clear H.
 
-  setoid_rewrite (val_is_dirac (mk_val _ H)).
-  rewrite meas_id_left.
-
-  elim_sig_exprs.
-  elim_erase_eqs.
-
-  enough (e0 = e2) by (subst; auto).
-  apply erase_injective.
-  rewrite He2, He0.
-  asimpl.
-  apply subst_only_matters_up_to_env.
+  apply (coarsening (fun a b => μEntropy a = μEntropy b)); auto.
   intros.
 
-  destruct x; auto; simpl in *.
-  erewrite dep_ids_ids; eauto.
-Qed.
+  set (S1 := preimage _ _).
+  set (S2 := preimage _ _).
 
-Print Assumptions beta_value.
+  replace S1 with (preimage (π 2) S2); revgoals. {
+    subst S1 S2.
+    unfold preimage.
+    extensionality σ.
+    f_equal.
+    unfold eval_in.
+    decide_eval (e_let v' e1_1) σ as [vl wl El ul]. {
+      dep_destruct El; try absurd_val.
+      dep_destruct El1.
+      apply invert_eval_val in El2.
+      inject El2.
+      munge.
+
+      replace e0 with e2 in *; revgoals. {
+        apply erase_injective.
+        rewrite He2, He0.
+        asimpl.
+        apply subst_only_matters_up_to_env.
+        intros.
+        destruct x; cbn; auto.
+        erewrite dep_ids_ids; eauto.
+      }
+
+      decide_eval as [vR wR ER uR]. {
+        specialize (uR _ _ El3).
+        inject uR.
+        cbn.
+        ring.
+      }
+    } {
+      decide_eval as [vR wR ER uR].
+      econtradict not_ex. {
+        rewrite (rewrite_v_lam) in *.
+        apply EVAL_val.
+      } {
+        munge.
+        replace e0 with e2 in *; revgoals. {
+          apply erase_injective.
+          rewrite He2, He0.
+          asimpl.
+          apply subst_only_matters_up_to_env.
+          intros.
+          destruct x; cbn; auto.
+          erewrite dep_ids_ids; eauto.
+        }
+        subst.
+        eauto.
+      }
+    }
+  } {
+    clearbody S1 S2.
+    subst.
+    clear_except H.
+
+    change ((μEntropy ∘ (preimage (π 2))) S2 = μEntropy S2).
+    fold (pushforward μEntropy (π 2)).
+
+    pose proof (fun f => project_same_integral f 2).
+    setoid_rewrite integration_of_pushforward in H at 1.
+    admit.
+  }
+Abort.
 
 Lemma apply_id_equiv {Γ τ} (e : expr Γ τ) :
   (EXP Γ ⊢ e_let e var_0 ≈ e : τ).
@@ -344,32 +481,24 @@ Proof.
   intro He.
   apply relate_exprs; intros.
 
-  elim_sig_exprs.
-  elim_erase_eqs.
+  munge.
 
   dep_destruct e0_1; try discriminate.
   inject H2.
 
-  rewrite apply_as_transformer.
-  rewrite lam_is_dirac.
-  rewrite meas_id_left.
+  rewrite let_as_transformer.
 
   set (fun _ => _ >>= _).
   enough (m = dirac). {
     rewrite H0.
     rewrite meas_id_right.
-    auto.
+    reflexivity.
   }
   subst m.
   clear e0_2 H1.
 
   extensionality v.
-  cbn.
-  fold_μ.
-
-  elim_sig_exprs.
-  elim_erase_eqs.
-
+  munge.
   apply val_is_dirac.
 Qed.
 
@@ -447,8 +576,7 @@ Instance expr_lift Γ τ : Lift.type (expr Γ τ) :=
 Lemma expr_lift_erase {Γ τ} (e : expr Γ τ) τ0 :
   erase (e ^ τ0) = (erase e)↑.
 Proof.
-  simpl.
-  elim_sig_exprs.
+  munge.
   rewrite He0.
   autosubst.
 Qed.
@@ -488,42 +616,28 @@ Lemma single_frame_case_app_f {Γ τe τa τo}
       (f_body : expr (τe :: Γ) (τa ~> τo))
       (e : expr Γ τe) :
   let S1 := (c_app_f (τr := τo) ea) in
-  (EXP Γ ⊢ e_let e (S1^τe)⟨e_let var_0 (f_body^τe)⟩ ≈ S1⟨e_let e f_body⟩ : τo).
+  (EXP Γ ⊢ e_let e (S1^τe)⟨((λ, f_body)^τe) @ var_0⟩ ≈ S1⟨e_let e f_body⟩ : τo).
 Proof.
   apply relate_exprs.
   intros.
+  munge.
 
-  elim_sig_exprs.
-  elim_erase_eqs.
-
-  rewrite !apply_as_transformer.
-  rewrite !lam_is_dirac.
-  rewrite !meas_id_left.
+  rewrite apply_as_transformer.
+  rewrite !let_as_transformer.
 
   rewrite meas_bind_assoc.
   integrand_extensionality va.
+  munge.
 
-  cbn.
-  repeat fold_μ.
-  elim_sig_exprs.
-  elim_erase_eqs.
-
-  repeat fold_μ.
   rewrite !apply_as_transformer.
-  rewrite lam_is_dirac, val_is_dirac.
-  rewrite !meas_id_left.
-  cbn.
-
-  elim_sig_exprs.
-  elim_erase_eqs.
-  fold_μ.
+  rewrite let_as_transformer.
+  munge.
 
   asimpl in He1.
   asimpl in He0.
   asimpl in H2.
 
   elim_erase_eqs.
-
   reflexivity.
 Qed.
 
@@ -532,42 +646,29 @@ Lemma single_frame_case_app_a {Γ τe τa τo}
       (f_body : expr (τe :: Γ) τa)
       (e : expr Γ τe) :
   let S1 := c_app_a ef in
-  (EXP Γ ⊢ e_let e (S1^τe)⟨e_let var_0 (f_body^τe)⟩ ≈ S1⟨e_let e f_body⟩ : τo).
+  (EXP Γ ⊢ e_let e (S1^τe)⟨((λ, f_body)^τe) @ var_0⟩ ≈ S1⟨e_let e f_body⟩ : τo).
 Proof.
   apply relate_exprs.
   intros.
-
-  elim_sig_exprs.
-  elim_erase_eqs.
+  munge.
 
   rewrite !apply_as_transformer.
-  rewrite !lam_is_dirac.
-  rewrite !meas_id_left.
+  rewrite !let_as_transformer.
 
   setoid_rewrite meas_bind_assoc.
   rewrite (μ_interchangable e3_1).
   integrand_extensionality va.
-
-  cbn.
-  elim_sig_exprs.
-  elim_erase_eqs.
-  repeat fold_μ.
+  munge.
 
   rewrite !apply_as_transformer.
-  rewrite lam_is_dirac.
-  rewrite val_is_dirac.
-  rewrite !meas_id_left.
-
-  cbn.
-  elim_sig_exprs.
-  elim_erase_eqs.
-  fold_μ.
+  rewrite !let_as_transformer.
+  munge.
 
   asimpl in He0.
   asimpl in He1.
   asimpl in H1.
-  elim_erase_eqs.
 
+  elim_erase_eqs.
   reflexivity.
 Qed.
 
@@ -575,37 +676,23 @@ Lemma single_frame_case_factor {Γ τe}
       (f_body : expr (τe :: Γ) ℝ)
       (e : expr Γ τe) :
   let S1 := c_factor in
-  (EXP Γ ⊢ e_let e (S1^τe)⟨e_let var_0 (f_body^τe)⟩ ≈ S1⟨e_let e f_body⟩ : ℝ).
+  (EXP Γ ⊢ e_let e (S1^τe)⟨((λ, f_body)^τe) @ var_0⟩ ≈ S1⟨e_let e f_body⟩ : ℝ).
 Proof.
   apply relate_exprs.
   intros.
-
-  elim_sig_exprs.
-  elim_erase_eqs.
+  munge.
 
   rewrite factor_as_transformer.
-  rewrite !apply_as_transformer.
-  rewrite !lam_is_dirac.
-  rewrite !meas_id_left.
+  rewrite !let_as_transformer.
+  munge.
 
   rewrite meas_bind_assoc.
   integrand_extensionality va.
-
-  cbn.
-  elim_sig_exprs.
-  elim_erase_eqs.
-  repeat fold_μ.
+  munge.
 
   rewrite factor_as_transformer.
-  rewrite !apply_as_transformer.
-  rewrite lam_is_dirac.
-  rewrite val_is_dirac.
-  rewrite !meas_id_left.
-
-  cbn.
-  elim_sig_exprs.
-  elim_erase_eqs.
-  fold_μ.
+  rewrite !let_as_transformer.
+  munge.
 
   asimpl in He0.
   asimpl in He1.
@@ -619,37 +706,23 @@ Lemma single_frame_case_plus_l {Γ τe}
       (f_body : expr (τe :: Γ) ℝ)
       (e : expr Γ τe) :
   let S1 := c_plus_l er in
-  (EXP Γ ⊢ e_let e (S1^τe)⟨e_let var_0 (f_body^τe)⟩ ≈ S1⟨e_let e f_body⟩ : ℝ).
+  (EXP Γ ⊢ e_let e (S1^τe)⟨((λ, f_body)^τe) @ var_0⟩ ≈ S1⟨e_let e f_body⟩ : ℝ).
 Proof.
   apply relate_exprs.
   intros.
-
-  elim_sig_exprs.
-  elim_erase_eqs.
+  munge.
 
   rewrite plus_as_transformer.
-  rewrite !apply_as_transformer.
-  rewrite !lam_is_dirac.
-  rewrite !meas_id_left.
+  rewrite !let_as_transformer.
+  munge.
 
   rewrite meas_bind_assoc.
   integrand_extensionality va.
-
-  cbn.
-  elim_sig_exprs.
-  elim_erase_eqs.
-  repeat fold_μ.
+  munge.
 
   rewrite plus_as_transformer.
-  rewrite !apply_as_transformer.
-  rewrite lam_is_dirac.
-  rewrite val_is_dirac.
-  rewrite !meas_id_left.
-
-  cbn.
-  elim_sig_exprs.
-  elim_erase_eqs.
-  fold_μ.
+  rewrite !let_as_transformer.
+  munge.
 
   asimpl in He0.
   asimpl in He1.
@@ -664,37 +737,23 @@ Lemma single_frame_case_plus_r {Γ τe}
       (f_body : expr (τe :: Γ) ℝ)
       (e : expr Γ τe) :
   let S1 := c_plus_r el in
-  (EXP Γ ⊢ e_let e (S1^τe)⟨e_let var_0 (f_body^τe)⟩ ≈ S1⟨e_let e f_body⟩ : ℝ).
+  (EXP Γ ⊢ e_let e (S1^τe)⟨((λ, f_body)^τe) @ var_0⟩ ≈ S1⟨e_let e f_body⟩ : ℝ).
 Proof.
-  apply relate_exprs; intros.
-
-  elim_sig_exprs.
-  elim_erase_eqs.
+  apply relate_exprs.
+  intros.
+  munge.
 
   rewrite plus_as_transformer.
-  rewrite !apply_as_transformer.
-  rewrite !lam_is_dirac.
-  rewrite !meas_id_left.
+  rewrite !let_as_transformer.
 
   setoid_rewrite meas_bind_assoc.
   rewrite (μ_interchangable e3_1); auto.
   integrand_extensionality va.
-
-  cbn.
-  elim_sig_exprs.
-  elim_erase_eqs.
-  repeat fold_μ.
+  munge.
 
   rewrite plus_as_transformer.
-  rewrite !apply_as_transformer.
-  rewrite lam_is_dirac.
-  rewrite val_is_dirac.
-  rewrite !meas_id_left.
-
-  cbn.
-  elim_sig_exprs.
-  elim_erase_eqs.
-  fold_μ.
+  rewrite !let_as_transformer.
+  munge.
 
   asimpl in He0.
   asimpl in He1.
@@ -762,7 +821,6 @@ Proof.
     rewrite <- IHU;
     auto.
 Qed.
-
 
 Lemma plug_app {Γ τo τm τi}
       (Co : (SIMPLE Γ ⊢ [τm] : τo))
@@ -864,6 +922,14 @@ Ltac show_refl :=
   | [ |- EXP _ ⊢ ?a ≈ ?b : _ ] => enough (H : a = b) by (rewrite H; reflexivity)
   end.
 
+(* Lemma single_frame_case_let {Γ τe τa τo} *)
+(*       (ea : expr Γ τa) *)
+(*       (f_body : expr (τe :: Γ) (τa ~> τo)) *)
+(*       (e : expr Γ τe) : *)
+(*   let S1 := (c_app_f (τr := τo) ea) :::: (c_lam : (FRAME Γ ⊢ [τe :: Γ ⊢ _] : _)) in *)
+(*   (EXP Γ ⊢ e_let e (S1^τe)⟨((λ, f_body)^τe) @ var_0⟩ ≈ S1⟨e_let e f_body⟩ : τo). *)
+
+
 (* theorem 24 *)
 Theorem subst_into_simple {Γ τe τo}
         (S : SIMPLE Γ ⊢ [τe] : τo)
@@ -917,55 +983,29 @@ Proof.
     transitivity (p⟨e_let e (S^τi)⟨var_0⟩⟩). {
       (* "by single-frame case" *)
 
-
-
+      unfold e_let.
 
       set (f := λ, (S^τi)⟨var_0⟩).
-      unfold e_let at 2.
       replace (λ, ((S^τi)^τi)⟨var_0⟩) with (f^τi); swap 1 2. {
-        admit.
-      }
-      subst f.
-      cbn.
-      unfold e_let in e0.
-
-      dependent destruction p using simple_ctx_frame_rect.
-      - apply single_frame_case_app_f.
-      - apply single_frame_case_app_a.
-      - apply single_frame_case_factor.
-      - apply single_frame_case_plus_l.
-      - apply single_frame_case_plus_r.
-
-
-
-
-
-
-
-
-      replace (((S ^ τi) ^ τi)⟨var_0⟩) with (((S ^ τi)⟨var_0⟩ ^ τi)); revgoals. {
-
-        assert (τm = τi) by admit.
-        subst.
-        assert (S = chain_nil) by admit.
-        subst.
-        cbn.
+        clear.
+        subst f.
         simpl.
 
-        destruct expr_ren.
-        cbn.
-        cbn in *.
-
         elim_sig_exprs.
+        elim_erase_eqs.
+        f_equal.
+
         apply erase_injective.
-        rewrite He0.
-        clear e0 He0.
+        setoid_rewrite erase_plug.
+        cbn.
+        rewrite H0.
+        clear e H0.
         setoid_rewrite erase_plug.
         rewrite <- rename_subst.
 
-        rewrite rename_simple_u_plug by apply erase_simple.
-        cbn.
-
+        rewrite rename_simple_u_plug; revgoals. {
+          apply erase_simple.
+        }
         f_equal.
         repeat setoid_rewrite erase_up_simple_ctx.
 
@@ -984,6 +1024,11 @@ Proof.
         destruct a; cbn; rewrite ?H; auto.
       }
 
+      subst f.
+
+      fold (e_let e (S ^ τi)⟨var_0⟩).
+      fold (e_let e (p ^ τi)⟨(λ, (S ^ τi)⟨var_0⟩) ^ τi @ var_0⟩).
+
       dependent destruction p using simple_ctx_frame_rect.
       - apply single_frame_case_app_f.
       - apply single_frame_case_app_a.
@@ -998,3 +1043,89 @@ Proof.
 Qed.
 
 Print Assumptions subst_into_simple.
+
+Definition var_swap : nat -> nat :=
+  (fun x =>
+    match x with
+    | 0 => 1
+    | 1 => 0
+    | _ => x
+    end)%nat.
+
+Definition ty_swap {Γ τ1 τ2 τ} (e : expr (τ1 :: τ2 :: Γ) τ) :
+  expr (τ2 :: τ1 :: Γ) τ.
+Proof.
+  refine (proj1_sig (expr_ren var_swap e (τ2 :: τ1 :: Γ) _)).
+  abstract (extensionality x; do 2 (destruct x; auto)).
+Defined.
+
+Lemma let2_as_transformer {τ0 τ1 τr} (e0 : expr · τ0) (e1 : expr · τ1)
+      (b : expr (τ1 :: τ0 :: ·) τr) :
+  μ (e_let e0 (e_let (e1^τ0) b)) =
+  μ e0 >>=
+    (fun v0 =>
+       μ e1 >>=
+         (fun v1 =>
+            μ (proj1_sig (close (dep_cons v1 (dep_cons v0 dep_nil)) b)))).
+Proof.
+  extensionality A.
+  rewrite let_as_transformer.
+  integrand_extensionality v0.
+  munge.
+
+  asimpl in H1.
+  elim_erase_eqs.
+  rewrite let_as_transformer.
+
+  integrand_extensionality v1.
+  munge.
+  asimpl in He.
+  elim_erase_eqs.
+  reflexivity.
+Qed.
+
+Lemma is_commutative {Γ τ1 τ2 τ}
+      (e1 : expr Γ τ1)
+      (e2 : expr Γ τ2)
+      (body : expr (τ2 :: τ1 :: Γ) τ) :
+  (EXP Γ ⊢ e_let e1 (e_let (e2^τ1) body) ≈ e_let e2 (e_let (e1^τ2) (ty_swap body)) : τ).
+Proof.
+  apply relate_exprs.
+  intros.
+  unfold ty_swap.
+  munge.
+
+  replace e3_4 with (proj1_sig (close ρ e2) ^ τ1); revgoals. {
+    elim_sig_exprs.
+    elim_erase_eqs.
+    asimpl in H4.
+    asimpl in He0.
+    elim_erase_eqs.
+    reflexivity.
+  }
+  replace e3_1_2 with (proj1_sig (close ρ e1) ^ τ2); revgoals. {
+    elim_sig_exprs.
+    elim_erase_eqs.
+    asimpl in H2.
+    asimpl in He0.
+    elim_erase_eqs.
+    reflexivity.
+  }
+
+  rewrite 2 let2_as_transformer.
+  rewrite μ_interchangable.
+  munge.
+  integrand_extensionality v2.
+  integrand_extensionality v1.
+
+  munge.
+  asimpl in He3.
+  asimpl in He4.
+  f_equal.
+
+  apply erase_injective.
+  rewrite He3, He4.
+  apply subst_only_matters_up_to_env.
+  intros.
+  repeat (destruct x; auto).
+Qed.

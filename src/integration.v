@@ -159,7 +159,13 @@ Arguments unif_score_meas {_} _ _ _ /.
 
 (** Tactic for showing [∫ f dμ = ∫ g dμ] by pointwise equality of [f] and [g]. *)
 Ltac integrand_extensionality x :=
-  refine (f_equal2 integration _ eq_refl); extensionality x.
+  match goal with
+  | [ |- _ = _ :> R+ ] => idtac
+  | [ |- _ = _ :> Meas _ ] => let A := fresh "A" in extensionality A
+  | [ |- _ = _ :> _ -> R+ ] => let A := fresh "A" in extensionality A
+  end;
+  refine (f_equal2 integration _ eq_refl);
+  extensionality x.
 
 (** Derive some more immediately useful forms of linearity. *)
 Lemma integration_linear_mult_r :
@@ -211,7 +217,7 @@ Proof.
 Qed.
 
 (** Some lemmas about integrating by the new measures *)
-Lemma integral_of_pushforward {A B} (g : A -> B) f μ :
+Lemma integration_of_pushforward {A B} (g : A -> B) f μ :
   integration (f ∘ g) μ = integration f (pushforward μ g).
 Proof.
   intros.
@@ -269,6 +275,18 @@ Proof.
   apply integration_of_indicator.
 Qed.
 
+Definition meas_join {A} (μ : Meas (Meas A)) : Meas A := μ >>= id.
+Definition kernel A B := A -> Meas B.
+
+Definition kleis_comp {A B C} (k0 : kernel A B) (k1 : kernel B C) : kernel A C :=
+  fun a => k0 a >>= k1.
+Infix ">=>" := (kleis_comp) (at level 21, right associativity).
+
+Class assocable {A B C D} (k0 : kernel A B) k1 (k2 : kernel C D) : Prop :=
+  meas_klies_assoc :
+    k0 >=> (k1 >=> k2) =
+    (k0 >=> k1) >=> k2.
+
 (** * Measures that may be safely interchanged *)
 
 (** Tonelli's theorem will be too restricted to be of immediate use in dealing
@@ -306,10 +324,11 @@ Instance score_meas_interchangable {X} (μ : Meas X) (w : X -> R+) :
     interchangable (score_meas w μ) μy.
 Proof.
   repeat intro.
+
   setoid_rewrite meas_bind_assoc.
   rewrite <- H; auto.
 
-  extensionality ev.
+  extensionality A.
   integrand_extensionality x.
 
   rewrite integration_linear_in_meas.
@@ -332,7 +351,7 @@ Proof.
 
   unfold ">>=".
 
-  setoid_rewrite <- (integral_of_pushforward f).
+  setoid_rewrite <- (integration_of_pushforward f).
 
   extensionality ev.
   change ((μ >>= (fun x => μz >>= (fun z => (f0 ∘ f) x z))) ev =
@@ -487,6 +506,30 @@ Lemma coarsening :
          (M : relation (Event X))
          (μ0 μ1 : Meas X)
          (f0 f1 : X -> R+)
+         (μs_agree : forall A0 A1, M A0 A1 -> μ0 A0 = μ1 A1)
+         (f_is_M_measurable :
+            forall (B : Event R+),
+              M (preimage f0 B) (preimage f1 B)),
+    integration f0 μ0 = integration f1 μ1.
+Proof.
+  intros.
+  setoid_rewrite riemann_def_of_lebesgue_integration.
+
+  integrand_extensionality t.
+  apply μs_agree.
+
+  specialize (f_is_M_measurable (fun fx => bool_of_dec (ennr_gt_dec fx t))).
+  unfold preimage in f_is_M_measurable.
+  exact f_is_M_measurable.
+Qed.
+
+Lemma coarsening' :
+  forall {X0 X1}
+         (M : Event X0 -> Event X1 -> Prop)
+         (μ0 : Meas X0)
+         (μ1 : Meas X1)
+         (f0 : X0 -> R+)
+         (f1 : X1 -> R+)
          (μs_agree : forall A0 A1, M A0 A1 -> μ0 A0 = μ1 A1)
          (f_is_M_measurable :
             forall (B : Event R+),
