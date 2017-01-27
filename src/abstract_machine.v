@@ -43,7 +43,6 @@ Section AbstractMachine.
   .
   Arguments mk_state {τ} c σ k.
 
-  Reserved Infix "-->" (at level 84).
   Inductive step : forall {τ τ'}, state τ -> state τ' -> R+ -> Type :=
   (* not a value, destruct the expression *)
   | step_app : forall {τa τr ef ea σ k},
@@ -195,7 +194,7 @@ End AbstractMachine.
 Arguments mk_state {τP τ} c σ k.
 
 Module AbstractMachineNotations.
-  Infix "-->" := (step _) (at level 84).
+  Infix "-->" := (step _).
   Infix "-->*" := (step_star _) (at level 84).
   Notation "s -->^[ n ] t" := (step_n _ n s t) (at level 84).
 End AbstractMachineNotations.
@@ -225,9 +224,9 @@ Qed.
    two different ways to an entire continuation (forwards and reverse). Most of
    the ugliness comes from fighting dependent types, the only really interesting
    part is the `dummy_entropy` that gets thrown in. *)
-Definition unabstract_frame {τo τi} (eσ : expr · τi ⨉ Entropy) (f : kont_frame τi τo)
-  : (expr · τo ⨉ Entropy) :=
-  match f in (kont_frame τi' τo') return τi = τi' -> (expr · τo' ⨉ Entropy) with
+Definition unabstract_frame {τo τi} (eσ : expr · τi * Entropy) (f : kont_frame τi τo)
+  : (expr · τo * Entropy) :=
+  match f in (kont_frame τi' τo') return τi = τi' -> (expr · τo' * Entropy) with
   | kAppFn σ' ea => fun Hτi => (e_app (rew Hτi in (fst eσ)) ea,
                                 join (snd eσ) σ')
   | kAppArg σ' vf => fun Hτi => (e_app vf (rew Hτi in (fst eσ)),
@@ -240,31 +239,31 @@ Definition unabstract_frame {τo τi} (eσ : expr · τi ⨉ Entropy) (f : kont_
                              join dummy_entropy (join (snd eσ) dummy_entropy))
   end eq_refl.
 
-Fixpoint unabstract_rev {τo τi} (eσ : expr · τi ⨉ Entropy) (rk : rev_kont τo τi)
-  : (expr · τo ⨉ Entropy) :=
-  match rk in chain _ τo' τi' return (τi = τi' -> expr · τo' ⨉ Entropy) with
-  | chain_nil => fun Hτi => rew [fun ti => expr · ti ⨉ Entropy] Hτi in eσ
+Fixpoint unabstract_rev {τo τi} (eσ : expr · τi * Entropy) (rk : rev_kont τo τi)
+  : (expr · τo * Entropy) :=
+  match rk in chain _ τo' τi' return (τi = τi' -> expr · τo' * Entropy) with
+  | chain_nil => fun Hτi => rew [fun ti => (expr · ti * Entropy)%type] Hτi in eσ
   | @chain_cons _ _ τo' τm τi' f rk' =>
     fun Hτi =>
-      unabstract_frame (unabstract_rev eσ (rew <- Hτi in rk') : expr · τm ⨉ Entropy) f
+      unabstract_frame (unabstract_rev eσ (rew <- Hτi in rk') : expr · τm * Entropy) f
   end eq_refl.
 
-Definition unabstract {τo τi} (eσ : expr · τi ⨉ Entropy) (k : kont τo τi)
-  : (expr · τo ⨉ Entropy) := unabstract_rev eσ (chain_rev k).
+Definition unabstract {τo τi} (eσ : expr · τi * Entropy) (k : kont τo τi)
+  : (expr · τo * Entropy) := unabstract_rev eσ (chain_rev k).
 
-Fixpoint unabstract' {τP τ} (eσ : expr · τ ⨉ Entropy) (k : kont τP τ)
-  : (expr · τP ⨉ Entropy) :=
+Fixpoint unabstract' {τP τ} (eσ : expr · τ * Entropy) (k : kont τP τ)
+  : (expr · τP * Entropy) :=
   match k in chain _ τ' τP'
-        return τ = τ' -> (expr · τP' ⨉ Entropy) with
+        return τ = τ' -> (expr · τP' * Entropy) with
   | chain_nil =>
     fun Hτ =>
-      (rew [fun t => expr · t ⨉ Entropy] Hτ in eσ)
+      (rew [fun t => (expr · t * Entropy)%type] Hτ in eσ)
   | @chain_cons _ _ τ0 τ1 τP' f k' =>
     fun Hτ =>
       unabstract' (unabstract_frame eσ (rew <-[fun t => kont_frame t τ1] Hτ in f)) k'
   end eq_refl.
 
-Lemma unabstract'_compose {τo τm τi} (eσ : expr · τi ⨉ Entropy)
+Lemma unabstract'_compose {τo τm τi} (eσ : expr · τi * Entropy)
       (ko : kont τo τm) (ki : kont τm τi) :
   unabstract' (unabstract' eσ ki) ko = unabstract' eσ (ki +++ ko).
 Proof.
@@ -288,7 +287,7 @@ Proof.
   auto.
 Qed.
 
-Lemma unabstract_compose {τo τm τi} (eσ : expr · τi ⨉ Entropy)
+Lemma unabstract_compose {τo τm τi} (eσ : expr · τi * Entropy)
       (ko : kont τo τm) (ki : kont τm τi) :
   unabstract (unabstract eσ ki) ko = unabstract eσ (ki +++ ko).
 Proof.
@@ -328,7 +327,7 @@ Proof.
 
     specialize (IHk' e e').
 
-    d_destruct x;
+    dep_destruct x;
       cbn in *;
       inject Heqp;
       inject Heqp0;
@@ -337,7 +336,7 @@ Proof.
       destruct p as [eP σP], p0 as [e'P σ'P];
       cbn in *;
       specialize (IHk' _ _ eq_refl _ _ eq_refl);
-      d_destruct HP; try absurd_val.
+      dep_destruct HP; try absurd_val.
     {
       replace (_ * _) with ((wdiff * w0) * w1 * w2) by ring.
       econstructor; π_join; eauto.
@@ -378,7 +377,7 @@ Proof.
   intros.
 
   (* ugh *)
-  d_destruct H;
+  dep_destruct H;
     cbn in *;
     rewrite ?join_πL_πR, ?ennr_mul_1_l, ?rewrite_v_real in *;
     try solve [
@@ -395,7 +394,7 @@ Proof.
   {
     constructor.
   } {
-    d_destruct H; try absurd_val.
+    dep_destruct H; try absurd_val.
     destruct (invert_eval_val H); subst.
     repeat econstructor; π_join; eauto.
   } {
@@ -405,7 +404,7 @@ Proof.
   } {
     econstructor; eauto.
   } {
-    d_destruct H; try absurd_val.
+    dep_destruct H; try absurd_val.
     destruct (invert_eval_val H); subst.
     repeat econstructor; π_join; eauto.
   } {
@@ -427,10 +426,10 @@ Proof.
   move n after τ.
   reverse.
   induction n; intros. {
-    d_destruct s.
+    dep_destruct s.
     constructor.
   } {
-    d_destruct s.
+    dep_destruct s.
     destruct s1 as [e' σ' k'].
     pose proof small_big_lemma e σ k e' σ' k'.
     rewrite <- Heqp in *.

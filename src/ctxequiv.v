@@ -1,32 +1,22 @@
+(** In this file, we define contexts, contextual equivalence, and show that the
+    logical relation [related_exprs] is sound with respect to contextual
+    equivalence. *)
 Require Import utils.
 Require Import syntax.
 Require Import relations.
 Require Import properties_of_relations.
-Require Import micromega.Lia.
-Require Import List.
+Require Import Coq.micromega.Lia.
+Require Import Coq.Lists.List.
 Require Export chain.
 
-(* A context is a chain (see chain.v) of context frames. As before with expr, we
-   define a (mostly) erased version and an injective erasure function from the
-   fully typed context *)
+(** * Contexts
 
-Inductive u_ctx_frame :=
-| uc_app_f (ua : u_expr)
-| uc_app_a (uf : u_expr)
-| uc_factor
-| uc_plus_l (ur : u_expr)
-| uc_plus_r (ul : u_expr)
-| uc_lam (τa : Ty)
-.
+    A context is represented as a [chain] of context frames.
 
-Definition u_ctx := list u_ctx_frame.
-Definition uc_hole : u_ctx := nil.
-
-(* The notation below for types of frames and contexts should be thought of as
-   "contexts take terms sitting in a hole typed `Γh ⊢ τh` and translate them to
-   sit at type `Γo ⊢ τo`". The outermost chain_cons is the outermost context
-   frame here. *)
-
+    The notations below for types of frames and contexts should be thought of as
+    "contexts take terms sitting in a hole typed '[Γh ⊢ τh]' and translate them
+    to expressions at type '[Γo ⊢ τo]'". The outermost chain_cons is the
+    outermost context frame here. *)
 Reserved Notation "'FRAME' Γo ⊢ [ Γh ⊢ τh ] : τo"
          (at level 70, Γo, Γh, τh, τo at level 200, no associativity).
 Reserved Notation "'CTX' Γo ⊢ [ Γh ⊢ τh ] : τo"
@@ -55,8 +45,25 @@ Definition ctx := bichain ctx_frame.
 Notation "'CTX' Γo ⊢ [ Γh ⊢ τh ] : τo" := (ctx Γo τo Γh τh).
 Definition c_hole {Γ τ} : (CTX Γ ⊢ [Γ ⊢ τ] : τ) := chain_nil.
 
+(** As before with [expr], we define a (mostly) erased version of contexts and
+    an injective erasure function from the fully typed context. *)
+Inductive u_ctx_frame :=
+| uc_app_f (ua : u_expr)
+| uc_app_a (uf : u_expr)
+| uc_factor
+| uc_plus_l (ur : u_expr)
+| uc_plus_r (ul : u_expr)
+| uc_lam (τa : Ty)
+.
+
+Definition u_ctx := list u_ctx_frame.
+Definition uc_hole : u_ctx := nil.
+
 Set Typeclasses Unique Instances.
 
+(** We can't instantiate all of autosubst's machinery for contexts, since they
+    can't be variables, but we can at least define renaming. We could define
+    substitution too, but the need for it hasn't come up yet. *)
 Instance Rename_u_ctx_frame : Rename u_ctx_frame :=
   fun σ f =>
     match f with
@@ -75,8 +82,20 @@ Instance Rename_u_ctx : Rename u_ctx :=
     | f :: U' => rename σ f :: Rename_u_ctx σ U'
     end.
 
+(** ** The [Plug] typeclass *)
+(** [Plug] should be thought of as a typeclass for plugging something into a
+    context-like object using the syntax "[C⟨e⟩]". The machinery needed to do
+    this is slightly more convoluted than it would be in Haskell. *)
+
+(** Things we want to be able to plug (both for typed and untyped):
+    - expressions into context frames
+    - expressions into contexts
+    - contexts into context
+ *)
+(** It would be possible to define even more combinations with frames, but they
+    aren't yet needed. *)
 Module Plug.
-  Class type obj hole res :=
+  Class Plug obj hole res :=
     mk {
         plug : obj -> hole -> res
       }.
@@ -88,7 +107,7 @@ Notation "C ⟨ e ⟩" := (Plug.plug C e)
   (at level 2, e at level 200, left associativity,
    format "C ⟨ e ⟩" ).
 
-Instance u_plug_frame : Plug.type u_ctx_frame u_expr u_expr :=
+Instance u_plug_frame : Plug.Plug u_ctx_frame u_expr u_expr :=
   { plug f e :=
       match f with
       | uc_app_f ea => u_app e ea
@@ -106,10 +125,10 @@ Fixpoint u_plug (U : u_ctx) (e : u_expr) : u_expr :=
   | f :: U' => f⟨u_plug U' e⟩
   end.
 
-Instance u_plug' : Plug.type u_ctx u_expr u_expr := { plug := u_plug }.
+Instance u_plug' : Plug.Plug u_ctx u_expr u_expr := { plug := u_plug }.
 
 Instance plug_frame {Γo τo Γh τh}
-  : Plug.type (FRAME Γo ⊢ [Γh ⊢ τh] : τo) (expr Γh τh) (expr Γo τo) :=
+  : Plug.Plug (FRAME Γo ⊢ [Γh ⊢ τh] : τo) (expr Γh τh) (expr Γo τo) :=
   { plug f :=
       match f in (FRAME Γo' ⊢ [Γh' ⊢ τh'] : τo')
             return (expr Γh' τh' -> expr Γo' τo') with
@@ -123,16 +142,8 @@ Instance plug_frame {Γo τo Γh τh}
   }.
 
 Instance plug {Γo τo Γh τh}
-  : Plug.type (CTX Γo ⊢ [Γh ⊢ τh] : τo) (expr Γh τh) (expr Γo τo) :=
+  : Plug.Plug (CTX Γo ⊢ [Γh ⊢ τh] : τo) (expr Γh τh) (expr Γo τo) :=
   { plug C e := bichain_fold_right (fun _ _ _ _ C e => C⟨e⟩) e C }.
-
-Lemma plug_cons {Γo τo Γm τm Γi τi}
-      (f : (FRAME Γo ⊢ [Γm ⊢ τm] : τo))
-      C (e : expr Γi τi) :
-  (f :::: C)⟨e⟩ = f⟨C⟨e⟩⟩.
-Proof.
-  trivial.
-Qed.
 
 Definition erase_ctx_frame {Γo τo Γh τh} (f : (FRAME Γo ⊢ [Γh ⊢ τh] : τo))
   : u_ctx_frame :=
@@ -171,7 +182,7 @@ Proof.
     rewrite !erase_cons in H.
     inject H.
 
-    d_destruct (x, x1);
+    dep_destruct (x, x1);
       try discriminate H1;
       f_equal;
       auto;
@@ -210,7 +221,7 @@ Proof.
     auto.
   change (erase_ctx C = erase_ctx C') in H1.
 
-  d_destruct (x, x0);
+  dep_destruct (x, x0);
     try inject Heq;
     try solve [eapply IHC; eauto].
   {
@@ -221,6 +232,53 @@ Proof.
     pose proof expr_type_unique _ _ H2.
     inject H.
     eapply IHC; eauto.
+  }
+Qed.
+
+Lemma compat_plug1 {Γo τo Γh τh}
+      (f : FRAME Γo ⊢ [Γh ⊢ τh] : τo)
+      e0 e1 :
+  (EXP Γh ⊢ e0 ≈ e1 : τh) ->
+  (EXP Γo ⊢ f⟨e0⟩ ≈ f⟨e1⟩ : τo).
+Proof.
+  intros.
+  dep_destruct f; cbn. {
+    eapply compat_app; auto.
+    reflexivity.
+  } {
+    eapply compat_app; auto.
+    reflexivity.
+  } {
+    apply compat_factor; auto.
+  } {
+    apply compat_plus; auto.
+    reflexivity.
+  } {
+    apply compat_plus; auto.
+    reflexivity.
+  } {
+    apply compat_lam; auto.
+  }
+Qed.
+
+Definition plug_cons {Γo τo Γm τm Γi τi}
+      (f : (FRAME Γo ⊢ [Γm ⊢ τm] : τo))
+      C (e : expr Γi τi) :
+  (f :::: C)⟨e⟩ = f⟨C⟨e⟩⟩ := eq_refl.
+
+Lemma compat_plug {Γo τo Γh τh}
+      (C : CTX Γo ⊢ [Γh ⊢ τh] : τo)
+      e0 e1 :
+  (EXP Γh ⊢ e0 ≈ e1 : τh) ->
+  (EXP Γo ⊢ C⟨e0⟩ ≈ C⟨e1⟩ : τo).
+Proof.
+  intros He.
+  dependent induction C using bichain_rect. {
+    exact He.
+  } {
+    change (EXP xA ⊢ x⟨C⟨e0⟩⟩ ≈ x⟨C⟨e1⟩⟩ : yA).
+    apply compat_plug1.
+    auto.
   }
 Qed.
 
@@ -236,107 +294,12 @@ Proof.
 
   repeat intro.
 
-  set (A0 := A) at 1.
-  set (A1 := A).
+  pose proof compat_plug C e0 e1 re.
+  specialize (H _ _ G_rel_nil).
+  rewrite 2 close_nil in H.
 
-  assert (HA : A_rel ℝ A0 A1). {
-    intros ? ? ?.
-    rewrite Hv.
-    auto.
-  }
-  clearbody A0 A1.
-  clear A.
-
-  revert C.
-  enough (forall Γo ρC0 ρC1 (Hρ : G_rel Γo ρC0 ρC1)
-                 (C : (CTX Γo ⊢ [Γ ⊢ τ] : ℝ)),
-             μ (proj1_sig (close ρC0 C⟨e0⟩)) A0 =
-             μ (proj1_sig (close ρC1 C⟨e1⟩)) A1); intros.
-  {
-    specialize (H _ _ _ G_rel_nil C).
-
-    elim_sig_exprs.
-    apply erase_injective in He.
-    apply erase_injective in He2.
-    subst.
-    auto.
-  }
-
-  move Hρ after A0.
-  induction C using bichain_rect. {
-    apply re; auto.
-  } {
-    specialize (IHC _ _ re).
-    rewrite !plug_cons.
-    destruct x; try specialize (IHC _ _ Hρ). {
-      pose proof (fundamental_property _ _ e _ _ Hρ).
-
-      elim_sig_exprs.
-      d_destruct (e6, He6).
-      d_destruct (e7, He7).
-      elim_erase_eqs.
-
-      apply case_app; auto.
-    } {
-      pose proof (fundamental_property _ _ e _ _ Hρ).
-
-      elim_sig_exprs.
-      d_destruct (e6, He6).
-      d_destruct (e7, He7).
-      elim_erase_eqs.
-
-      apply case_app; auto.
-    } {
-      elim_sig_exprs.
-      d_destruct (e3, He3).
-      d_destruct (e4, He4).
-      elim_erase_eqs.
-
-      apply case_factor; auto.
-    } {
-      pose proof (fundamental_property _ _ e _ _ Hρ).
-
-      elim_sig_exprs.
-      d_destruct (e6, He6).
-      d_destruct (e7, He7).
-      elim_erase_eqs.
-
-      apply case_plus; auto.
-    } {
-      pose proof (fundamental_property _ _ e _ _ Hρ).
-
-      elim_sig_exprs.
-      d_destruct (e6, He6).
-      d_destruct (e7, He7).
-      elim_erase_eqs.
-
-      apply case_plus; auto.
-    } {
-      elim_sig_exprs.
-      d_destruct (e, He).
-      d_destruct (e2, He2).
-
-      rewrite !rewrite_v_lam.
-      rewrite 2 val_is_dirac.
-      unfold dirac, indicator.
-      f_equal.
-      apply HA.
-
-      constructor.
-      intros.
-
-      specialize (IHC _ _ (G_rel_cons H Hρ)).
-
-      elim_sig_exprs.
-      rewrite x0 in He5.
-      rewrite x in He6.
-      asimpl in He5.
-      asimpl in He6.
-      elim_erase_eqs.
-
-      repeat intro.
-      apply IHC.
-      auto.
-    }
-  }
+  apply H.
+  repeat intro.
+  inject Hv.
+  reflexivity.
 Qed.

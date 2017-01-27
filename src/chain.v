@@ -1,25 +1,28 @@
 Require Import Coq.Program.Basics.
 Import EqNotations.
 
-(* A chain is like a list, but with dependent types that must link between
-   consequetive pairs. If a list is a free monoid, maybe this is a free
-   category? *)
+(** A chain (elsewhere called a type-aligned list) is like a list, but with
+    dependent types that must link between consequetive pairs. If a list is a
+    free monoid, maybe this is a free category? Anyway, it's a useful way to
+    represent a typed context since it's composable on both the inside and the
+    outside. *)
 Inductive chain {X} {P : X -> X -> Type} : X -> X -> Type :=
 | chain_nil {A : X} : chain A A
 | chain_cons {A B C : X} :
     P A B -> chain B C -> chain A C
 .
 
+(** Most definitions and lemmas in this file will mirror that of [list] *)
 Arguments chain {X} P _ _.
 Infix ":::" := chain_cons (at level 60, right associativity).
 
 Fixpoint chain_app {X} {P : X -> X -> Type} {A B C}
          (c : chain P A B) (c' : chain P B C) : chain P A C :=
   match c in (chain _ A' B') return (B = B' -> chain P A' C) with
-  | chain_nil => fun HB => rew[fun B => chain P B C] HB in c'
+  | chain_nil => fun HB => rew [fun B => chain P B C] HB in c'
   | x ::: xs =>
     fun HB =>
-      x ::: chain_app xs (rew[fun B => chain P B C] HB in c')
+      x ::: chain_app xs (rew [fun B => chain P B C] HB in c')
   end eq_refl.
 Infix "+++" := chain_app (right associativity, at level 60).
 
@@ -52,7 +55,7 @@ Fixpoint chain_rev {X} {P : X -> X -> Type} {A B}
   match c with
   | chain_nil => chain_nil
   | x ::: xs => chain_snoc (chain_rev xs) x
-  end.
+end.
 
 Lemma chain_rev_app_distr {X} {P : X -> X -> Type} {A B C}
       (c0 : chain P A B) (c1 : chain P B C)
@@ -84,8 +87,6 @@ Proof.
   auto.
 Qed.
 
-(* elimination predicate for a reverse chain, i.e. pretending it was defined by
-   nil and snoc instead of nil and cons. *)
 Lemma rev_chain_rect X (P : X -> X -> Type)
       (motive : forall A B, chain P A B -> Type)
       (case_nil : forall A, motive A A chain_nil)
@@ -127,8 +128,8 @@ Definition chain_fold_left {X} {P : X -> X -> Type}
         chain_fold_left (f a (rew <-[fun a => P a _] HA in x)) c'
     end eq_refl.
 
-(* this could be expressed in terms of fold_right, but `cbn`s look nicer if it's
-   spelled out as a fixpoint. *)
+(** this could be expressed in terms of fold_right, but intermediate steps in
+    computation look nicer if it's spelled out as a fixpoint. *)
 Definition chain_to_list {X} {P : X -> X -> Type}
            {L : Type}
            (f : forall {A B : X}, P A B -> L)
@@ -140,39 +141,16 @@ Definition chain_to_list {X} {P : X -> X -> Type}
       cons (f x) (chain_to_list c')
     end.
 
-(* A bichain is just a chain on a product, but it makes a lot of things easier
-   to spell it out . *)
+(** A bichain is just a chain on a product, but it makes a lot of things easier
+   to spell it out. *)
 
 Definition bicurry {A B C D E} (f : A -> B -> C -> D -> E)
   : (A * B) -> (C * D) -> E :=
   fun ab cd => f (fst ab) (snd ab) (fst cd) (snd cd).
 
-Lemma dep_bicurry {A B C D} {E : A -> B -> C -> D -> Type}
-      (f : forall A B C D, E A B C D)
-  : forall (ab : A * B) (cd : C * D),
-    bicurry E ab cd.
-Proof.
-  intros [? ?] [? ?].
-  apply f.
-Defined.
-
 Definition bichain {X Y} (P : X -> Y -> X -> Y -> Type)
            (xA : X) (yA : Y) (xB : X) (yB : Y)
-  : Type := @chain
-              (X * Y)
-              (bicurry P)
-              (xA, yA)
-              (xB, yB).
-(* Inductive chain (X : Type) (P : X -> X -> Type) : X -> X -> Type := *)
-(*     chain_nil : forall A : X, chain P A A *)
-(*   | chain_cons : forall A B C : X, P A B -> chain P B C -> chain P A C *)
-
-(* For chain: Argument X is implicit and maximally inserted *)
-(* For chain_nil: Arguments X, P, A are implicit and maximally inserted *)
-(* For chain_cons: Arguments X, P, A, B, C are implicit and maximally inserted *)
-(* For chain: Argument scopes are [type_scope _ _ _] *)
-(* For chain_nil: Argument scopes are [type_scope _ _] *)
-(* For chain_cons: Argument scopes are [type_scope _ _ _ _ _ _] *)
+  : Type := @chain (X * Y) (bicurry P) (xA, yA) (xB, yB).
 
 Definition bichain_cons {X Y} {P : X -> Y -> X -> Y -> Type} {xA yA xB yB xC yC} :
   P xA yA xB yB -> bichain P xB yB xC yC -> bichain P xA yA xC yC
@@ -213,21 +191,6 @@ Proof.
   eapply f; eauto.
 Defined.
 
-(* chain_rect *)
-(*      : forall (X : Type) (P : X -> X -> Type) *)
-(*          (P0 : forall x x0 : X, chain P x x0 -> Type), *)
-(*        (forall A : X, P0 A A chain_nil) -> *)
-(*        (forall (A B C : X) (p : P A B) (c : chain P B C), P0 B C c -> P0 A C (p ::: c)) -> *)
-(*        forall (y y0 : X) (c : chain P y y0), P0 y y0 c *)
-
-Local Lemma surjective_pairing' {A B} (p : A * B) :
-  p = (fst p, snd p).
-Proof.
-  destruct p.
-  auto.
-Defined.
-
-(* well this is ugly... *)
 Lemma bichain_rect X Y (P : X -> Y -> X -> Y -> Type)
       (motive : forall {xA xB yA yB}, bichain P xA xB yA yB -> Type)
       (case_nil : forall {x y}, @motive x y x y chain_nil)
@@ -237,71 +200,17 @@ Lemma bichain_rect X Y (P : X -> Y -> X -> Y -> Type)
           motive xs -> motive (x :::: xs)) :
   forall {xA yA xB yB} (c : bichain P xA yA xB yB), motive c.
 Proof.
-  intros ? ? ? ?.
-
-  set (A := (xA, yA)).
-  set (B := (xB, yB)).
-  replace xA with (fst A) by auto.
-  replace yA with (snd A) by auto.
-  replace xB with (fst B) by auto.
-  replace yB with (snd B) by auto.
-  clearbody A B.
-  clear xA yA xB yB.
-
   intros.
 
-  unfold bichain in *.
-  set (P' := bicurry P) in *.
-  pose (m' := dep_bicurry motive).
-  unfold bicurry in m'.
-
-  change (m' (fst A, snd A) (fst B, snd B) c).
-  assert (case_nil' : forall A, m' (fst A, snd A) (fst A, snd A) chain_nil). {
-    intros [? ?].
-    apply case_nil.
-  }
-  clear case_nil.
-  assert (case_cons' : forall A B C x xs,
-             m' (fst B, snd B) (fst C, snd C) xs ->
-             m' (fst A, snd A) (fst C, snd C) (x ::: xs)).
-  {
-    intros [? ?] [? ?] [? ?] ? ? ?.
-    apply case_cons.
-    apply X0.
-  }
-  clearbody m'.
-  clear case_cons motive.
-  clearbody P'.
-  clear P.
-  cbn in *.
-
-  pose (H := @surjective_pairing' X Y).
-
-  assert ({c' : chain P' A B &
-                m' A B (rew [fun A => chain P' A _] H A in
-                           rew [chain P' A] H B in c') ->
-                m' (fst A, snd A) (fst B, snd B) c}).
-  {
-    destruct A, B.
-    cbn in *.
-    exists c.
-
-    exact id.
+  (* "transparent assert" from https://sympa.inria.fr/sympa/arc/coq-club/2015-10/msg00047.html *)
+  simple refine (let motive' : forall A B : X * Y, chain (bicurry P) A B -> Type := _ in _). {
+    intros [? ?] [? ?].
+    apply motive.
   }
 
-  destruct X0 as [c' H0].
-  apply H0.
-  clear H0 c.
-
-  induction c'. {
-    specialize (case_nil' A).
-    destruct A.
-    cbn in *.
-    assumption.
-  } {
-    specialize (case_cons' A B C).
-    destruct A, B, C.
-    cbn in *.
-    auto.
-  }
+  change (motive' _ _ c).
+  apply (chain_rect (X * Y) (bicurry P));
+    subst motive';
+    repeat intros [? ?];
+    eauto.
 Qed.

@@ -1,7 +1,9 @@
+Require Import Coq.Classes.RelationClasses.
+
 Require Import utils.
 Require Import syntax.
 Require Import relations.
-Require Import RelationClasses.
+Require Import integration.
 
 (* Symmetry *)
 
@@ -27,7 +29,7 @@ Qed.
 Instance V_rel_symmetric {τ} : Symmetric (V_rel τ).
 Proof.
   repeat intro.
-  induction τ; destruct_val x; destruct_val y. {
+  induction τ. {
     apply eq_sym.
     exact H.
   } {
@@ -38,7 +40,8 @@ Proof.
 
     apply E_rel_symmetric'; auto.
     apply H.
-    auto.
+    apply IHτ1.
+    exact H0.
   }
 Qed.
 
@@ -50,17 +53,13 @@ Instance A_rel_symmetric {τ} : Symmetric (A_rel τ)
 Instance G_rel_symmetric {Γ} : Symmetric (G_rel Γ).
 Proof.
   repeat intro.
-  induction Γ; d_destruct (x, y). {
+  induction Γ; dep_destruct (x, y). {
     constructor.
   } {
-    d_destruct H.
-    constructor. {
-      apply V_rel_symmetric.
-      auto.
-    } {
-      apply IHΓ.
-      auto.
-    }
+    dep_destruct H.
+    constructor; auto.
+    symmetry.
+    assumption.
   }
 Qed.
 
@@ -102,25 +101,20 @@ Instance V_rel_transitive {τ} :
   Transitive (V_rel τ).
 Proof.
   repeat intro.
-  induction τ;
-    destruct_val x;
-    destruct_val y;
-    destruct_val z.
+  induction τ.
   {
-    transitivity (v_real r0); auto.
+    transitivity y; assumption.
   } {
+    destruct H.
+    remember (v_lam body1).
+    destruct H0.
+    dep_destruct Heqv.
+    rename body0 into x_body, body1 into y_body, body3 into z_body.
+
     constructor.
     intros.
 
-    remember (v_lam body).
-    destruct H.
-    remember (v_lam body3).
-    remember (v_lam body1).
-    destruct H0.
-    d_destruct (Heqv, Heqv0, Heqv1).
-    clear body0.
-
-    eapply (E_rel_transitive' IHτ2 _ (proj1_sig (ty_subst1 body3 va0))); [| apply H0; auto].
+    eapply (E_rel_transitive' IHτ2 _); [| apply H0; eauto].
     apply H.
 
     eapply IHτ1; eauto.
@@ -137,11 +131,11 @@ Instance A_rel_transitive {τ} : Transitive (A_rel τ)
 Instance G_rel_transitive {Γ} : Transitive (G_rel Γ).
 Proof.
   repeat intro.
-  induction Γ; d_destruct (x, y, z). {
+  induction Γ; dep_destruct (x, y, z). {
     constructor.
   } {
-    d_destruct H.
-    d_destruct H1.
+    dep_destruct H.
+    dep_destruct H1.
     constructor. {
       etransitivity; eauto.
     } {
@@ -168,19 +162,10 @@ Qed.
 
 (* reflexivity depends on the fundamental property. *)
 
-Lemma A_rel_subidentity {τ} {A0 A1 : Event (val τ)}
-  : A_rel τ A0 A1 -> A0 = A1.
-Proof.
-  intros.
-  extensionality v.
-  apply H.
-  apply fundamental_property_of_values.
-Qed.
-
 Instance E_rel_reflexive {τ} : Reflexive (E_rel τ).
 Proof.
   intro e.
-  pose proof (fundamental_property _ _ e _ _ G_rel_nil).
+  pose proof (fundamental_property e _ _ G_rel_nil).
   elim_sig_exprs.
   elim_erase_eqs.
   auto.
@@ -189,22 +174,45 @@ Qed.
 Instance V_rel_reflexive {τ} : Reflexive (V_rel τ).
 Proof.
   intros v.
-  apply fundamental_property_of_values.
+
+  destruct v using wt_val_rect; subst; simpl in *. {
+    reflexivity.
+  } {
+    constructor.
+    repeat intro.
+
+    pose proof fundamental_property body as fp.
+    specialize (fp _ _ (G_rel_cons H G_rel_nil)).
+
+    elim_sig_exprs.
+    elim_erase_eqs.
+
+    apply fp; auto.
+  }
+Qed.
+
+Lemma A_rel_subidentity {τ} {A0 A1 : Event (val τ)}
+  : A_rel τ A0 A1 -> A0 = A1.
+Proof.
+  intros.
+  extensionality v.
+  apply H.
+  reflexivity.
 Qed.
 
 Instance G_rel_reflexive {Γ} : Reflexive (G_rel Γ).
 Proof.
   repeat intro.
-  induction Γ; d_destruct x. {
+  induction Γ; dep_destruct x. {
     constructor.
   } {
     constructor; auto.
-    apply V_rel_reflexive.
+    reflexivity.
   }
 Qed.
 
 Instance rel_expr_reflexive {Γ τ} : Reflexive (expr_rel Γ τ)
-  := fundamental_property _ _.
+  := fundamental_property.
 
 Lemma same_substitution_suffices {Γ τ} (e0 e1 : expr Γ τ) :
   (forall (ρ : wt_env Γ),

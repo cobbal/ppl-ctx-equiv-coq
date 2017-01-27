@@ -88,25 +88,28 @@ Module Log_rel1.
 
     Lemma apply_G_rel {Γ ρ} :
       G_rel Γ ρ ->
-      forall {x τ v},
+      forall {x τ} {v : val τ},
         lookup Γ x = Some τ ->
-        dep_lookup ρ x = Some (existT _ τ v) ->
+        erase v = erase_wt_env ρ x ->
         V_rel τ v.
     Proof.
       intros.
       revert Γ ρ H H0 X.
       induction x; intros. {
-        destruct ρ; inversion H; subst.
-        simpl in *.
-        dependent destruction H0.
+        dep_destruct (Γ, H0).
+        dep_destruct (ρ, H).
         destruct X.
+
+        cbn in *.
+        elim_erase_eqs.
+        apply val_eq in x.
+        subst.
         auto.
       } {
-        destruct ρ; inversion H; subst.
-        simpl in *.
-        eapply IHx; eauto.
+        dep_destruct (Γ, H0).
+        dep_destruct (ρ, H).
         destruct X.
-        auto.
+        eapply IHx; eauto.
       }
     Qed.
 
@@ -132,12 +135,13 @@ Module Log_rel1.
     Proof.
       common.
 
-      destruct (env_search ρ H) as [v ρv].
-      pose proof (lookup_subst _ ρv).
+      destruct (env_search_subst ρ H) as [v ρx].
+
+      pose proof (apply_G_rel Hρ H ρx).
       elim_erase_eqs.
 
       apply case_val.
-      eapply apply_G_rel; eauto.
+      assumption.
     Qed.
 
     Lemma compat_lam Γ τa τr body :
@@ -193,7 +197,7 @@ Module Log_rel1.
       apply case_plus; auto.
     Qed.
 
-    Lemma fundamental_property Γ τ e :
+    Lemma fundamental_property {Γ τ} e :
       expr_rel Γ τ e.
     Proof.
       induction e.
@@ -291,24 +295,27 @@ Module Log_rel2.
 
     Lemma apply_G_rel {Γ ρ0 ρ1} :
       G_rel Γ ρ0 ρ1 ->
-      forall {x τ v0 v1},
+      forall {x τ} {v0 v1 : val τ},
         lookup Γ x = Some τ ->
-        dep_lookup ρ0 x = Some (existT _ τ v0) ->
-        dep_lookup ρ1 x = Some (existT _ τ v1) ->
+        erase v0 = erase_wt_env ρ0 x ->
+        erase v1 = erase_wt_env ρ1 x ->
         V_rel τ v0 v1.
     Proof.
       intros.
       revert Γ ρ0 ρ1 H H0 H1 H2.
       induction x; intros. {
-        d_destruct (ρ0, ρ1); inversion H0; subst.
-        simpl in *.
-        d_destruct H1.
-        d_destruct H.
-        assumption.
-      } {
-        d_destruct (ρ0, ρ1); inversion H0; subst.
+        dep_destruct (Γ, H0).
+        dep_destruct (ρ0, ρ1, H).
+
         cbn in *.
-        d_destruct H.
+        elim_erase_eqs.
+        apply val_eq in H1.
+        apply val_eq in H2.
+        subst.
+        auto.
+      } {
+        dep_destruct (Γ, H0).
+        dep_destruct (ρ0, ρ1, H).
         eapply IHx; eauto.
       }
     Qed.
@@ -335,14 +342,14 @@ Module Log_rel2.
     Proof.
       common.
 
-      destruct (env_search ρ0 H) as [v0 ρv0].
-      destruct (env_search ρ1 H) as [v1 ρv1].
-      pose proof (lookup_subst _ ρv0).
-      pose proof (lookup_subst _ ρv1).
+      destruct (env_search_subst ρ0 H) as [v0 ρ0x].
+      destruct (env_search_subst ρ1 H) as [v1 ρ1x].
+
+      pose proof (apply_G_rel Hρ H ρ0x ρ1x).
       elim_erase_eqs.
 
       apply case_val.
-      eapply apply_G_rel; eauto.
+      assumption.
     Qed.
 
     Lemma compat_lam Γ τa τr body0 body1 :
@@ -401,7 +408,7 @@ Module Log_rel2.
     Qed.
 
     Lemma fundamental_property :
-      forall Γ τ e, expr_rel Γ τ e e.
+      forall {Γ τ} e, expr_rel Γ τ e e.
     Proof.
       induction e.
       - apply compat_real.

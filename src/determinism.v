@@ -1,19 +1,19 @@
-Require Import Reals.
-Require Import List.
-Require Import Ensembles.
-Require Import Coq.Logic.FunctionalExtensionality.
-Require Import Coq.Logic.ProofIrrelevance.
-Require Import Coq.Logic.JMeq.
-Require Import Coq.Program.Equality.
-Require Import Coq.Program.Basics.
-Require Import Coq.fourier.Fourier.
-Require Import nnr.
-Require Import syntax.
-Require Import utils.
-Require Import micromega.Lia.
-Require Import logrel.
+(** This file is very boring. It simply says that our language is deterministic,
+    and we could have written evaluation as a parital function if our
+    implementation language allowed general recursion.
 
-Import EqNotations.
+    ----
+
+    The only exports of interest from this file will be contained in the module
+    [eval_dec] at the very bottom. *)
+
+Require Import Coq.Reals.Reals.
+Require Import Coq.Lists.List.
+Require Import Coq.Logic.ProofIrrelevance.
+
+Require Import utils.
+Require Import syntax.
+Require Import logrel.
 
 Local Open Scope ennr.
 
@@ -28,9 +28,9 @@ Module DeterminismBase <: BASE.
       forall σ,
         {vw : (val τ * R+) &
               let (v, w) := vw in
-              (V_rel_τ v)
-                ⨉ (EVAL σ ⊢ e ⇓ v, w)
-                ⨉ (forall v' w', (EVAL σ ⊢ e ⇓ v', w') -> v' = v /\ w' = w)
+              (V_rel_τ v
+               * (EVAL σ ⊢ e ⇓ v, w)
+               * (forall v' w', (EVAL σ ⊢ e ⇓ v', w') -> v' = v /\ w' = w))%type
         } +
         ({vw : (val τ * R+) &
                let (v, w) := vw in EVAL σ ⊢ e ⇓ v, w}
@@ -53,6 +53,14 @@ Module DeterminismCases : CASES DeterminismBase.
       intros.
       destruct (invert_eval_val H); auto.
     }
+  Qed.
+
+  Lemma extend_grel {Γ τ ρ v} :
+    (V_rel τ v) ->
+    (G_rel Γ ρ) ->
+    (G_rel (τ :: Γ) (dep_cons v ρ)).
+  Proof.
+    constructor; auto.
   Qed.
 
   Lemma case_real : forall r,
@@ -95,12 +103,12 @@ Module DeterminismCases : CASES DeterminismBase.
             econstructor; eauto.
           } {
             intros.
-            d_destruct H; try absurd_val.
+            dep_destruct H; try absurd_val.
             specialize (uf _ _ H).
             specialize (ua _ _ H0).
             inject ua.
             inject uf.
-            d_destruct H0.
+            dep_destruct H0.
             elim_sig_exprs.
             elim_erase_eqs.
             specialize (ur _ _ H1).
@@ -111,11 +119,11 @@ Module DeterminismCases : CASES DeterminismBase.
           right.
           contradict not_ex.
           destruct not_ex as [[v w] E].
-          d_destruct E; try absurd_val.
+          dep_destruct E; try absurd_val.
 
           specialize (uf _ _ E1).
           inject uf.
-          d_destruct H.
+          dep_destruct H.
 
           specialize (ua _ _ E2).
           inject ua.
@@ -126,14 +134,14 @@ Module DeterminismCases : CASES DeterminismBase.
         right.
         contradict not_ex.
         destruct not_ex as [[v w] E].
-        d_destruct E; try absurd_val.
+        dep_destruct E; try absurd_val.
         eexists (_, _); eauto.
       }
     } {
       right.
       contradict not_ex.
       destruct not_ex as [[v w] E].
-      d_destruct E; try absurd_val.
+      dep_destruct E; try absurd_val.
       eexists (_, _); eauto.
     }
   Qed.
@@ -150,10 +158,10 @@ Module DeterminismCases : CASES DeterminismBase.
         left.
         exists (v_real r, finite r r0 * w).
         split; [split |]; auto. {
-          exact (EFactor σ r0 E).
+          exact (EVAL_factor σ r0 E).
         } {
           intros.
-          d_destruct H0; try absurd_val.
+          dep_destruct H0; try absurd_val.
           specialize (u _ _ H0).
           inject u.
           inject H1.
@@ -164,17 +172,17 @@ Module DeterminismCases : CASES DeterminismBase.
         right.
         contradict n.
         destruct n as [[v w'] E'].
-        d_destruct E'; try absurd_val.
+        dep_destruct E'; try absurd_val.
         specialize (u _ _ E').
         inject u.
-        d_destruct H0.
+        dep_destruct H0.
         auto.
       }
     } {
       right.
       contradict not_ex.
       destruct not_ex as [[v w] E].
-      d_destruct E; try absurd_val.
+      dep_destruct E; try absurd_val.
       eexists (_, _); eauto.
     }
   Qed.
@@ -191,7 +199,7 @@ Module DeterminismCases : CASES DeterminismBase.
       exact I.
     } {
       intros.
-      d_destruct H; try absurd_val.
+      dep_destruct H; try absurd_val.
       auto.
     }
   Qed.
@@ -215,7 +223,7 @@ Module DeterminismCases : CASES DeterminismBase.
         constructor; [repeat econstructor |]; eauto.
         intros.
 
-        d_destruct H; try absurd_val.
+        dep_destruct H; try absurd_val.
 
         destruct (ul _ _ H); subst.
         destruct (ur _ _ H0); subst.
@@ -230,7 +238,7 @@ Module DeterminismCases : CASES DeterminismBase.
         contradict not_ex.
 
         destruct X as [[? ?] ?].
-        d_destruct y; try absurd_val.
+        dep_destruct y; try absurd_val.
 
         eexists (_, _); eauto.
       }
@@ -241,7 +249,7 @@ Module DeterminismCases : CASES DeterminismBase.
       contradict not_ex.
 
       destruct X as [[? ?] ?].
-      d_destruct y; try absurd_val.
+      dep_destruct y; try absurd_val.
 
       eexists (_, _); eauto.
     }
@@ -267,11 +275,10 @@ Arguments eval_dec_not_ex {_ _ _} not_ex.
 
 Theorem eval_dec {τ} (e : expr · τ) σ : eval_dec_result e σ.
 Proof.
-  pose proof (fundamental_property · τ e dep_nil I) as fp.
+  pose proof (fundamental_property e dep_nil I) as fp.
 
   elim_sig_exprs.
   elim_erase_eqs.
-
   destruct (fp σ). {
     destruct s as [[v w] [[? ?] ?]].
     eapply eval_dec_ex_unique; eauto.
