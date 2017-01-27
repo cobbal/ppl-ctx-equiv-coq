@@ -1,3 +1,11 @@
+EXTRA_DIR:=coqdocjs/extra
+COQDOCFLAGS:= \
+  --external 'https://www.ps.uni-saarland.de/autosubst/doc/' autosubst \
+  --toc --toc-depth 2 --html --interpolate \
+  --index indexpage --no-lib-name --parse-comments \
+  --with-header $(EXTRA_DIR)/header.html --with-footer $(EXTRA_DIR)/footer.html
+export COQDOCFLAGS
+
 all: coq
 
 auto-subst:
@@ -6,7 +14,11 @@ auto-subst:
 	mv auto-subst-unpack auto-subst
 
 coq: Makefile.coq
-	$(MAKE) -f Makefile.coq
+	@$(MAKE) -f Makefile.coq
+
+html: Makefile.coq
+	@$(MAKE) -f Makefile.coq html
+	cp $(EXTRA_DIR)/resources/* html
 
 Makefile.coq: auto-subst Makefile _CoqProject src/*.v
 	coq_makefile -f _CoqProject -o Makefile.coq
@@ -16,7 +28,13 @@ clean:: Makefile.coq
 	rm -f Makefile.coq
 	rm -f lia.cache
 	rm -rf dep-graph
-	rm -f dep.vo dep.glob
+	rm -f src/*.vo src/*.glob src/*.v.d
+	rm -f all.pdf
+
+pages: html
+	mkdir -p pages
+	rm -f pages/*
+	cp html/* pages/
 
 graph: dep-graph/graph.pdf
 
@@ -30,4 +48,5 @@ dep-graph/graph.dpd: src/dep.v coq
 	mkdir -p dep-graph
 	coqc -R ./auto-subst/theories Autosubst -R ./src OpSemProofs src/dep.v
 
-.PHONY: all coq graph
+
+.PHONY: all coq graph html

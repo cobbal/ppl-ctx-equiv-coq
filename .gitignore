@@ -5,8 +5,11 @@
 .*.aux
 Makefile.coq
 lean
-lia.cache
+src/.lia.cache
 auto-subst
 old-and-broken
 dep-graph
 attic
+html
+coqdocjs
+pages
