@@ -233,6 +233,7 @@ Definition plus_in (v v' : val ℝ) : Meas (val ℝ) :=
     | e_real r, e_real r' => fun A => indicator A (v_real (r + r'))
     | _, _ => (* never happens *) empty_meas _
     end.
+Arguments plus_in !_ !_.
 
 Definition factor_in (v : val ℝ) : Meas (val ℝ) :=
   match (v : expr · ℝ) with

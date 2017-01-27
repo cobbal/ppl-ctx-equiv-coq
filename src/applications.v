@@ -300,7 +300,7 @@ Qed.
 
 Program Definition open_subst1 {Γ τa τr}
         (e : expr (τa :: Γ) τr)
-      (esub : expr Γ τa) :
+        (esub : expr Γ τa) :
   { e' : expr Γ τr |
     erase e' = (erase e).[erase esub /] }
   :=
@@ -1129,3 +1129,6 @@ Proof.
   intros.
   repeat (destruct x; auto).
 Qed.
+
+Definition e_seq {Γ τ0 τ1} (e0 : expr Γ τ0) (e1 : expr Γ τ1) : expr Γ τ1 :=
+  ((λ, (λ, var_0)) @ e0 @ e1).
