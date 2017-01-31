@@ -5,7 +5,7 @@ Require Import syntax.
 Require Import relations.
 Require Import integration.
 
-(* Symmetry *)
+(** * Symmetry *)
 
 Lemma A_rel_symmetric' {τ} :
   Symmetric (V_rel τ) ->
@@ -72,7 +72,7 @@ Proof.
   auto.
 Qed.
 
-(* Transitivity *)
+(** * Transitivity *)
 
 Instance A_rel_transitive' {τ} :
   Transitive (V_rel τ) ->
@@ -158,9 +158,8 @@ Proof.
 Qed.
 
 
-(* Reflexivity *)
-
-(* reflexivity depends on the fundamental property. *)
+(** * Reflexivity
+    Depends on the fundamental property. *)
 
 Instance E_rel_reflexive {τ} : Reflexive (E_rel τ).
 Proof.
@@ -213,6 +212,8 @@ Qed.
 
 Instance rel_expr_reflexive {Γ τ} : Reflexive (related_exprs Γ τ)
   := fundamental_property.
+
+(** * Proving expressions are related *)
 
 Lemma same_substitution_suffices {Γ τ} (e0 e1 : expr Γ τ) :
   (forall (ρ : wt_env Γ),

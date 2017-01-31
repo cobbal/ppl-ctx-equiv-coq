@@ -1,29 +1,21 @@
-Require Import Basics.
-Require Import Reals.
-Require Import List.
-Require Import Ensembles.
-Require Import Coq.Logic.FunctionalExtensionality.
-Require Import Coq.Logic.ProofIrrelevance.
-Require Import Coq.Program.Basics.
-Require Import Coq.Program.Equality.
-Require Import Coq.Setoids.Setoid.
-Require Import syntax.
+Require Import Coq.Reals.Reals.
+Require Import Coq.Lists.List.
+Require Import Coq.Sets.Ensembles.
+
 Require Import utils.
-Require Import Coq.Classes.Morphisms.
+Require Import syntax.
 Require Import relations.
 Require Import ctxequiv.
 Require Import properties_of_relations.
 Require Import integration.
-
-Require Import micromega.Lia.
 
 Local Open Scope nat.
 
 Transparent π.
 
 Notation "'λ,' e" := (e_lam e) (at level 69, right associativity).
-Notation "e0 @ e1" := (e_app e0 e1) (at level 68, left associativity).
-Notation "e0 +! e1" := (e_plus e0 e1).
+Infix "@" := e_app (at level 68, left associativity).
+Infix "+!" := e_plus.
 
 Definition var_0 {τ Γ} : expr (τ :: Γ) τ :=
   e_var O (eq_refl : lookup (τ :: Γ) O = Some τ).
