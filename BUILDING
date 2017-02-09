@@ -1,0 +1,9 @@
+To build and verify the theorems, the following dependencies are required:
+  - Unix-like build environment
+  - Coq 8.6 (https://coq.inria.fr/)
+  - Autosubst (https://www.ps.uni-saarland.de/autosubst/)
+    If the build process doesn't find an autosubst directory, it will
+    automatically fetch one from GitHub and build it (requires git).
+
+Once the dependencies are installed, to build and verify the proofs simply run
+    make

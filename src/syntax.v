@@ -398,7 +398,7 @@ Ltac elim_erase_eqs :=
 
     The idea is to put all the information needed about the internals into [P]
     so that you can eliminate calls to the function (wich now look like
-    [`(f x)]) using [destruct (f x)] and rewriting insead
+    [proj1_sig (f x)]) using [destruct (f x)] and rewriting insead
     of standard computation.
 
     The tactic [elim_sig_exprs] attempts to do exactly that destruction on
