@@ -10,7 +10,7 @@ all: coq
 
 auto-subst:
 	git clone https://github.com/tebbi/autosubst auto-subst-unpack
-	(cd auto-subst-unpack; make)
+	(cd auto-subst-unpack; git checkout coq86-devel; make)
 	mv auto-subst-unpack auto-subst
 
 coq: Makefile.coq
