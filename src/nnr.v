@@ -27,10 +27,17 @@ Notation "R+" := ennr : type_scope.
 (*   end. *)
 (* Infix "==" := ennr_eq. *)
 
+Lemma Rle_0_2 : 0 <= 2.
+Proof.
+  fourier.
+Qed.
+
 Definition ennr_0 := finite 0 (Rle_refl _).
 Definition ennr_1 := finite 1 Rle_0_1.
+Definition ennr_2 : R+ := finite 2 Rle_0_2.
 Notation "0" := ennr_0.
 Notation "1" := ennr_1.
+Notation "2" := ennr_2.
 
 Definition ennr_abs (r : R) : R+ := finite (Rabs r) (Rabs_pos _).
 
@@ -238,4 +245,15 @@ Proof.
   intros.
   rewrite ennr_mul_comm.
   apply ennr_mul_1_l.
+Qed.
+
+
+Lemma max_sub_min_is_pos a b :
+  (0 <= Rmax a b - Rmin a b)%R.
+Proof.
+  unfold Rmax, Rmin.
+  destruct Rle_dec.
+  fourier.
+  apply Rnot_le_lt in n.
+  fourier.
 Qed.

@@ -70,6 +70,7 @@ Qed.
 Definition bool_of_dec {A B} : sumbool A B -> bool :=
   fun x => if x then true else false.
 
+Axiom lebesgue_measure : Meas R.
 Axiom lebesgue_pos_measure : Meas R+.
 Axiom lebesgue_pos_measure_interval :
   forall (r : R+),
@@ -87,6 +88,15 @@ Axiom integration_of_indicator :
          (m : Meas A)
          (f : Event A),
     integration (fun x => indicator f x) m = m f.
+
+Definition lebesgue_01_ivl : Meas R :=
+  fun A => lebesgue_measure (fun r =>
+                               if Rle_dec 0 r
+                               then if Rle_dec r 1
+                                    then A r
+                                    else false
+                               else false).
+
 
 Definition meas_bind {A B} (μ : Meas A) (f : A -> Meas B) : Meas B :=
   fun ev => integration (fun a => f a ev) μ.
@@ -123,7 +133,8 @@ Admitted.
 
 Inductive SigmaFinite : forall {A}, Meas A -> Prop :=
 | ent_finite : SigmaFinite μEntropy
-| leb_finite : SigmaFinite lebesgue_pos_measure.
+| leb_finite : SigmaFinite lebesgue_measure
+| leb_pos_finite : SigmaFinite lebesgue_pos_measure.
 Hint Constructors SigmaFinite.
 
 Lemma tonelli_sigma_finite :
@@ -136,6 +147,41 @@ Admitted.
 
 Definition preimage {A B C} (f : A -> B) : (B -> C) -> (A -> C) :=
   fun eb a => eb (f a).
+Arguments preimage {_ _ _} _ _ _ /.
+
+Definition pushforward {A B} (μ : Meas A) (f : A -> B) : Meas B :=
+  μ ∘ preimage f.
+
+Axiom μEntropy_proj_is_lebesgue : forall n : nat,
+    pushforward μEntropy (fun σ => proj1_sig (σ n)) = lebesgue_01_ivl.
+
+Lemma integration_of_pushforward {A B} (g : A -> B) f μ :
+  integration f (pushforward μ g) = integration (f ∘ g) μ.
+Proof.
+  intros.
+  setoid_rewrite riemann_def_of_lebesgue_integration.
+  unfold pushforward, preimage, compose.
+  trivial.
+Qed.
+
+Lemma bind_of_pushforward {A B C} (g : A -> B) (f : B -> Meas C) μ :
+  (pushforward μ g) >>= f = μ >>= (f ∘ g).
+Proof.
+  extensionality ev.
+  unfold ">>=".
+  rewrite integration_of_pushforward.
+  auto.
+Qed.
+
+Lemma integration_linear_in_meas {A B} (μ : Meas A) (s : R+) (f : A -> Meas B) :
+  (fun ev => s * μ ev) >>= f =
+  (fun ev => s * (μ >>= f) ev).
+Proof.
+  extensionality ev.
+  setoid_rewrite riemann_def_of_lebesgue_integration.
+  rewrite <- integration_linear_mult_l.
+  auto.
+Qed.
 
 (* Lemma 3 *)
 Lemma coarsening :
@@ -262,3 +308,52 @@ Proof.
   integrand_extensionality σ1.
   setoid_rewrite int_const_entropy; auto.
 Qed.
+
+
+
+
+
+(* new, scary stuff *)
+
+Definition lebesgue0 (a b : R) : R+ :=
+  finite (Rmax a b - Rmin a b) (max_sub_min_is_pos _ _).
+
+Definition Rmonotone (f : R -> R) :=
+  (forall a b, a <= b -> f a <= f b)%R.
+
+(* Axiom lebesgue_translate_invariant : *)
+(*   forall r, lebesgue_measure = pushforward lebesgue_measure (Rplus r). *)
+
+(* Axiom lebesgue_opp_invariant : lebesgue_measure = pushforward lebesgue_measure Ropp. *)
+
+Definition is_RN_deriv_traditional {X} (ν : Meas X) (μ : Meas X) (f : X -> R+) : Prop :=
+  forall A,
+    ν A = integration (fun x => indicator A x * f x) μ.
+
+(* a more bind-y way to write it *)
+Definition is_RN_deriv {X} (ν : Meas X) (μ : Meas X) (f : X -> R+) : Prop :=
+    ν = μ >>= (fun x A => indicator A x * f x).
+
+Lemma RN_defs_equiv {X} (ν μ : Meas X) f :
+  is_RN_deriv ν μ f <-> is_RN_deriv_traditional ν μ f.
+Proof.
+  unfold is_RN_deriv, is_RN_deriv_traditional, ">>=".
+  split; intros. {
+    rewrite H.
+    auto.
+  } {
+    extensionality A.
+    apply H.
+  }
+Qed.
+
+(* borrowing from https://math.stackexchange.com/questions/2139423 for now, need
+   to look up a real source later. *)
+Axiom RN_deriv_is_coq_deriv : forall f f' (df : derivable f),
+    (forall x, f' x = ennr_abs (derive f df x)) ->
+    is_RN_deriv lebesgue_measure (pushforward lebesgue_measure f) f'.
+
+
+(* Axiom monotonic_pushforward_of_lebesgue : *)
+(*   forall f, Rmonotone f -> *)
+(*             pushforward lebesgue_measure f = *)

@@ -56,27 +56,89 @@ Defined.
 
 Inductive binop :=
 | Add
-| Mult
+| ConstDouble
+(* | ConstCube *)
+(* | Mult *)
 .
+
+
+Definition Rcube r := pow r 3.
+Arguments Rcube : simpl never.
+Axiom Rcube_root : R -> R.
+Axiom Rcube_root_of_cube : forall r, Rcube_root (Rcube r) = r.
+Axiom Rcube_of_cube_root : forall r, Rcube (Rcube_root r) = r.
 
 Definition δ (op : binop) : R -> R -> R :=
   match op with
   | Add => Rplus
-  | Mult => Rmult
+  | ConstDouble => fun _ => Rmult 2
+  (* | Mult => Rmult *)
+  (* | ConstCube => fun _ => Rcube *)
   end.
 
 (* if {v1} = op^-1(v0, ·)({v})
    then return v1 *)
-Definition δ_unique_inv (op : binop) (v1 : R) (v : R) : option R :=
+Definition δ_unique_inv (op : binop) (v0 : R) (v : R) : option R :=
   match op with
-  | Add => Some (v - v1)%R
-  | Mult => Some (v / v1)%R
+  | Add => Some (v - v0)%R
+  | ConstDouble => Some (v / 2)%R
+  (* | Mult => if Req_EM_T v0 0 *)
+  (*           then None *)
+  (*           else Some (v / v0)%R *)
+  (* | ConstCube => Some (Rcube_root v) *)
   end.
+
+Lemma δ_unique_inv_correct op v0 v1 v :
+  δ_unique_inv op v0 v = Some v1 <->
+  (δ op v0 v1 = v /\ forall v1', δ op v0 v1' = v -> v1 = v1').
+Proof.
+  destruct op; cbn -[pow]. {
+    repeat split; intros. {
+      inject H.
+      ring.
+    } {
+      inject H.
+      ring.
+    } {
+      destruct H.
+      subst.
+      f_equal.
+      ring.
+    }
+  } {
+    repeat split; intros. {
+      inject H.
+      field.
+    } {
+      inject H.
+      field.
+    } {
+      destruct H.
+      subst.
+      f_equal.
+      field.
+    }
+  }
+
+  (* { *)
+  (*   inject H. *)
+  (*   apply Rcube_of_cube_root. *)
+  (* } { *)
+  (*   inject H. *)
+  (*   apply Rcube_root_of_cube. *)
+  (* } { *)
+  (*   destruct H. *)
+  (*   subst. *)
+  (*   f_equal. *)
+  (*   apply Rcube_root_of_cube. *)
+  (* } *)
+Qed.
 
 Definition δ_partial_deriv_2 (op : binop) (v0 v1 : R) : R :=
   match op with
   | Add => 1
-  | Mult => v0
+  | ConstDouble => 2
+  (* | ConstCube => 3 * (v1 * v1) *)
   end.
 
 (* u for untyped *)
@@ -887,11 +949,11 @@ eval_obs (σ : Entropy) : forall (e : expr · ℝ ObsR) (v : val ℝ) (w : R+), 
          {e1 : expr · ℝ ObsR}
          {r0 r1 r : R} {is_v0 is_v1} {w0 w1 : R+}
   : (EVAL (π 0 σ) ⊢ e0 ⇓ mk_val (e_real r0) is_v0, w0) ->
-    δ_unique_inv op r r0 = Some r1 ->
+    δ_unique_inv op r0 r = Some r1 ->
     (OBS_EVAL (π 1 σ) ⊢ e1 ⇓ mk_val (e_real r1) is_v1, w1) ->
     (OBS_EVAL σ ⊢ e_binop op e0 e1 ⇓ v_real r, w0 * w1 / ennr_abs (δ_partial_deriv_2 op r0 r1))
 | OSample {r : R}
-  : (0 < r < 1)%R ->
+  : (0 <= r <= 1)%R ->
     (OBS_EVAL σ ⊢ e_sample ⇓ v_real r, 1)
 where "'OBS_EVAL' σ ⊢ e ⇓ v , w" := (eval_obs σ e v w)
 and "'EVAL' σ ⊢ e ⇓ v , w" := (eval σ e v w)

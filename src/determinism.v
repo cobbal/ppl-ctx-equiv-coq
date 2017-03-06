@@ -275,9 +275,9 @@ Module DeterminismCases : CASES DeterminismBase.
       clear Hτ Hϕ.
 
       destruct_val v.
-      assert ({0 < r < 1} + {~ 0 < r < 1}). {
-        destruct (Rlt_dec 0 r); [| right; tauto].
-        destruct (Rlt_dec r 1); [left | right]; tauto.
+      assert ({0 <= r <= 1} + {~ 0 <= r <= 1}). {
+        destruct (Rle_dec 0 r); [| right; tauto].
+        destruct (Rle_dec r 1); [left | right]; tauto.
       }
       destruct H. {
         apply (oeval_ex_unique 1). {
@@ -385,7 +385,7 @@ Module DeterminismCases : CASES DeterminismBase.
         destruct X0 as [_ X0].
         destruct_val vl.
         destruct_val v.
-        remember (δ_unique_inv op r0 r) as rr.
+        remember (δ_unique_inv op r r0) as rr.
         replace Hτ with (eq_refl ℝ) in * by (apply UIP_dec, ty_eq_dec).
         cbn in *.
         destruct rr as [rr |]. {

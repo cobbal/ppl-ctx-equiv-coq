@@ -265,6 +265,32 @@ Module CtxEquivCases <: CASES CtxEquivBase.
     reflexivity.
   Qed.
 
+  (** A helper lemma and tactic for applying the coarsening lemma *)
+  Lemma coarsen_helper {τ ϕ X} (e0 e1 : expr · τ ϕ) (f0 f1 : val τ -> Meas X) (A0 A1 : Event X) :
+    E_rel τ ϕ e0 e1 ->
+    (forall v0 v1, V_rel τ v0 v1 -> f0 v0 A0 = f1 v1 A1) ->
+    (μ e0 >>= f0) A0 = (μ e1 >>= f1) A1.
+  Proof.
+    intros.
+    apply (coarsening (A_rel τ)). {
+      intros.
+      apply H.
+      auto.
+    } {
+      intros B v0 v1 Hv.
+      cbn.
+      f_equal.
+      apply H0.
+      apply Hv.
+    }
+  Qed.
+
+  Ltac coarsen v :=
+    let v0 := fresh v "0" in
+    let v1 := fresh v "1" in
+    let Hv := fresh "H" v in
+    apply coarsen_helper; [(reflexivity || tauto) |]; intros v0 v1 Hv.
+
   Lemma case_val : forall τ v0 v1,
       V_rel τ v0 v1 -> E_rel τ _ v0 v1.
   Proof.
@@ -455,15 +481,16 @@ Module CtxEquivCases <: CASES CtxEquivBase.
 
   Lemma obs_help_app {τa ϕf ϕa}
         (ef : expr · (τa ~~ ObsR ~> ℝ) ϕf)
-        (ea : expr · τa ϕa)
-        (v : val ℝ) :
-    obs_μ (e_app ef ea) v =
-    μ ef >>=
-      (fun vf =>
-         μ ea >>=
-           (fun va =>
-              μEntropy >>= obs_apply_in vf va v)).
+        (ea : expr · τa ϕa) :
+    obs_μ (e_app ef ea) =
+    fun v =>
+      μ ef >>=
+        (fun vf =>
+           μ ea >>=
+             (fun va =>
+                μEntropy >>= obs_apply_in vf va v)).
   Proof.
+    extensionality v.
     extensionality A.
 
     rewrite μe_eq_μEntropy2.
@@ -542,15 +569,8 @@ Module CtxEquivCases <: CASES CtxEquivBase.
     split; intros. {
       rewrite 2 by_μe_eq_μEntropy_app.
 
-      apply (coarsening (A_rel _)); [apply H; tauto |].
-      intros B vf0 vf1 Hvf.
-      unfold preimage.
-      f_equal.
-
-      apply (coarsening (A_rel τa)); [apply H0; tauto |].
-      intros B0 va0 va1 Hva.
-      unfold preimage.
-      f_equal.
+      coarsen vf.
+      coarsen va.
 
       destruct_val vf0.
       destruct_val vf1.
@@ -567,15 +587,8 @@ Module CtxEquivCases <: CASES CtxEquivBase.
 
       rewrite 2 obs_help_app.
 
-      apply (coarsening (A_rel _)); [apply H; tauto |].
-      intros B vf0 vf1 Hvf.
-      unfold preimage.
-      f_equal.
-
-      apply (coarsening (A_rel τa)); [apply H0; tauto |].
-      intros B0 va0 va1 Hva.
-      unfold preimage.
-      f_equal.
+      coarsen vf.
+      coarsen va.
 
       destruct_val vf0.
       destruct_val vf1.
@@ -643,10 +656,7 @@ Module CtxEquivCases <: CASES CtxEquivBase.
 
     rewrite 2 by_μe_eq_μEntropy_factor.
 
-    apply (coarsening (A_rel ℝ)); [apply H; tauto |].
-    intros B v0 v1 Hv.
-    unfold preimage.
-    f_equal.
+    coarsen v.
 
     destruct_val v0.
     destruct_val v1.
@@ -747,10 +757,7 @@ Module CtxEquivCases <: CASES CtxEquivBase.
 
     do 2 rewrite by_μe_eq_μEntropy_observe.
 
-    apply (coarsening (A_rel ℝ)); [apply H; tauto |].
-    intros B vl0 vl1 Hvl.
-    unfold preimage.
-    f_equal.
+    coarsen vl.
 
     unfold indicator.
     rewrite (HA vl0 vl1 Hvl).
@@ -824,7 +831,7 @@ Module CtxEquivCases <: CASES CtxEquivBase.
     : Meas unit :=
     match (vl : expr _ _ _), (v : expr _ _ _) with
     | e_real rl, e_real rv =>
-      match δ_unique_inv op rv rl with
+      match δ_unique_inv op rl rv with
       | Some ri =>
         fun A =>
           indicator A tt
@@ -837,11 +844,11 @@ Module CtxEquivCases <: CASES CtxEquivBase.
 
   Lemma obs_help_op {ϕl} op
         (el : expr · ℝ ϕl)
-        (er : expr · ℝ ObsR)
-        (v : val ℝ) :
-    obs_μ (e_binop op el er) v =
-    μ el >>= (fun vl => μEntropy >>= obs_op_in op vl er v).
+        (er : expr · ℝ ObsR) :
+    obs_μ (e_binop op el er) =
+    fun v => μ el >>= (fun vl => μEntropy >>= obs_op_in op vl er v).
   Proof.
+    extensionality v.
     extensionality A.
 
     rewrite μe_eq_μEntropy.
@@ -913,15 +920,8 @@ Module CtxEquivCases <: CASES CtxEquivBase.
     split; intros. {
       do 2 rewrite by_μe_eq_μEntropy_op.
 
-      apply (coarsening (A_rel ℝ)); [apply H; tauto |].
-      intros B vl0 vl1 Hvl.
-      unfold preimage.
-      f_equal.
-
-      apply (coarsening (A_rel ℝ)); [apply H0; tauto |].
-      intros B0 vr0 vr1 Hvr.
-      unfold preimage.
-      f_equal.
+      coarsen vl.
+      coarsen vr.
 
       destruct_val vl0.
       destruct_val vl1.
@@ -944,10 +944,7 @@ Module CtxEquivCases <: CASES CtxEquivBase.
 
       rewrite 2 obs_help_op.
 
-      apply (coarsening (A_rel _)); [apply H; tauto |].
-      intros B vl0 vl1 Hvl.
-      unfold preimage.
-      f_equal.
+      coarsen vl.
 
       destruct_val vl0.
       destruct_val vl1.
