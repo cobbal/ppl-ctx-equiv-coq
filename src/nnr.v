@@ -40,6 +40,9 @@ Notation "1" := ennr_1.
 Notation "2" := ennr_2.
 
 Definition ennr_abs (r : R) : R+ := finite (Rabs r) (Rabs_pos _).
+Arguments ennr_abs : simpl never.
+
+Ltac case_abs := unfold ennr_abs in *; progress repeat destruct ennr_abs.
 
 Definition ennr_plus (a b : R+) : R+ :=
   match a, b with
@@ -96,6 +99,7 @@ Definition ennr_inv (a : R+) : R+ :=
   | infinite
     => 0
   end.
+Arguments ennr_inv !a.
 Notation "/ a" := (ennr_inv a).
 
 Definition ennr_div (a b : R+) : R+ := a * / b.

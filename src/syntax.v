@@ -7,6 +7,7 @@ Require Import Coq.Logic.JMeq.
 Require Import Coq.Program.Equality.
 Require Import Coq.Program.Basics.
 Require Import nnr.
+Require Import cube.
 Require Export entropy.
 Require Import utils.
 Require Import List.
@@ -57,89 +58,155 @@ Defined.
 Inductive binop :=
 | Add
 | ConstDouble
-(* | ConstCube *)
+| ConstCube
 (* | Mult *)
 .
-
-
-Definition Rcube r := pow r 3.
-Arguments Rcube : simpl never.
-Axiom Rcube_root : R -> R.
-Axiom Rcube_root_of_cube : forall r, Rcube_root (Rcube r) = r.
-Axiom Rcube_of_cube_root : forall r, Rcube (Rcube_root r) = r.
 
 Definition δ (op : binop) : R -> R -> R :=
   match op with
   | Add => Rplus
   | ConstDouble => fun _ => Rmult 2
   (* | Mult => Rmult *)
-  (* | ConstCube => fun _ => Rcube *)
+  | ConstCube => fun _ => Rcube
+  (* | Mult => Rmult *)
   end.
 
 (* if {v1} = op^-1(v0, ·)({v})
    then return v1 *)
 Definition δ_unique_inv (op : binop) (v0 : R) (v : R) : option R :=
-  match op with
-  | Add => Some (v - v0)%R
-  | ConstDouble => Some (v / 2)%R
-  (* | Mult => if Req_EM_T v0 0 *)
-  (*           then None *)
-  (*           else Some (v / v0)%R *)
-  (* | ConstCube => Some (Rcube_root v) *)
-  end.
+  (match op with
+   | Add => Some (v - v0)
+   | ConstDouble => Some (v / 2)
+   | ConstCube => Some (Rcube_root v)
+   (* | Mult => *)
+     (* if Req_EM_T v0 0 *)
+     (* then None *)
+     (* else Some (v / v0)%R *)
+     (* Some (v / v0) *)
+   end)%R.
 
-Lemma δ_unique_inv_correct op v0 v1 v :
-  δ_unique_inv op v0 v = Some v1 <->
-  (δ op v0 v1 = v /\ forall v1', δ op v0 v1' = v -> v1 = v1').
+Definition δ_unique_inv_cheating (op : binop) (v0 : R) (v : R) : R :=
+  (match op with
+   | Add => v - v0
+   | ConstDouble => v / 2
+   | ConstCube => Rcube_root v
+   end)%R.
+
+Lemma δ_unique_inv_is_an_inverse op v0 v1 v :
+  δ_unique_inv op v0 v = Some v1 -> δ op v0 v1 = v.
 Proof.
-  destruct op; cbn -[pow]. {
-    repeat split; intros. {
-      inject H.
-      ring.
-    } {
-      inject H.
-      ring.
-    } {
-      destruct H.
+  destruct op; cbn; intros; try inject H; try solve [field].
+  apply Rcube_of_cube_root.
+Qed.
+
+Lemma δ_inv_get_away_with_cheating op v0 v :
+  δ_unique_inv op v0 v = Some (δ_unique_inv_cheating op v0 v).
+Proof.
+  destruct op; cbn; eexists; try reflexivity.
+Qed.
+
+Lemma δ_inv_cheat_left op v0 v1 :
+  δ_unique_inv_cheating op v0 (δ op v0 v1) = v1.
+Proof.
+  destruct op; cbn; try field.
+  apply Rcube_root_of_cube.
+Qed.
+
+Lemma δ_inv_cheat_right op v0 v :
+  δ op v0 (δ_unique_inv_cheating op v0 v) = v.
+Proof.
+  destruct op; cbn; try field.
+  apply Rcube_of_cube_root.
+Qed.
+
+Lemma δ_unique_inv_is_complete op v0 v1 :
+  δ_unique_inv op v0 (δ op v0 v1) = Some v1 \/
+  exists v1', v1 <> v1' /\ δ op v0 v1 = δ op v0 v1'.
+Proof.
+  destruct op; cbn; try solve [left; f_equal; field]. {
+    setoid_rewrite Rcube_root_of_cube.
+    tauto.
+  }
+  (*
+  {
+    destruct Req_EM_T. {
       subst.
-      f_equal.
+      right.
+      exists (v1 + 1)%R.
+      split; try Fourier.fourier.
+      apply Rlt_not_eq.
+      Fourier.fourier.
       ring.
-    }
-  } {
-    repeat split; intros. {
-      inject H.
-      field.
     } {
-      inject H.
-      field.
-    } {
-      destruct H.
-      subst.
+      left.
       f_equal.
       field.
+      auto.
     }
   }
-
-  (* { *)
-  (*   inject H. *)
-  (*   apply Rcube_of_cube_root. *)
-  (* } { *)
-  (*   inject H. *)
-  (*   apply Rcube_root_of_cube. *)
-  (* } { *)
-  (*   destruct H. *)
-  (*   subst. *)
-  (*   f_equal. *)
-  (*   apply Rcube_root_of_cube. *)
-  (* } *)
+*)
 Qed.
+Global Opaque δ_unique_inv.
+Global Opaque δ_unique_inv_cheating.
 
 Definition δ_partial_deriv_2 (op : binop) (v0 v1 : R) : R :=
   match op with
   | Add => 1
   | ConstDouble => 2
-  (* | ConstCube => 3 * (v1 * v1) *)
+  | ConstCube => 3 * (v1 * v1)
+  (* | Mult => v0 *)
   end.
+
+Lemma δ_partial_deriv_2_correct op v0 v1 :
+  derivable_pt_lim (δ op v0) v1 (δ_partial_deriv_2 op v0 v1).
+Proof.
+  destruct op. {
+    hnf; intros.
+    exists (mkposreal eps H).
+    intros.
+    replace (_ - _)%R with 0%R. {
+      unfold Rabs.
+      destruct Rcase_abs; Fourier.fourier.
+    } {
+      cbn; field; auto.
+    }
+  } {
+    hnf; intros.
+    exists (mkposreal eps H).
+    intros.
+    replace (_ - _)%R with 0%R. {
+      unfold Rabs.
+      destruct Rcase_abs; Fourier.fourier.
+    } {
+      cbn; field; auto.
+    }
+  } {
+    cbn.
+    clear v0.
+    pose proof (derivable_pt_lim_pow v1 3).
+    fold Rcube in H.
+    cbn in H.
+    ring_simplify in H.
+    ring_simplify.
+    assumption.
+  }
+  (*
+  {
+    cbn.
+    rewrite <- (Rmult_1_r v0) at 2.
+    apply derivable_pt_lim_scal.
+    apply derivable_pt_lim_id.
+  }
+*)
+Qed.
+Global Opaque δ_partial_deriv_2.
+
+Definition δ_derivable op v0 : derivable (δ op v0).
+Proof.
+  intro v1.
+  eexists.
+  apply δ_partial_deriv_2_correct.
+Defined.
 
 (* u for untyped *)
 Inductive u_expr :=

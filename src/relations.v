@@ -776,7 +776,7 @@ Module CtxEquivCases <: CASES CtxEquivBase.
 
   Definition op_in (op : binop) (v v' : val ℝ) : Meas (val ℝ) :=
     match (v : expr _ _ _), (v' : expr _ _ _) with
-    | e_real r, e_real r' => fun A => indicator A (v_real (δ op r r'))
+    | e_real r, e_real r' => dirac (v_real (δ op r r'))
     | _, _ => fun A => 0
     end.
 
@@ -811,7 +811,7 @@ Module CtxEquivCases <: CASES CtxEquivBase.
         destruct (ul _ _ ex0_1), (ur _ _ ex0_2); subst.
         d_destruct (H, H1).
 
-        unfold op_in; simpl.
+        unfold op_in, dirac; simpl.
         ring.
       } {
         decide_eval el (π 0 σ) as [vl wl exl ul].
@@ -826,20 +826,19 @@ Module CtxEquivCases <: CASES CtxEquivBase.
     }
   Qed.
 
-  Definition obs_op_in (op : binop) (vl : val ℝ) (er : expr · ℝ ObsR)
-             (v : val ℝ) σ
-    : Meas unit :=
+  Definition obs_op_in (op : binop) (vl : val ℝ) (er : expr · ℝ ObsR) (v : val ℝ)
+    : Entropy -> Meas unit :=
     match (vl : expr _ _ _), (v : expr _ _ _) with
     | e_real rl, e_real rv =>
       match δ_unique_inv op rl rv with
       | Some ri =>
-        fun A =>
+        fun σ A =>
           indicator A tt
           * obs er (v_real ri) σ
           / ennr_abs (δ_partial_deriv_2 op rl ri)
-      | None => const 0
+      | None => fun _ _ => 0
       end
-    | _, _ => const 0
+    | _, _ => fun _ _ => 0
     end.
 
   Lemma obs_help_op {ϕl} op
@@ -932,7 +931,7 @@ Module CtxEquivCases <: CASES CtxEquivBase.
       d_destruct (Hvl, Hvr).
       unfold op_in; simpl.
 
-      unfold indicator.
+      unfold dirac, indicator.
       f_equal.
       apply HA.
       reflexivity.

@@ -36,7 +36,6 @@ Proof.
   unfold is_RN_deriv in H.
   subst.
   rewrite meas_bind_assoc.
-  extensionality A.
   integrand_extensionality x.
   setoid_rewrite ennr_mul_comm.
   rewrite integration_linear_in_meas.
@@ -45,95 +44,237 @@ Proof.
   trivial.
 Qed.
 
-Lemma scale_deriv r : is_RN_deriv
-                       lebesgue_measure
-                       (pushforward lebesgue_measure (Rmult r))
-                       (const (ennr_abs r)).
+Lemma scale_deriv r :
+  (r <> R0) ->
+  is_RN_deriv
+    (pushforward lebesgue_measure (Rmult r))
+    lebesgue_measure
+    (const (ennr_abs (/ r))).
 Proof.
-  simple refine (RN_deriv_is_coq_deriv _ _ _ _). {
-    apply derivable_mult. {
-      apply derivable_const.
-    } {
-      apply derivable_id.
-    }
+  intros.
+  simple refine (RN_deriv_is_coq_deriv _ (Rmult (/ r)%R) _ _ _ _ _); intros. {
+    apply derivable_mult; [apply derivable_const | apply derivable_id].
   } {
-    intros.
+    field; auto.
+  } {
+    field; auto.
+  } {
     unfold const.
+    f_equal.
     unfold derive, derive_pt, const.
     destruct derivable_mult; cbn.
     unfold derivable_pt_abs in d.
-    f_equal.
     unfold mult_fct in *.
+    enough (r = x0). {
+      subst.
+      unfold ennr_abs; cbn.
+      destruct Req_EM_T. {
+        exfalso.
+        unfold Rabs in e.
+        destruct Rcase_abs; subst; try fourier; tauto.
+      }
+      ennr.
+      apply Rabs_Rinv; auto.
+    }
     eapply uniqueness_limite; eauto.
     repeat intro.
     assert (0 < (2 * eps))%R by fourier.
     exists (mkposreal _ H0).
     intros.
     cbn in *.
-    replace ((r * (x + h) - r * x) / h - r)%R with 0%R by (field; auto).
+    replace (Rabs _) with (Rabs 0%R) by (f_equal; field; auto).
     unfold Rabs.
-    destruct Rcase_abs; fourier.
+    destruct Rcase_abs; try fourier.
   }
 Qed.
 
 Lemma lebesgue_scale r :
-  lebesgue_measure = (fun A : Event R => (ennr_abs r) * pushforward lebesgue_measure (Rmult r) A).
+  r <> R0 ->
+  lebesgue_measure = (fun A : Event R => ennr_abs r * pushforward lebesgue_measure (Rmult r) A).
 Proof.
-  setoid_rewrite <- meas_id_right at 1.
-  erewrite change_of_variable; [| apply (scale_deriv r)].
+  intros.
+  rewrite <- (meas_id_right (pushforward lebesgue_measure (Rmult r))).
+  erewrite change_of_variable; [| apply scale_deriv; auto].
   unfold pushforward, compose, preimage.
   extensionality A.
   unfold const.
   setoid_rewrite <- integration_linear_mult_r.
   unfold dirac.
   rewrite integration_of_indicator.
-  ring.
+
+  rewrite ennr_mul_comm.
+  rewrite <- ennr_mul_assoc.
+  rewrite <- ennr_mul_1_r at 1.
+  f_equal.
+  ennr.
+  unfold Rabs.
+  repeat destruct Rcase_abs; try field; auto. {
+    exfalso.
+    assert (0 <= r)%R by fourier.
+    pose proof nnr.Rinv_pos H0 ltac:(auto).
+    pose proof Rle_lt_trans _ _ _ H1 r0.
+    econtradict Rlt_irrefl.
+  } {
+    assert (0 <= / r)%R by (set (/ r)%R in *; fourier).
+    assert (0 <= r)%R. {
+      rewrite <- Rinv_involutive; auto.
+      apply nnr.Rinv_pos; auto.
+      intro.
+      symmetry in H1.
+      apply Rinv_neq_0_compat in H1; auto.
+    }
+    pose proof Rle_lt_trans _ _ _ H1 r1.
+    fourier.
+  }
 Qed.
 
 Lemma plus_deriv r : is_RN_deriv
-                       lebesgue_measure
                        (pushforward lebesgue_measure (Rplus r))
+                       lebesgue_measure
                        (const 1).
 Proof.
-  simple refine (RN_deriv_is_coq_deriv _ _ _ _). {
-    apply derivable_plus. {
-      apply derivable_const.
-    } {
-      apply derivable_id.
-    }
+  simple refine (RN_deriv_is_coq_deriv _ (fun x => x - r) _ _ _ _ _); intros; cbn. {
+    apply derivable_plus; [apply derivable_const | apply derivable_id].
   } {
-    intros.
-    unfold const.
-    unfold derive, derive_pt, const.
-    destruct derivable_plus; cbn.
-    unfold derivable_pt_abs in d.
-    unfold plus_fct in *.
-    enough (x0 = 1)%R. {
-      subst.
-      ennr.
-      unfold Rabs.
-      destruct Rcase_abs; auto; fourier.
-    } {
-      eapply uniqueness_limite; eauto.
-      repeat intro.
-      exists (mkposreal _ H).
-      intros.
-      cbn in *.
-      replace ((r + (x + h) - (r + x)) / h - 1)%R with 0%R by (field; auto).
-      unfold Rabs.
+    ring.
+  } {
+    ring.
+  }
+  unfold const.
+  ring_simplify.
+  unfold derive, derive_pt, const.
+  destruct derivable_plus; cbn.
+  unfold derivable_pt_abs in d.
+  unfold plus_fct in *.
+  enough (x0 = 1)%R. {
+    subst.
+    unfold ennr_abs; cbn.
+    destruct Req_EM_T. {
+      unfold Rabs in e.
       destruct Rcase_abs; fourier.
     }
+    ennr.
+    unfold Rabs.
+    destruct Rcase_abs; auto; try fourier; field.
+  } {
+    eapply uniqueness_limite; eauto.
+    repeat intro.
+    exists (mkposreal _ H).
+    intros.
+    cbn in *.
+    replace (Rabs _)%R with (Rabs 0)%R by (f_equal; field; auto).
+    unfold Rabs.
+    destruct Rcase_abs; fourier.
   }
 Qed.
 
 Lemma lebesgue_translate_invariant r :
   lebesgue_measure = pushforward lebesgue_measure (Rplus r).
 Proof.
-  setoid_rewrite <- meas_id_right at 1.
+  rewrite <- (meas_id_right (pushforward lebesgue_measure (Rplus r))).
   erewrite change_of_variable; [| apply (plus_deriv r)].
   unfold const.
   setoid_rewrite ennr_mul_1_r.
-  apply meas_id_right.
+  rewrite meas_id_right.
+  auto.
+Qed.
+
+Definition score_meas {X} (w : X -> R+) (μ : Meas X) : Meas X :=
+  μ >>= (fun x A => w x * indicator A x).
+
+Definition score_abs_meas {X} (w : X -> R) (μ : Meas X) : Meas X :=
+  μ >>= (fun x A => ennr_abs (w x) * indicator A x).
+
+Lemma bind_of_score_abs {A B} w μ (f : A -> Meas B) :
+  score_abs_meas w μ >>= f = μ >>= (fun a ev => ennr_abs (w a) * f a ev).
+Proof.
+  unfold score_abs_meas.
+  rewrite meas_bind_assoc.
+  integrand_extensionality x.
+  rewrite integration_linear_in_meas.
+  fold (dirac x).
+  rewrite meas_id_left.
+  reflexivity.
+Qed.
+
+Lemma bind_of_score {A B} w μ (f : A -> Meas B) :
+  score_meas w μ >>= f = μ >>= (fun a ev => (w a) * f a ev).
+Proof.
+  unfold score_meas.
+  rewrite meas_bind_assoc.
+  integrand_extensionality x.
+  rewrite integration_linear_in_meas.
+  fold (dirac x).
+  rewrite meas_id_left.
+  reflexivity.
+Qed.
+
+Lemma push_score {X Y} (f : X -> R+) (g : X -> Y) (g_inv : Y -> X) (μ : Meas X) :
+  (forall x : X, g_inv (g x) = x) ->
+  pushforward (score_meas f μ) g =
+  score_meas (f ∘ g_inv) (pushforward μ g).
+Proof.
+  intros.
+  unfold score_meas.
+  (* rewrite bind_of_pushforward. *)
+  unfold compose.
+  rewrite 2 pushforward_as_bind.
+  repeat rewrite meas_bind_assoc.
+  integrand_extensionality x.
+  unfold compose.
+  rewrite meas_id_left.
+  rewrite integration_linear_in_meas.
+  fold (dirac x).
+  rewrite meas_id_left.
+  rewrite H.
+  auto.
+Qed.
+
+Lemma δ_deriv op v0 :
+    is_RN_deriv
+      (pushforward lebesgue_measure (δ op v0))
+      lebesgue_measure
+      (fun x => / ennr_abs (δ_partial_deriv_2 op v0 (fromOption R0 (δ_unique_inv op v0 x)))).
+      (* (fun x => ennr_abs (/ δ_partial_deriv_2 op v0 x)). *)
+Proof.
+  refine (RN_deriv_is_coq_deriv
+            _
+            (fun x => fromOption R0 (δ_unique_inv op v0 x))
+            _
+            (δ_derivable _ _)
+            _ _ _);
+    auto;
+    cbn;
+    intros;
+    revgoals.
+  {
+    rewrite δ_inv_get_away_with_cheating.
+    cbn.
+    apply δ_inv_cheat_left.
+  } {
+    rewrite δ_inv_get_away_with_cheating.
+    cbn.
+    apply δ_inv_cheat_right.
+  }
+Qed.
+
+Lemma lebesgue_deriv_invariant op v0 :
+  score_meas
+    (ennr_inv ∘ ennr_abs ∘ δ_partial_deriv_2 op v0 ∘ δ_unique_inv_cheating op v0)
+    lebesgue_measure =
+  pushforward lebesgue_measure (δ op v0).
+Proof.
+  setoid_rewrite <- (meas_id_right (pushforward lebesgue_measure (δ op v0))).
+  erewrite change_of_variable; revgoals. {
+    apply δ_deriv.
+  } {
+    unfold compose.
+    integrand_extensionality x.
+    unfold dirac.
+    rewrite δ_inv_get_away_with_cheating.
+    cbn.
+    ring.
+  }
 Qed.
 
 Require Import logrel.
@@ -408,10 +549,6 @@ Module RadonNikodymCases : CASES RadonNikodymBase.
     }
   Qed.
 
-  Definition score_meas {X} (w : X -> R+) (μ : Meas X) : Meas X :=
-    μ >>= (fun x A => w x * indicator A x).
-
-
   Lemma case_binop : forall ϕl ϕr op el er,
       E_rel ℝ ϕl el ->
       E_rel ℝ ϕr er ->
@@ -450,147 +587,68 @@ Module RadonNikodymCases : CASES RadonNikodymBase.
 
       clear H el.
 
-      destruct op. {
-        cbn.
-        setoid_rewrite ennr_mul_1_l.
-        unfold ennr_div.
-        replace (/ _) with 1; revgoals. {
-          cbn.
-          destruct Req_EM_T. {
-            unfold Rabs in e.
-            destruct Rcase_abs; fourier.
-          } {
-            ennr.
-            compute.
-            destruct Rcase_abs; try fourier.
-            rewrite Rinv_1.
-            auto.
-          }
-        }
-
-        setoid_rewrite ennr_mul_1_r.
-
-        replace (μ er) with (lebesgue_val_measure
-                               >>=
-                               (fun x A => indicator A x * obs_μ er x full_event));
-          revgoals.
-        {
-          symmetry.
-          destruct H0 as [_ ?].
-          apply (H eq_refl eq_refl).
-        }
-        unfold lebesgue_val_measure.
-        rewrite bind_of_pushforward.
-        rewrite meas_bind_assoc.
-        unfold compose.
-
-        unfold obs_μ.
-        cbn.
-        setoid_rewrite ennr_mul_1_l.
-
-        setoid_rewrite ennr_mul_comm at 1.
-        setoid_rewrite integration_linear_in_meas.
-
-        transitivity (
-            lebesgue_measure >>=
-            (fun (x : R) (ev : Event (val ℝ)) =>
-            integration (fun σ : Entropy => obs er (v_real x) σ) μEntropy *
-            op_in Add (v_real r) (v_real x) ev)).
-        {
-          f_equal.
-          extensionality x.
-          extensionality A.
-          fold (dirac (v_real x)).
-          rewrite meas_id_left.
-          auto.
-        }
-        cbn.
-
-        rewrite (lebesgue_translate_invariant r) at 2.
-        rewrite !bind_of_pushforward.
-        unfold compose.
-        extensionality A.
-        integrand_extensionality x.
-        rewrite <- integration_linear_mult_l.
-        rewrite ennr_mul_comm.
-        f_equal.
-        integrand_extensionality σ.
-        repeat f_equal.
-        ring.
-      } {
-        cbn.
-        setoid_rewrite ennr_mul_1_l.
-        unfold ennr_div.
-
-        replace (μ er) with (lebesgue_val_measure
-                               >>=
-                               (fun x A => indicator A x * obs_μ er x full_event));
-          revgoals.
-        {
-          symmetry.
-          destruct H0 as [_ ?].
-          apply (H eq_refl eq_refl).
-        }
-        unfold lebesgue_val_measure.
-        rewrite bind_of_pushforward.
-        rewrite meas_bind_assoc.
-        unfold compose.
-
-        unfold obs_μ.
-        cbn.
-        destruct Req_EM_T. {
-          exfalso.
-          unfold Rabs in e.
-          destruct Rcase_abs; fourier.
-        }
-        setoid_rewrite ennr_mul_1_l.
-
-        setoid_rewrite ennr_mul_comm at 1.
-        setoid_rewrite integration_linear_in_meas.
-
-        transitivity (
-            lebesgue_measure >>=
-            (fun (x : R) (ev : Event (val ℝ)) =>
-            integration (fun σ : Entropy => obs er (v_real x) σ) μEntropy *
-            op_in ConstDouble (v_real r) (v_real x) ev)).
-        {
-          f_equal.
-          extensionality x.
-          extensionality A.
-          fold (dirac (v_real x)).
-          rewrite meas_id_left.
-          auto.
-        }
-        cbn.
-
-        rewrite (lebesgue_scale 2) at 2.
-        setoid_rewrite integration_linear_in_meas.
-        rewrite !bind_of_pushforward.
-        unfold compose.
-        extensionality A.
-        setoid_rewrite integration_linear_mult_l.
-        integrand_extensionality x.
-        setoid_rewrite ennr_mul_comm at 2.
-        rewrite <- integration_linear_mult_l.
-        rewrite <- ennr_mul_assoc.
-        replace (ennr_abs 2) with 2; revgoals. {
-          ennr.
-          unfold Rabs.
-          destruct Rcase_abs; auto; fourier.
-        }
-        rewrite (integration_linear_mult_r _ 2).
-        rewrite ennr_mul_comm.
-        f_equal.
-        integrand_extensionality σ.
-
-        replace (2 * x / 2)%R with x by field.
-        rewrite <- ennr_mul_assoc.
-        replace (_ * 2) with 1; try ring.
-        ennr.
-        unfold Rabs.
-        destruct Rcase_abs; try fourier.
-        field.
+      replace (μ er)
+      with (lebesgue_val_measure
+              >>= (fun x A => indicator A x * obs_μ er x full_event));
+        revgoals.
+      {
+        symmetry.
+        destruct H0 as [_ ?].
+        apply (H eq_refl eq_refl).
       }
+      unfold lebesgue_val_measure.
+      rewrite bind_of_pushforward.
+      rewrite meas_bind_assoc.
+      unfold compose.
+
+      unfold obs_μ.
+      cbn.
+      setoid_rewrite ennr_mul_1_l.
+      setoid_rewrite ennr_mul_comm at 1.
+      setoid_rewrite integration_linear_in_meas.
+
+      transitivity (
+          score_meas
+            (fun x => integration (obs er (v_real x)) μEntropy)
+            lebesgue_measure >>=
+                           (fun (x : R) => op_in op (v_real r) (v_real x))).
+                           (* (fun (x : R) (ev : Event (val ℝ)) => *)
+                           (*    integration (fun σ : Entropy => obs er (v_real x) σ) μEntropy * *)
+                           (*    op_in op (v_real r) (v_real x) ev)). *)
+      {
+        rewrite bind_of_score.
+        integrand_extensionality x.
+        fold (dirac (v_real x)).
+        rewrite meas_id_left.
+        reflexivity.
+      }
+      cbn.
+
+      rewrite <- (pushforward_as_bind _ (v_real ∘ δ op r)).
+      rewrite pushforward_compose.
+
+
+      rewrite <- meas_id_right at 1.
+      rewrite bind_of_pushforward.
+
+      setoid_rewrite <- integration_linear_mult_l.
+
+      erewrite push_score; try apply δ_inv_cheat_left.
+      rewrite bind_of_score.
+      rewrite <- lebesgue_deriv_invariant.
+
+      rewrite bind_of_score.
+      integrand_extensionality x.
+      unfold compose.
+      rewrite ennr_mul_assoc.
+      rewrite ennr_mul_comm.
+      f_equal.
+      rewrite δ_inv_get_away_with_cheating.
+      rewrite integration_linear_mult_l.
+      integrand_extensionality σ.
+      unfold ennr_div.
+      cbn.
+      ring.
     }
   Qed.
 End RadonNikodymCases.

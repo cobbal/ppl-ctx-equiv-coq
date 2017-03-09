@@ -32,7 +32,13 @@ Axiom integration : forall {A}, (A -> R+) -> Meas A -> R+.
 
 (* show (∫ f dμ = ∫ g dμ) by showing pointwise equality *)
 Ltac integrand_extensionality x :=
-  refine (f_equal2 integration _ eq_refl); extensionality x.
+  match goal with
+  | [ |- _ = _ :> R+ ] => idtac
+  | [ |- _ = _ :> Meas _ ] => let A := fresh "A" in extensionality A
+  | [ |- _ = _ :> _ -> R+ ] => let A := fresh "A" in extensionality A
+  end;
+  refine (f_equal2 integration _ eq_refl);
+  extensionality x.
 
 Axiom integration_linear :
   forall {A} (μ : Meas A) (s0 s1 : R+) (f0 f1 : A -> R+),
@@ -155,6 +161,12 @@ Definition pushforward {A B} (μ : Meas A) (f : A -> B) : Meas B :=
 Axiom μEntropy_proj_is_lebesgue : forall n : nat,
     pushforward μEntropy (fun σ => proj1_sig (σ n)) = lebesgue_01_ivl.
 
+Lemma pushforward_compose {A B C} μ (f : B -> C) (g : A -> B) :
+  pushforward μ (f ∘ g) = pushforward (pushforward μ g) f.
+Proof.
+  trivial.
+Qed.
+
 Lemma integration_of_pushforward {A B} (g : A -> B) f μ :
   integration f (pushforward μ g) = integration (f ∘ g) μ.
 Proof.
@@ -171,6 +183,13 @@ Proof.
   unfold ">>=".
   rewrite integration_of_pushforward.
   auto.
+Qed.
+
+Lemma pushforward_as_bind {A B} μ (f : A -> B) :
+  pushforward μ f = μ >>= (dirac ∘ f).
+Proof.
+  rewrite <- meas_id_right at 1.
+  apply bind_of_pushforward.
 Qed.
 
 Lemma integration_linear_in_meas {A B} (μ : Meas A) (s : R+) (f : A -> Meas B) :
@@ -347,13 +366,9 @@ Proof.
   }
 Qed.
 
-(* borrowing from https://math.stackexchange.com/questions/2139423 for now, need
-   to look up a real source later. *)
-Axiom RN_deriv_is_coq_deriv : forall f f' (df : derivable f),
-    (forall x, f' x = ennr_abs (derive f df x)) ->
-    is_RN_deriv lebesgue_measure (pushforward lebesgue_measure f) f'.
-
-
-(* Axiom monotonic_pushforward_of_lebesgue : *)
-(*   forall f, Rmonotone f -> *)
-(*             pushforward lebesgue_measure f = *)
+(* Is this even true? *)
+Axiom RN_deriv_is_coq_deriv : forall f inv_f D_f_inv (H : derivable f),
+    (forall x, f (inv_f x) = x) ->
+    (forall x, inv_f (f x) = x) ->
+    (forall x, D_f_inv x = / (ennr_abs (derive f H (inv_f x)))) ->
+    is_RN_deriv (pushforward lebesgue_measure f) lebesgue_measure D_f_inv.
