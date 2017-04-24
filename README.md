@@ -5,10 +5,10 @@
 ## Intro
 
 These proofs accompany the paper at
-https://link.springer.com/chapter/10.1007%2F978-3-662-54434-1_14
+<https://link.springer.com/chapter/10.1007%2F978-3-662-54434-1_14>
 
 A prettier, coqdoc version of the sources is viewable at
-https://cobbal.github.io/ppl-ctx-equiv-coq/toc.html
+<https://cobbal.github.io/ppl-ctx-equiv-coq/toc.html>
 
 
 ## Axioms
