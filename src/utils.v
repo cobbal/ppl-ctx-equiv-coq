@@ -41,8 +41,6 @@ Definition option_bind {A B} (t : option A) (f : A -> option B) : option B :=
   | None => None
   end.
 
-Definition id {A} := @Datatypes.id A.
-
 (** [dep_destruct] crudely extends the [dependent destruction] tactic to
     destruct multiple variables at once. *)
 Ltac dep_destruct xs :=

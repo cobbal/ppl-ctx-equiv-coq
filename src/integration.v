@@ -278,15 +278,6 @@ Qed.
 Definition meas_join {A} (μ : Meas (Meas A)) : Meas A := μ >>= id.
 Definition kernel A B := A -> Meas B.
 
-Definition kleis_comp {A B C} (k0 : kernel A B) (k1 : kernel B C) : kernel A C :=
-  fun a => k0 a >>= k1.
-Infix ">=>" := (kleis_comp) (at level 21, right associativity).
-
-Class assocable {A B C D} (k0 : kernel A B) k1 (k2 : kernel C D) : Prop :=
-  meas_klies_assoc :
-    k0 >=> (k1 >=> k2) =
-    (k0 >=> k1) >=> k2.
-
 (** * Measures that may be safely interchanged *)
 
 (** Tonelli's theorem will be too restricted to be of immediate use in dealing

@@ -18,7 +18,7 @@ Infix "@" := e_app (at level 68, left associativity).
 Infix "+!" := e_plus.
 
 Definition var_0 {τ Γ} : expr (τ :: Γ) τ :=
-  e_var O (eq_refl : lookup (τ :: Γ) O = Some τ).
+  e_var 0%nat (eq_refl : lookup (τ :: Γ) 0%nat = Some τ).
 Definition var_1 {τ0 τ1 Γ} : expr (τ0 :: τ1 :: Γ) τ1 :=
   e_var 1%nat (eq_refl : lookup (τ0 :: τ1 :: Γ) 1%nat = Some τ1).
 
@@ -378,94 +378,6 @@ Proof.
   destruct x; auto; cbn in *.
   erewrite dep_ids_ids; eauto.
 Qed.
-
-Lemma beta_value' {Γ τ τv}
-      (e : expr (τv :: Γ) τ)
-      (v : expr Γ τv) :
-  is_pure v ->
-  (EXP Γ ⊢ e_let v e ≈ proj1_sig (open_subst1 e v) : τ).
-Proof.
-  intros v_val.
-
-  apply relate_exprs; intros.
-
-  pose proof closed_pure_is_val v_val ρ.
-
-  munge.
-  rewrite <- H2 in H.
-  set (v' := mk_val e1_2 H).
-  replace e1_2 with (v' : expr _ _) in * by auto.
-  clearbody v'.
-  clear H.
-
-  apply (coarsening (fun a b => μEntropy a = μEntropy b)); auto.
-  intros.
-
-  set (S1 := preimage _ _).
-  set (S2 := preimage _ _).
-
-  replace S1 with (preimage (π 2) S2); revgoals. {
-    subst S1 S2.
-    unfold preimage.
-    extensionality σ.
-    f_equal.
-    unfold eval_in.
-    decide_eval (e_let v' e1_1) σ as [vl wl El ul]. {
-      dep_destruct El; try absurd_val.
-      dep_destruct El1.
-      apply invert_eval_val in El2.
-      inject El2.
-      munge.
-
-      replace e0 with e2 in *; revgoals. {
-        apply erase_injective.
-        rewrite He2, He0.
-        asimpl.
-        apply subst_only_matters_up_to_env.
-        intros.
-        destruct x; cbn; auto.
-        erewrite dep_ids_ids; eauto.
-      }
-
-      decide_eval as [vR wR ER uR]. {
-        specialize (uR _ _ El3).
-        inject uR.
-        cbn.
-        ring.
-      }
-    } {
-      decide_eval as [vR wR ER uR].
-      econtradict not_ex. {
-        rewrite (rewrite_v_lam) in *.
-        apply EVAL_val.
-      } {
-        munge.
-        replace e0 with e2 in *; revgoals. {
-          apply erase_injective.
-          rewrite He2, He0.
-          asimpl.
-          apply subst_only_matters_up_to_env.
-          intros.
-          destruct x; cbn; auto.
-          erewrite dep_ids_ids; eauto.
-        }
-        subst.
-        eauto.
-      }
-    }
-  } {
-    clearbody S1 S2.
-    subst.
-    clear_except H.
-
-    change ((μEntropy ∘ (preimage (π 2))) S2 = μEntropy S2).
-    fold (pushforward μEntropy (π 2)).
-
-    pose proof (fun f => project_same_integral f 2).
-    setoid_rewrite integration_of_pushforward in H at 1.
-    admit.
-  }
-Abort.
 
 Lemma apply_id_equiv {Γ τ} (e : expr Γ τ) :
   (EXP Γ ⊢ e_let e var_0 ≈ e : τ).
