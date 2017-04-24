@@ -40,8 +40,8 @@ In this file, we define contexts, contextual equivalence, and show that the
 <span class="id" title="keyword">Require</span> <span class="id" title="keyword">Import</span> <a class="idref" href="OpSemProofs.syntax.html#"><span class="id" title="library">syntax</span></a>.<br/>
 <span class="id" title="keyword">Require</span> <span class="id" title="keyword">Import</span> <a class="idref" href="OpSemProofs.relations.html#"><span class="id" title="library">relations</span></a>.<br/>
 <span class="id" title="keyword">Require</span> <span class="id" title="keyword">Import</span> <a class="idref" href="OpSemProofs.properties_of_relations.html#"><span class="id" title="library">properties_of_relations</span></a>.<br/>
-<span class="id" title="keyword">Require</span> <span class="id" title="keyword">Import</span> <a class="idref" href="http://coq.inria.fr/distrib/8.6/stdlib/Coq.micromega.Lia.html#"><span class="id" title="library">micromega.Lia</span></a>.<br/>
-<span class="id" title="keyword">Require</span> <span class="id" title="keyword">Import</span> <a class="idref" href="http://coq.inria.fr/distrib/8.6/stdlib/Coq.Lists.List.html#"><span class="id" title="library">List</span></a>.<br/>
+<span class="id" title="keyword">Require</span> <span class="id" title="keyword">Import</span> <a class="idref" href="http://coq.inria.fr/distrib/8.6/stdlib/Coq.micromega.Lia.html#"><span class="id" title="library">Coq.micromega.Lia</span></a>.<br/>
+<span class="id" title="keyword">Require</span> <span class="id" title="keyword">Import</span> <a class="idref" href="http://coq.inria.fr/distrib/8.6/stdlib/Coq.Lists.List.html#"><span class="id" title="library">Coq.Lists.List</span></a>.<br/>
 <span class="id" title="keyword">Require</span> <span class="id" title="keyword">Export</span> <a class="idref" href="OpSemProofs.chain.html#"><span class="id" title="library">chain</span></a>.<br/>
 
 <br/>
@@ -53,14 +53,14 @@ In this file, we define contexts, contextual equivalence, and show that the
 
 <div class="paragraph"> </div>
 
-    A context is a <span class="inlinecode"><a class="idref" href="OpSemProofs.chain.html#chain"><span class="id" title="inductive">chain</span></a></span> of context frames.
+    A context is represented as a <span class="inlinecode"><a class="idref" href="OpSemProofs.chain.html#chain"><span class="id" title="inductive">chain</span></a></span> of context frames.
 
 <div class="paragraph"> </div>
 
     The notations below for types of frames and contexts should be thought of as
-    "contexts take terms sitting in a hole typed `Γh ⊢ τh` and translate them to
-    sit at type `Γo ⊢ τo`". The outermost chain_cons is the outermost context
-    frame here. 
+    "contexts take terms sitting in a hole typed '<span class="inlinecode"><a class="idref" href="OpSemProofs.ctxequiv.html#822060a466bcd54791654747e0de37c6"><span class="id" title="variable">Γh</span></a></span> <span class="inlinecode">⊢</span> <span class="inlinecode">τ<span class="id" title="var">h</span></span>' and translate them
+    to expressions at type '<span class="inlinecode"><a class="idref" href="OpSemProofs.ctxequiv.html#fc68c553740324099788cba09632d1f9"><span class="id" title="variable">Γo</span></a></span> <span class="inlinecode">⊢</span> <span class="inlinecode">τ<a class="idref" href="OpSemProofs.applications.html#o"><span class="id" title="variable">o</span></a></span>'". The outermost chain_cons is the
+    outermost context frame here. 
 </div>
 <div class="code">
 <span class="id" title="keyword">Reserved Notation</span> &quot;'FRAME' Γo ⊢ [ Γh ⊢ τh ] : τo"<br/>
@@ -94,8 +94,13 @@ In this file, we define contexts, contextual equivalence, and show that the
 <span class="id" title="keyword">Definition</span> <a name="c_hole"><span class="id" title="definition">c_hole</span></a> {<span class="id" title="var">Γ</span> τ} : (<a class="idref" href="OpSemProofs.ctxequiv.html#1112558c4c77925d049077334e1e3bf7"><span class="id" title="notation">CTX</span></a> <a class="idref" href="OpSemProofs.ctxequiv.html#1b004e48cd1f64e22d5c000cf0d7f047"><span class="id" title="variable">Γ</span></a> <a class="idref" href="OpSemProofs.ctxequiv.html#1112558c4c77925d049077334e1e3bf7"><span class="id" title="notation">⊢</span></a> <a class="idref" href="OpSemProofs.ctxequiv.html#1112558c4c77925d049077334e1e3bf7"><span class="id" title="notation">[</span></a><a class="idref" href="OpSemProofs.ctxequiv.html#1b004e48cd1f64e22d5c000cf0d7f047"><span class="id" title="variable">Γ</span></a> <a class="idref" href="OpSemProofs.ctxequiv.html#1112558c4c77925d049077334e1e3bf7"><span class="id" title="notation">⊢</span></a> <a class="idref" href="OpSemProofs.ctxequiv.html#a788b57bb5319497a4de11f3392dcbc3"><span class="id" title="variable">τ</span></a><a class="idref" href="OpSemProofs.ctxequiv.html#1112558c4c77925d049077334e1e3bf7"><span class="id" title="notation">]</span></a> <a class="idref" href="OpSemProofs.ctxequiv.html#1112558c4c77925d049077334e1e3bf7"><span class="id" title="notation">:</span></a> <a class="idref" href="OpSemProofs.ctxequiv.html#a788b57bb5319497a4de11f3392dcbc3"><span class="id" title="variable">τ</span></a>) := <a class="idref" href="OpSemProofs.chain.html#chain_nil"><span class="id" title="constructor">chain_nil</span></a>.<br/>
 
 <br/>
-<span class="comment">(*&nbsp;As&nbsp;before&nbsp;with&nbsp;expr,&nbsp;we&nbsp;define&nbsp;a&nbsp;(mostly)&nbsp;erased&nbsp;version&nbsp;of&nbsp;contexts&nbsp;and&nbsp;an<br/>
-&nbsp;&nbsp;&nbsp;injective&nbsp;erasure&nbsp;function&nbsp;from&nbsp;the&nbsp;fully&nbsp;typed&nbsp;context.&nbsp;*)</span><br/>
+</div>
+
+<div class="doc">
+As before with <span class="inlinecode"><a class="idref" href="OpSemProofs.syntax.html#expr"><span class="id" title="inductive">expr</span></a></span>, we define a (mostly) erased version of contexts and
+    an injective erasure function from the fully typed context. 
+</div>
+<div class="code">
 <span class="id" title="keyword">Inductive</span> <a name="u_ctx_frame"><span class="id" title="inductive">u_ctx_frame</span></a> :=<br/>
 | <a name="uc_app_f"><span class="id" title="constructor">uc_app_f</span></a> (<span class="id" title="var">ua</span> : <a class="idref" href="OpSemProofs.syntax.html#u_expr"><span class="id" title="inductive">u_expr</span></a>)<br/>
 | <a name="uc_app_a"><span class="id" title="constructor">uc_app_a</span></a> (<span class="id" title="var">uf</span> : <a class="idref" href="OpSemProofs.syntax.html#u_expr"><span class="id" title="inductive">u_expr</span></a>)<br/>
@@ -389,14 +394,13 @@ We can't instantiate all of autosubst's machinery for contexts, since they
 <br/>
 &nbsp;&nbsp;<span class="id" title="tactic">pose</span> <span class="id" title="var">proof</span> <a class="idref" href="OpSemProofs.ctxequiv.html#compat_plug"><span class="id" title="lemma">compat_plug</span></a> <span class="id" title="var">C</span> <span class="id" title="var">e0</span> <span class="id" title="var">e1</span> <span class="id" title="var">re</span>.<br/>
 &nbsp;&nbsp;<span class="id" title="tactic">specialize</span> (<span class="id" title="var">H</span> <span class="id" title="var">_</span> <span class="id" title="var">_</span> <a class="idref" href="OpSemProofs.relations.html#G_rel_nil"><span class="id" title="constructor">G_rel_nil</span></a>).<br/>
-&nbsp;&nbsp;<span class="id" title="var">elim_sig_exprs</span>.<br/>
-&nbsp;&nbsp;<span class="id" title="var">elim_erase_eqs</span>.<br/>
+&nbsp;&nbsp;<span class="id" title="tactic">rewrite</span> 2 <a class="idref" href="OpSemProofs.syntax.html#close_nil"><span class="id" title="lemma">close_nil</span></a> <span class="id" title="keyword">in</span> <span class="id" title="var">H</span>.<br/>
 
 <br/>
 &nbsp;&nbsp;<span class="id" title="tactic">apply</span> <span class="id" title="var">H</span>.<br/>
 &nbsp;&nbsp;<span class="id" title="tactic">repeat</span> <span class="id" title="tactic">intro</span>.<br/>
 &nbsp;&nbsp;<span class="id" title="var">inject</span> <span class="id" title="var">Hv</span>.<br/>
-&nbsp;&nbsp;<span class="id" title="tactic">trivial</span>.<br/>
+&nbsp;&nbsp;<span class="id" title="tactic">reflexivity</span>.<br/>
 <span class="id" title="keyword">Qed</span>.<br/>
 </div>
 </div>

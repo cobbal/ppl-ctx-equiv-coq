@@ -253,101 +253,7 @@ The first step towards proving injectivity of <span class="inlinecode"><a class=
 </div>
 
 <div class="doc">
-<a name="lab14"></a><h3 class="section">Tactics</h3>
-
-
-<div class="paragraph"> </div>
-
-    Some tactics useful for making use of equalities between erased expressions.
-    
-</div>
-<div class="code">
-
-<br/>
-<span class="id" title="keyword">Ltac</span> <span class="id" title="var">inject_erase_directly</span> :=<br/>
-&nbsp;&nbsp;<span class="id" title="keyword">match</span> <span class="id" title="keyword">goal</span> <span class="id" title="keyword">with</span><br/>
-&nbsp;&nbsp;| [ <span class="id" title="var">H</span> : <a class="idref" href="OpSemProofs.syntax.html#erase"><span class="id" title="definition">erase</span></a> ?<span class="id" title="var">x</span> <a class="idref" href="http://coq.inria.fr/distrib/8.6/stdlib/Coq.Init.Logic.html#1c39bf18749e5cc609e83c0a0ba5a372"><span class="id" title="notation">=</span></a> <a class="idref" href="OpSemProofs.syntax.html#erase"><span class="id" title="definition">erase</span></a> ?<span class="id" title="var">y</span> |- <span class="id" title="var">_</span> ] =&gt;<br/>
-&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="tactic">apply</span> <a class="idref" href="OpSemProofs.syntax.html#erase_injective"><span class="id" title="lemma">erase_injective</span></a> <span class="id" title="keyword">in</span> <span class="id" title="var">H</span>;<br/>
-&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="tactic">try</span> <span class="id" title="tactic">subst</span> <span class="id" title="var">x</span><br/>
-&nbsp;&nbsp;<span class="id" title="keyword">end</span>.<br/>
-
-<br/>
-<span class="id" title="keyword">Ltac</span> <span class="id" title="var">match_erase_eqs</span> :=<br/>
-&nbsp;&nbsp;<span class="id" title="keyword">let</span> <span class="id" title="var">H</span> := <span class="id" title="tactic">fresh</span> "H" <span class="id" title="keyword">in</span><br/>
-&nbsp;&nbsp;<span class="id" title="keyword">let</span> <span class="id" title="var">H'</span> := <span class="id" title="tactic">fresh</span> "H" <span class="id" title="keyword">in</span><br/>
-&nbsp;&nbsp;<span class="id" title="keyword">match</span> <span class="id" title="keyword">goal</span> <span class="id" title="keyword">with</span><br/>
-&nbsp;&nbsp;| [<span class="id" title="var">H0</span> : <a class="idref" href="OpSemProofs.syntax.html#erase"><span class="id" title="definition">erase</span></a> ?<span class="id" title="var">x</span> <a class="idref" href="http://coq.inria.fr/distrib/8.6/stdlib/Coq.Init.Logic.html#1c39bf18749e5cc609e83c0a0ba5a372"><span class="id" title="notation">=</span></a> ?<span class="id" title="var">s</span>, <span class="id" title="var">H1</span> : <a class="idref" href="OpSemProofs.syntax.html#erase"><span class="id" title="definition">erase</span></a> ?<span class="id" title="var">y</span> <a class="idref" href="http://coq.inria.fr/distrib/8.6/stdlib/Coq.Init.Logic.html#1c39bf18749e5cc609e83c0a0ba5a372"><span class="id" title="notation">=</span></a> ?<span class="id" title="var">s</span> |- <span class="id" title="var">_</span> ] =&gt;<br/>
-&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="tactic">pose</span> <span class="id" title="var">proof</span> (<a class="idref" href="http://coq.inria.fr/distrib/8.6/stdlib/Coq.Init.Logic.html#eq_trans"><span class="id" title="lemma">eq_trans</span></a> <span class="id" title="var">H0</span> (<a class="idref" href="http://coq.inria.fr/distrib/8.6/stdlib/Coq.Init.Logic.html#eq_sym"><span class="id" title="lemma">eq_sym</span></a> <span class="id" title="var">H1</span>)) <span class="id" title="keyword">as</span> <span class="id" title="var">H</span>;<br/>
-&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">let</span> <span class="id" title="var">z</span> := <span class="id" title="var">type</span> <span class="id" title="var">of</span> <span class="id" title="var">y</span> <span class="id" title="keyword">in</span><br/>
-&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">match</span> <span class="id" title="var">type</span> <span class="id" title="var">of</span> <span class="id" title="var">x</span> <span class="id" title="keyword">with</span><br/>
-&nbsp;&nbsp;&nbsp;&nbsp;| <span class="id" title="var">z</span> =&gt; <span class="id" title="tactic">idtac</span><br/>
-&nbsp;&nbsp;&nbsp;&nbsp;| <a class="idref" href="OpSemProofs.syntax.html#expr"><span class="id" title="inductive">expr</span></a> <a class="idref" href="OpSemProofs.syntax.html#e2ec2a380d764ef079e64369fbd29f66"><span class="id" title="notation">·</span></a> ?τ =&gt;<br/>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="tactic">pose</span> <span class="id" title="var">proof</span> (<a class="idref" href="OpSemProofs.syntax.html#expr_type_unique"><span class="id" title="lemma">expr_type_unique</span></a> <span class="id" title="var">_</span> <span class="id" title="var">_</span> <span class="id" title="var">H</span>) <span class="id" title="keyword">as</span> <span class="id" title="var">H'</span>;<br/>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id" title="tactic">subst</span> τ || <span class="id" title="var">dep_destruct</span> <span class="id" title="var">H'</span>)<br/>
-&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">end</span>;<br/>
-&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="tactic">apply</span> <a class="idref" href="OpSemProofs.syntax.html#erase_injective"><span class="id" title="lemma">erase_injective</span></a> <span class="id" title="keyword">in</span> <span class="id" title="var">H</span>;<br/>
-&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="tactic">subst</span> <span class="id" title="var">x</span><br/>
-&nbsp;&nbsp;<span class="id" title="keyword">end</span>;<br/>
-&nbsp;&nbsp;<span class="id" title="var">clear_dups</span>.<br/>
-
-<br/>
-<span class="id" title="keyword">Ltac</span> <span class="id" title="var">subst_erase_eq</span> :=<br/>
-&nbsp;&nbsp;<span class="id" title="keyword">match</span> <span class="id" title="keyword">goal</span> <span class="id" title="keyword">with</span><br/>
-&nbsp;&nbsp;| [ <span class="id" title="var">H</span> : <a class="idref" href="OpSemProofs.syntax.html#erase"><span class="id" title="definition">erase</span></a> ?<span class="id" title="var">e</span> <a class="idref" href="http://coq.inria.fr/distrib/8.6/stdlib/Coq.Init.Logic.html#1c39bf18749e5cc609e83c0a0ba5a372"><span class="id" title="notation">=</span></a> <span class="id" title="var">_</span>, <span class="id" title="var">H'</span> : <span class="id" title="keyword">context</span> [ <a class="idref" href="OpSemProofs.syntax.html#erase"><span class="id" title="definition">erase</span></a> ?<span class="id" title="var">e</span> ] |- <span class="id" title="var">_</span> ] =&gt;<br/>
-&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="tactic">rewrite</span> <span class="id" title="var">H</span> <span class="id" title="keyword">in</span> <span class="id" title="var">H'</span>;<br/>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="tactic">try</span> <span class="id" title="tactic">clear</span> <span class="id" title="var">H</span> <span class="id" title="var">e</span><br/>
-&nbsp;&nbsp;<span class="id" title="keyword">end</span>.<br/>
-
-<br/>
-</div>
-
-<div class="doc">
-dep_destruct is often slow, do don't use unless we need 
-</div>
-<div class="code">
-<span class="comment">(*&nbsp;TODO:&nbsp;speed&nbsp;up&nbsp;even&nbsp;more&nbsp;for&nbsp;exprs&nbsp;*)</span><br/>
-<span class="id" title="keyword">Ltac</span> <span class="id" title="var">expr_destruct</span> <span class="id" title="var">e</span> :=<br/>
-&nbsp;&nbsp;<span class="id" title="keyword">match</span> <span class="id" title="var">type</span> <span class="id" title="var">of</span> <span class="id" title="var">e</span> <span class="id" title="keyword">with</span><br/>
-&nbsp;&nbsp;| <a class="idref" href="OpSemProofs.syntax.html#expr"><span class="id" title="inductive">expr</span></a> <span class="id" title="var">_</span> (<span class="id" title="var">_</span> <a class="idref" href="OpSemProofs.syntax.html#f3c8ae9482c969ad716aa1d8aebf6f70"><span class="id" title="notation">~&gt;</span></a> <span class="id" title="var">_</span>) =&gt; <span class="id" title="var">dep_destruct</span> <span class="id" title="var">e</span><br/>
-&nbsp;&nbsp;| <a class="idref" href="OpSemProofs.syntax.html#expr"><span class="id" title="inductive">expr</span></a> <span class="id" title="var">_</span> <a class="idref" href="OpSemProofs.syntax.html#e7b0d812dc6fa89f651429266ac01c95"><span class="id" title="constructor">ℝ</span></a> =&gt; <span class="id" title="var">dep_destruct</span> <span class="id" title="var">e</span><br/>
-&nbsp;&nbsp;| <a class="idref" href="OpSemProofs.syntax.html#expr"><span class="id" title="inductive">expr</span></a> <span class="id" title="var">_</span> <span class="id" title="var">_</span> =&gt; <span class="id" title="tactic">destruct</span> <span class="id" title="var">e</span><br/>
-&nbsp;&nbsp;<span class="id" title="keyword">end</span>.<br/>
-
-<br/>
-<span class="id" title="keyword">Ltac</span> <span class="id" title="var">inject_erased</span> :=<br/>
-&nbsp;&nbsp;<span class="id" title="keyword">let</span> <span class="id" title="var">go</span> <span class="id" title="var">e</span> <span class="id" title="var">H</span> :=<br/>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">expr_destruct</span> <span class="id" title="var">e</span>; <span class="id" title="var">inject</span> <span class="id" title="var">H</span><br/>
-&nbsp;&nbsp;<span class="id" title="keyword">in</span> <span class="id" title="keyword">match</span> <span class="id" title="keyword">goal</span> <span class="id" title="keyword">with</span><br/>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;| [ <span class="id" title="var">H</span> : <a class="idref" href="OpSemProofs.syntax.html#erase"><span class="id" title="definition">erase</span></a> ?<span class="id" title="var">e</span> <a class="idref" href="http://coq.inria.fr/distrib/8.6/stdlib/Coq.Init.Logic.html#1c39bf18749e5cc609e83c0a0ba5a372"><span class="id" title="notation">=</span></a> <a class="idref" href="OpSemProofs.syntax.html#u_app"><span class="id" title="constructor">u_app</span></a> <span class="id" title="var">_</span> <span class="id" title="var">_</span> |- <span class="id" title="var">_</span> ] =&gt; <span class="id" title="var">go</span> <span class="id" title="var">e</span> <span class="id" title="var">H</span><br/>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;| [ <span class="id" title="var">H</span> : <a class="idref" href="OpSemProofs.syntax.html#erase"><span class="id" title="definition">erase</span></a> ?<span class="id" title="var">e</span> <a class="idref" href="http://coq.inria.fr/distrib/8.6/stdlib/Coq.Init.Logic.html#1c39bf18749e5cc609e83c0a0ba5a372"><span class="id" title="notation">=</span></a> <a class="idref" href="OpSemProofs.syntax.html#u_factor"><span class="id" title="constructor">u_factor</span></a> <span class="id" title="var">_</span> |- <span class="id" title="var">_</span> ] =&gt; <span class="id" title="var">go</span> <span class="id" title="var">e</span> <span class="id" title="var">H</span><br/>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;| [ <span class="id" title="var">H</span> : <a class="idref" href="OpSemProofs.syntax.html#erase"><span class="id" title="definition">erase</span></a> ?<span class="id" title="var">e</span> <a class="idref" href="http://coq.inria.fr/distrib/8.6/stdlib/Coq.Init.Logic.html#1c39bf18749e5cc609e83c0a0ba5a372"><span class="id" title="notation">=</span></a> <a class="idref" href="OpSemProofs.syntax.html#u_sample"><span class="id" title="constructor">u_sample</span></a> |- <span class="id" title="var">_</span> ] =&gt; <span class="id" title="var">go</span> <span class="id" title="var">e</span> <span class="id" title="var">H</span><br/>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;| [ <span class="id" title="var">H</span> : <a class="idref" href="OpSemProofs.syntax.html#erase"><span class="id" title="definition">erase</span></a> ?<span class="id" title="var">e</span> <a class="idref" href="http://coq.inria.fr/distrib/8.6/stdlib/Coq.Init.Logic.html#1c39bf18749e5cc609e83c0a0ba5a372"><span class="id" title="notation">=</span></a> <a class="idref" href="OpSemProofs.syntax.html#u_plus"><span class="id" title="constructor">u_plus</span></a> <span class="id" title="var">_</span> <span class="id" title="var">_</span> |- <span class="id" title="var">_</span> ] =&gt; <span class="id" title="var">go</span> <span class="id" title="var">e</span> <span class="id" title="var">H</span><br/>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;| [ <span class="id" title="var">H</span> : <a class="idref" href="OpSemProofs.syntax.html#erase"><span class="id" title="definition">erase</span></a> ?<span class="id" title="var">e</span> <a class="idref" href="http://coq.inria.fr/distrib/8.6/stdlib/Coq.Init.Logic.html#1c39bf18749e5cc609e83c0a0ba5a372"><span class="id" title="notation">=</span></a> <a class="idref" href="OpSemProofs.syntax.html#u_real"><span class="id" title="constructor">u_real</span></a> <span class="id" title="var">_</span> |- <span class="id" title="var">_</span> ] =&gt; <span class="id" title="var">go</span> <span class="id" title="var">e</span> <span class="id" title="var">H</span><br/>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;| [ <span class="id" title="var">H</span> : <a class="idref" href="OpSemProofs.syntax.html#erase"><span class="id" title="definition">erase</span></a> ?<span class="id" title="var">e</span> <a class="idref" href="http://coq.inria.fr/distrib/8.6/stdlib/Coq.Init.Logic.html#1c39bf18749e5cc609e83c0a0ba5a372"><span class="id" title="notation">=</span></a> <a class="idref" href="OpSemProofs.syntax.html#u_lam"><span class="id" title="constructor">u_lam</span></a> <span class="id" title="var">_</span> <span class="id" title="var">_</span> |- <span class="id" title="var">_</span> ] =&gt; <span class="id" title="var">go</span> <span class="id" title="var">e</span> <span class="id" title="var">H</span><br/>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;| [ <span class="id" title="var">H</span> : <a class="idref" href="OpSemProofs.syntax.html#erase"><span class="id" title="definition">erase</span></a> ?<span class="id" title="var">e</span> <a class="idref" href="http://coq.inria.fr/distrib/8.6/stdlib/Coq.Init.Logic.html#1c39bf18749e5cc609e83c0a0ba5a372"><span class="id" title="notation">=</span></a> <a class="idref" href="OpSemProofs.syntax.html#u_var"><span class="id" title="constructor">u_var</span></a> <span class="id" title="var">_</span> |- <span class="id" title="var">_</span> ] =&gt; <span class="id" title="var">go</span> <span class="id" title="var">e</span> <span class="id" title="var">H</span><br/>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;| [ <span class="id" title="var">H</span> : <a class="idref" href="OpSemProofs.syntax.html#erase"><span class="id" title="definition">erase</span></a> ?<span class="id" title="var">e</span> <a class="idref" href="http://coq.inria.fr/distrib/8.6/stdlib/Coq.Init.Logic.html#1c39bf18749e5cc609e83c0a0ba5a372"><span class="id" title="notation">=</span></a> <span class="id" title="definition">ids</span> <span class="id" title="var">_</span> |- <span class="id" title="var">_</span> ] =&gt; <span class="id" title="var">go</span> <span class="id" title="var">e</span> <span class="id" title="var">H</span><br/>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">end</span>.<br/>
-
-<br/>
-</div>
-
-<div class="doc">
-<span class="inlinecode"><span class="id" title="var">elim_erase_eqs</span></span>'s main objective is to eliminate hypothesis of the form
-    <span class="inlinecode"><a class="idref" href="OpSemProofs.syntax.html#erase"><span class="id" title="definition">erase</span></a></span> <span class="inlinecode"><a class="idref" href="OpSemProofs.integration.html#e"><span class="id" title="variable">e</span></a></span> <span class="inlinecode">=</span> <span class="inlinecode">...</span> 
-</div>
-<div class="code">
-<span class="id" title="keyword">Ltac</span> <span class="id" title="var">elim_erase_eqs</span> :=<br/>
-&nbsp;&nbsp;<span class="id" title="tactic">progress</span> <span class="id" title="tactic">repeat</span> (<span class="id" title="var">subst_erase_eq</span><br/>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;|| <span class="id" title="var">inject_erase_directly</span><br/>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;|| <span class="id" title="var">match_erase_eqs</span><br/>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;|| <span class="id" title="var">inject_erased</span>);<br/>
-&nbsp;&nbsp;<span class="id" title="var">clear_dups</span>.<br/>
-
-<br/>
-</div>
-
-<div class="doc">
-<a name="lab15"></a><h1 class="section">Values</h1>
+<a name="lab14"></a><h1 class="section">Values</h1>
 
 
 <div class="paragraph"> </div>
@@ -529,7 +435,115 @@ Quite often we will with a goal containing a <span class="inlinecode"><a class="
 </div>
 
 <div class="doc">
-<a name="lab16"></a><h1 class="section">Using <span class="inlinecode"><span class="id" title="var">sig</span></span> to program by tactics</h1>
+<a name="lab15"></a><h3 class="section">Tactics</h3>
+
+
+<div class="paragraph"> </div>
+
+    Some tactics useful for making use of equalities between erased expressions.
+    
+</div>
+<div class="code">
+
+<br/>
+<span class="id" title="keyword">Ltac</span> <span class="id" title="var">inject_erase_directly</span> :=<br/>
+&nbsp;&nbsp;<span class="id" title="keyword">match</span> <span class="id" title="keyword">goal</span> <span class="id" title="keyword">with</span><br/>
+&nbsp;&nbsp;| [ <span class="id" title="var">H</span> : <a class="idref" href="OpSemProofs.syntax.html#erase"><span class="id" title="definition">erase</span></a> ?<span class="id" title="var">x</span> <a class="idref" href="http://coq.inria.fr/distrib/8.6/stdlib/Coq.Init.Logic.html#1c39bf18749e5cc609e83c0a0ba5a372"><span class="id" title="notation">=</span></a> <a class="idref" href="OpSemProofs.syntax.html#erase"><span class="id" title="definition">erase</span></a> ?<span class="id" title="var">y</span> |- <span class="id" title="var">_</span> ] =&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">match</span> <span class="id" title="var">type</span> <span class="id" title="var">of</span> <span class="id" title="var">x</span> <span class="id" title="keyword">with</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;| (<a class="idref" href="OpSemProofs.syntax.html#expr"><span class="id" title="inductive">expr</span></a> <span class="id" title="var">_</span> ?τ<span class="id" title="var">x</span>) =&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">match</span> <span class="id" title="var">type</span> <span class="id" title="var">of</span> <span class="id" title="var">y</span> <span class="id" title="keyword">with</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;| (<a class="idref" href="OpSemProofs.syntax.html#expr"><span class="id" title="inductive">expr</span></a> <span class="id" title="var">_</span> τ<span class="id" title="var">x</span>) =&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="tactic">apply</span> <a class="idref" href="OpSemProofs.syntax.html#erase_injective"><span class="id" title="lemma">erase_injective</span></a> <span class="id" title="keyword">in</span> <span class="id" title="var">H</span>;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="tactic">try</span> <span class="id" title="tactic">subst</span> <span class="id" title="var">x</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;| (<a class="idref" href="OpSemProofs.syntax.html#expr"><span class="id" title="inductive">expr</span></a> <span class="id" title="var">_</span> ?τ<span class="id" title="var">y</span>) =&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">let</span> <span class="id" title="var">H'</span> := <span class="id" title="tactic">fresh</span> "H" <span class="id" title="keyword">in</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="tactic">pose</span> <span class="id" title="var">proof</span> (<a class="idref" href="OpSemProofs.syntax.html#expr_type_unique"><span class="id" title="lemma">expr_type_unique</span></a> <span class="id" title="var">_</span> <span class="id" title="var">_</span> <span class="id" title="var">H</span>) <span class="id" title="keyword">as</span> <span class="id" title="var">H'</span>;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id" title="tactic">subst</span> τ<span class="id" title="var">x</span> || <span class="id" title="var">dep_destruct</span> <span class="id" title="var">H'</span>);<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="tactic">apply</span> <a class="idref" href="OpSemProofs.syntax.html#erase_injective"><span class="id" title="lemma">erase_injective</span></a> <span class="id" title="keyword">in</span> <span class="id" title="var">H</span>;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="tactic">try</span> <span class="id" title="tactic">subst</span> <span class="id" title="var">x</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">end</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">end</span><br/>
+&nbsp;&nbsp;<span class="id" title="keyword">end</span>.<br/>
+
+<br/>
+<span class="id" title="keyword">Ltac</span> <span class="id" title="var">match_erase_eqs</span> :=<br/>
+&nbsp;&nbsp;<span class="id" title="keyword">let</span> <span class="id" title="var">H</span> := <span class="id" title="tactic">fresh</span> "H" <span class="id" title="keyword">in</span><br/>
+&nbsp;&nbsp;<span class="id" title="keyword">let</span> <span class="id" title="var">H'</span> := <span class="id" title="tactic">fresh</span> "H" <span class="id" title="keyword">in</span><br/>
+&nbsp;&nbsp;<span class="id" title="keyword">match</span> <span class="id" title="keyword">goal</span> <span class="id" title="keyword">with</span><br/>
+&nbsp;&nbsp;| [<span class="id" title="var">H0</span> : <a class="idref" href="OpSemProofs.syntax.html#erase"><span class="id" title="definition">erase</span></a> ?<span class="id" title="var">x</span> <a class="idref" href="http://coq.inria.fr/distrib/8.6/stdlib/Coq.Init.Logic.html#1c39bf18749e5cc609e83c0a0ba5a372"><span class="id" title="notation">=</span></a> ?<span class="id" title="var">s</span>, <span class="id" title="var">H1</span> : <a class="idref" href="OpSemProofs.syntax.html#erase"><span class="id" title="definition">erase</span></a> ?<span class="id" title="var">y</span> <a class="idref" href="http://coq.inria.fr/distrib/8.6/stdlib/Coq.Init.Logic.html#1c39bf18749e5cc609e83c0a0ba5a372"><span class="id" title="notation">=</span></a> ?<span class="id" title="var">s</span> |- <span class="id" title="var">_</span> ] =&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="tactic">pose</span> <span class="id" title="var">proof</span> (<a class="idref" href="http://coq.inria.fr/distrib/8.6/stdlib/Coq.Init.Logic.html#eq_trans"><span class="id" title="lemma">eq_trans</span></a> <span class="id" title="var">H0</span> (<a class="idref" href="http://coq.inria.fr/distrib/8.6/stdlib/Coq.Init.Logic.html#eq_sym"><span class="id" title="lemma">eq_sym</span></a> <span class="id" title="var">H1</span>)) <span class="id" title="keyword">as</span> <span class="id" title="var">H</span>;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">let</span> <span class="id" title="var">z</span> := <span class="id" title="var">type</span> <span class="id" title="var">of</span> <span class="id" title="var">y</span> <span class="id" title="keyword">in</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">let</span> <span class="id" title="var">kill_</span>τ τ :=<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="tactic">pose</span> <span class="id" title="var">proof</span> (<a class="idref" href="OpSemProofs.syntax.html#expr_type_unique"><span class="id" title="lemma">expr_type_unique</span></a> <span class="id" title="var">_</span> <span class="id" title="var">_</span> <span class="id" title="var">H</span>) <span class="id" title="keyword">as</span> <span class="id" title="var">H'</span>;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id" title="tactic">subst</span> τ || <span class="id" title="var">dep_destruct</span> <span class="id" title="var">H'</span>) <span class="id" title="keyword">in</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">match</span> <span class="id" title="var">type</span> <span class="id" title="var">of</span> <span class="id" title="var">x</span> <span class="id" title="keyword">with</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;| <span class="id" title="var">z</span> =&gt; <span class="id" title="tactic">idtac</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;| <a class="idref" href="OpSemProofs.syntax.html#val"><span class="id" title="inductive">val</span></a> ?τ =&gt; <span class="id" title="var">kill_</span>τ τ<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;| <a class="idref" href="OpSemProofs.syntax.html#expr"><span class="id" title="inductive">expr</span></a> <a class="idref" href="OpSemProofs.syntax.html#e2ec2a380d764ef079e64369fbd29f66"><span class="id" title="notation">·</span></a> ?τ =&gt; <span class="id" title="var">kill_</span>τ τ<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">end</span>;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="tactic">apply</span> <a class="idref" href="OpSemProofs.syntax.html#erase_injective"><span class="id" title="lemma">erase_injective</span></a> <span class="id" title="keyword">in</span> <span class="id" title="var">H</span>;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="tactic">subst</span> <span class="id" title="var">x</span><br/>
+&nbsp;&nbsp;<span class="id" title="keyword">end</span>;<br/>
+&nbsp;&nbsp;<span class="id" title="var">clear_dups</span>.<br/>
+
+<br/>
+<span class="id" title="keyword">Ltac</span> <span class="id" title="var">subst_erase_eq</span> :=<br/>
+&nbsp;&nbsp;<span class="id" title="keyword">match</span> <span class="id" title="keyword">goal</span> <span class="id" title="keyword">with</span><br/>
+&nbsp;&nbsp;| [ <span class="id" title="var">H</span> : <a class="idref" href="OpSemProofs.syntax.html#erase"><span class="id" title="definition">erase</span></a> ?<span class="id" title="var">e</span> <a class="idref" href="http://coq.inria.fr/distrib/8.6/stdlib/Coq.Init.Logic.html#1c39bf18749e5cc609e83c0a0ba5a372"><span class="id" title="notation">=</span></a> <span class="id" title="var">_</span>, <span class="id" title="var">H'</span> : <span class="id" title="keyword">context</span> [ <a class="idref" href="OpSemProofs.syntax.html#erase"><span class="id" title="definition">erase</span></a> ?<span class="id" title="var">e</span> ] |- <span class="id" title="var">_</span> ] =&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="tactic">rewrite</span> <span class="id" title="var">H</span> <span class="id" title="keyword">in</span> <span class="id" title="var">H'</span>;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="tactic">try</span> <span class="id" title="tactic">clear</span> <span class="id" title="var">H</span> <span class="id" title="var">e</span><br/>
+&nbsp;&nbsp;<span class="id" title="keyword">end</span>.<br/>
+
+<br/>
+</div>
+
+<div class="doc">
+dep_destruct is often slow, do don't use unless we need 
+</div>
+<div class="code">
+<span class="comment">(*&nbsp;TODO:&nbsp;speed&nbsp;up&nbsp;even&nbsp;more&nbsp;for&nbsp;exprs&nbsp;*)</span><br/>
+<span class="id" title="keyword">Ltac</span> <span class="id" title="var">expr_destruct</span> <span class="id" title="var">e</span> :=<br/>
+&nbsp;&nbsp;<span class="id" title="keyword">match</span> <span class="id" title="var">type</span> <span class="id" title="var">of</span> <span class="id" title="var">e</span> <span class="id" title="keyword">with</span><br/>
+&nbsp;&nbsp;| <a class="idref" href="OpSemProofs.syntax.html#expr"><span class="id" title="inductive">expr</span></a> <span class="id" title="var">_</span> (<span class="id" title="var">_</span> <a class="idref" href="OpSemProofs.syntax.html#f3c8ae9482c969ad716aa1d8aebf6f70"><span class="id" title="notation">~&gt;</span></a> <span class="id" title="var">_</span>) =&gt; <span class="id" title="var">dep_destruct</span> <span class="id" title="var">e</span><br/>
+&nbsp;&nbsp;| <a class="idref" href="OpSemProofs.syntax.html#expr"><span class="id" title="inductive">expr</span></a> <span class="id" title="var">_</span> <a class="idref" href="OpSemProofs.syntax.html#e7b0d812dc6fa89f651429266ac01c95"><span class="id" title="constructor">ℝ</span></a> =&gt; <span class="id" title="var">dep_destruct</span> <span class="id" title="var">e</span><br/>
+&nbsp;&nbsp;| <a class="idref" href="OpSemProofs.syntax.html#expr"><span class="id" title="inductive">expr</span></a> <span class="id" title="var">_</span> <span class="id" title="var">_</span> =&gt; <span class="id" title="tactic">destruct</span> <span class="id" title="var">e</span><br/>
+&nbsp;&nbsp;<span class="id" title="keyword">end</span>.<br/>
+
+<br/>
+<span class="id" title="keyword">Ltac</span> <span class="id" title="var">inject_erased</span> :=<br/>
+&nbsp;&nbsp;<span class="id" title="keyword">let</span> <span class="id" title="var">go</span> <span class="id" title="var">e</span> <span class="id" title="var">H</span> :=<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">expr_destruct</span> <span class="id" title="var">e</span>; <span class="id" title="var">inject</span> <span class="id" title="var">H</span><br/>
+&nbsp;&nbsp;<span class="id" title="keyword">in</span> <span class="id" title="keyword">match</span> <span class="id" title="keyword">goal</span> <span class="id" title="keyword">with</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;| [ <span class="id" title="var">H</span> : <a class="idref" href="OpSemProofs.syntax.html#erase"><span class="id" title="definition">erase</span></a> ?<span class="id" title="var">e</span> <a class="idref" href="http://coq.inria.fr/distrib/8.6/stdlib/Coq.Init.Logic.html#1c39bf18749e5cc609e83c0a0ba5a372"><span class="id" title="notation">=</span></a> <a class="idref" href="OpSemProofs.syntax.html#u_app"><span class="id" title="constructor">u_app</span></a> <span class="id" title="var">_</span> <span class="id" title="var">_</span> |- <span class="id" title="var">_</span> ] =&gt; <span class="id" title="var">go</span> <span class="id" title="var">e</span> <span class="id" title="var">H</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;| [ <span class="id" title="var">H</span> : <a class="idref" href="OpSemProofs.syntax.html#erase"><span class="id" title="definition">erase</span></a> ?<span class="id" title="var">e</span> <a class="idref" href="http://coq.inria.fr/distrib/8.6/stdlib/Coq.Init.Logic.html#1c39bf18749e5cc609e83c0a0ba5a372"><span class="id" title="notation">=</span></a> <a class="idref" href="OpSemProofs.syntax.html#u_factor"><span class="id" title="constructor">u_factor</span></a> <span class="id" title="var">_</span> |- <span class="id" title="var">_</span> ] =&gt; <span class="id" title="var">go</span> <span class="id" title="var">e</span> <span class="id" title="var">H</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;| [ <span class="id" title="var">H</span> : <a class="idref" href="OpSemProofs.syntax.html#erase"><span class="id" title="definition">erase</span></a> ?<span class="id" title="var">e</span> <a class="idref" href="http://coq.inria.fr/distrib/8.6/stdlib/Coq.Init.Logic.html#1c39bf18749e5cc609e83c0a0ba5a372"><span class="id" title="notation">=</span></a> <a class="idref" href="OpSemProofs.syntax.html#u_sample"><span class="id" title="constructor">u_sample</span></a> |- <span class="id" title="var">_</span> ] =&gt; <span class="id" title="var">go</span> <span class="id" title="var">e</span> <span class="id" title="var">H</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;| [ <span class="id" title="var">H</span> : <a class="idref" href="OpSemProofs.syntax.html#erase"><span class="id" title="definition">erase</span></a> ?<span class="id" title="var">e</span> <a class="idref" href="http://coq.inria.fr/distrib/8.6/stdlib/Coq.Init.Logic.html#1c39bf18749e5cc609e83c0a0ba5a372"><span class="id" title="notation">=</span></a> <a class="idref" href="OpSemProofs.syntax.html#u_plus"><span class="id" title="constructor">u_plus</span></a> <span class="id" title="var">_</span> <span class="id" title="var">_</span> |- <span class="id" title="var">_</span> ] =&gt; <span class="id" title="var">go</span> <span class="id" title="var">e</span> <span class="id" title="var">H</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;| [ <span class="id" title="var">H</span> : <a class="idref" href="OpSemProofs.syntax.html#erase"><span class="id" title="definition">erase</span></a> ?<span class="id" title="var">e</span> <a class="idref" href="http://coq.inria.fr/distrib/8.6/stdlib/Coq.Init.Logic.html#1c39bf18749e5cc609e83c0a0ba5a372"><span class="id" title="notation">=</span></a> <a class="idref" href="OpSemProofs.syntax.html#u_real"><span class="id" title="constructor">u_real</span></a> <span class="id" title="var">_</span> |- <span class="id" title="var">_</span> ] =&gt; <span class="id" title="var">go</span> <span class="id" title="var">e</span> <span class="id" title="var">H</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;| [ <span class="id" title="var">H</span> : <a class="idref" href="OpSemProofs.syntax.html#erase"><span class="id" title="definition">erase</span></a> ?<span class="id" title="var">e</span> <a class="idref" href="http://coq.inria.fr/distrib/8.6/stdlib/Coq.Init.Logic.html#1c39bf18749e5cc609e83c0a0ba5a372"><span class="id" title="notation">=</span></a> <a class="idref" href="OpSemProofs.syntax.html#u_lam"><span class="id" title="constructor">u_lam</span></a> <span class="id" title="var">_</span> <span class="id" title="var">_</span> |- <span class="id" title="var">_</span> ] =&gt; <span class="id" title="var">go</span> <span class="id" title="var">e</span> <span class="id" title="var">H</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;| [ <span class="id" title="var">H</span> : <a class="idref" href="OpSemProofs.syntax.html#erase"><span class="id" title="definition">erase</span></a> ?<span class="id" title="var">e</span> <a class="idref" href="http://coq.inria.fr/distrib/8.6/stdlib/Coq.Init.Logic.html#1c39bf18749e5cc609e83c0a0ba5a372"><span class="id" title="notation">=</span></a> <a class="idref" href="OpSemProofs.syntax.html#u_var"><span class="id" title="constructor">u_var</span></a> <span class="id" title="var">_</span> |- <span class="id" title="var">_</span> ] =&gt; <span class="id" title="var">go</span> <span class="id" title="var">e</span> <span class="id" title="var">H</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;| [ <span class="id" title="var">H</span> : <a class="idref" href="OpSemProofs.syntax.html#erase"><span class="id" title="definition">erase</span></a> ?<span class="id" title="var">e</span> <a class="idref" href="http://coq.inria.fr/distrib/8.6/stdlib/Coq.Init.Logic.html#1c39bf18749e5cc609e83c0a0ba5a372"><span class="id" title="notation">=</span></a> <span class="id" title="definition">ids</span> <span class="id" title="var">_</span> |- <span class="id" title="var">_</span> ] =&gt; <span class="id" title="var">go</span> <span class="id" title="var">e</span> <span class="id" title="var">H</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">end</span>.<br/>
+
+<br/>
+</div>
+
+<div class="doc">
+<span class="inlinecode"><span class="id" title="var">elim_erase_eqs</span></span>'s main objective is to eliminate hypothesis of the form
+    <span class="inlinecode"><a class="idref" href="OpSemProofs.syntax.html#erase"><span class="id" title="definition">erase</span></a></span> <span class="inlinecode"><a class="idref" href="OpSemProofs.integration.html#e"><span class="id" title="variable">e</span></a></span> <span class="inlinecode">=</span> <span class="inlinecode">...</span> 
+</div>
+<div class="code">
+<span class="id" title="keyword">Ltac</span> <span class="id" title="var">elim_erase_eqs</span> :=<br/>
+&nbsp;&nbsp;<span class="id" title="tactic">progress</span> <span class="id" title="tactic">repeat</span> (<span class="id" title="var">subst_erase_eq</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;|| <span class="id" title="var">inject_erase_directly</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;|| <span class="id" title="var">match_erase_eqs</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;|| <span class="id" title="var">inject_erased</span>);<br/>
+&nbsp;&nbsp;<span class="id" title="var">clear_dups</span>.<br/>
+
+<br/>
+</div>
+
+<div class="doc">
+<a name="lab16"></a><h2 class="section">Using <span class="inlinecode"><span class="id" title="var">sig</span></span> to program by tactics</h2>
 
 <div class="paragraph"> </div>
 
@@ -542,8 +556,8 @@ Quite often we will with a goal containing a <span class="inlinecode"><a class="
 
     The idea is to put all the information needed about the internals into <span class="inlinecode"><a class="idref" href="OpSemProofs.syntax.html#P"><span class="id" title="variable">P</span></a></span>
     so that you can eliminate calls to the function (wich now look like
-    <span class="inlinecode"><a class="idref" href="http://coq.inria.fr/distrib/8.6/stdlib/Coq.Init.Specif.html#proj1_sig"><span class="id" title="definition">proj1_sig</span></a></span> <span class="inlinecode">(<a class="idref" href="OpSemProofs.utils.html#f"><span class="id" title="variable">f</span></a></span> <span class="inlinecode"><a class="idref" href="OpSemProofs.integration.html#x"><span class="id" title="variable">x</span></a>)</span>) using <span class="inlinecode"><span class="id" title="tactic">destruct</span></span> <span class="inlinecode">(<a class="idref" href="OpSemProofs.utils.html#f"><span class="id" title="variable">f</span></a></span> <span class="inlinecode"><a class="idref" href="OpSemProofs.integration.html#x"><span class="id" title="variable">x</span></a>)</span> and rewriting insead of standard
-    computation.
+    <span class="inlinecode"><a class="idref" href="http://coq.inria.fr/distrib/8.6/stdlib/Coq.Init.Specif.html#proj1_sig"><span class="id" title="definition">proj1_sig</span></a></span> <span class="inlinecode">(<a class="idref" href="OpSemProofs.utils.html#f"><span class="id" title="variable">f</span></a></span> <span class="inlinecode"><a class="idref" href="OpSemProofs.integration.html#x"><span class="id" title="variable">x</span></a>)</span>) using <span class="inlinecode"><span class="id" title="tactic">destruct</span></span> <span class="inlinecode">(<a class="idref" href="OpSemProofs.utils.html#f"><span class="id" title="variable">f</span></a></span> <span class="inlinecode"><a class="idref" href="OpSemProofs.integration.html#x"><span class="id" title="variable">x</span></a>)</span> and rewriting insead
+    of standard computation.
 
 <div class="paragraph"> </div>
 
@@ -551,6 +565,8 @@ Quite often we will with a goal containing a <span class="inlinecode"><a class="
     results of type <span class="inlinecode"><a class="idref" href="OpSemProofs.syntax.html#expr"><span class="id" title="inductive">expr</span></a></span>. 
 </div>
 <div class="code">
+
+<br/>
 <span class="id" title="keyword">Ltac</span> <span class="id" title="var">elim_sig_exprs</span> :=<br/>
 &nbsp;&nbsp;<span class="id" title="keyword">let</span> <span class="id" title="var">doit</span> <span class="id" title="var">Γ</span> τ <span class="id" title="var">pair</span> <span class="id" title="var">stac</span> :=<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id" title="keyword">let</span> <span class="id" title="var">e</span> := <span class="id" title="tactic">fresh</span> "e" <span class="id" title="keyword">in</span><br/>

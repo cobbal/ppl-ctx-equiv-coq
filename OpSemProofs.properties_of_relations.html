@@ -37,7 +37,13 @@
 <span class="id" title="keyword">Require</span> <span class="id" title="keyword">Import</span> <a class="idref" href="OpSemProofs.integration.html#"><span class="id" title="library">integration</span></a>.<br/>
 
 <br/>
-<span class="comment">(*&nbsp;Symmetry&nbsp;*)</span><br/>
+</div>
+
+<div class="doc">
+<a name="lab27"></a><h1 class="section">Symmetry</h1>
+
+</div>
+<div class="code">
 
 <br/>
 <span class="id" title="keyword">Lemma</span> <a name="A_rel_symmetric'"><span class="id" title="lemma">A_rel_symmetric'</span></a> {τ} :<br/>
@@ -64,7 +70,7 @@
 <span class="id" title="keyword">Instance</span> <a name="V_rel_symmetric"><span class="id" title="instance">V_rel_symmetric</span></a> {τ} : <a class="idref" href="http://coq.inria.fr/distrib/8.6/stdlib/Coq.Classes.RelationClasses.html#Symmetric"><span class="id" title="class">Symmetric</span></a> (<a class="idref" href="OpSemProofs.relations.html#V_rel"><span class="id" title="definition">V_rel</span></a> <a class="idref" href="OpSemProofs.properties_of_relations.html#a788b57bb5319497a4de11f3392dcbc3"><span class="id" title="variable">τ</span></a>).<br/>
 <span class="id" title="keyword">Proof</span>.<br/>
 &nbsp;&nbsp;<span class="id" title="tactic">repeat</span> <span class="id" title="tactic">intro</span>.<br/>
-&nbsp;&nbsp;<span class="id" title="tactic">induction</span> τ; <span class="id" title="var">destruct_val</span> <span class="id" title="var">x</span>; <span class="id" title="var">destruct_val</span> <span class="id" title="var">y</span>. {<br/>
+&nbsp;&nbsp;<span class="id" title="tactic">induction</span> τ. {<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="tactic">apply</span> <a class="idref" href="http://coq.inria.fr/distrib/8.6/stdlib/Coq.Init.Logic.html#eq_sym"><span class="id" title="lemma">eq_sym</span></a>.<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="tactic">exact</span> <span class="id" title="var">H</span>.<br/>
 &nbsp;&nbsp;} {<br/>
@@ -77,7 +83,8 @@
 <br/>
 &nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="tactic">apply</span> <a class="idref" href="OpSemProofs.properties_of_relations.html#E_rel_symmetric'"><span class="id" title="lemma">E_rel_symmetric'</span></a>; <span class="id" title="tactic">auto</span>.<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="tactic">apply</span> <span class="id" title="var">H</span>.<br/>
-&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="tactic">auto</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="tactic">apply</span> <span class="id" title="var">IH</span>τ1.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="tactic">exact</span> <span class="id" title="var">H0</span>.<br/>
 &nbsp;&nbsp;}<br/>
 <span class="id" title="keyword">Qed</span>.<br/>
 
@@ -96,8 +103,8 @@
 &nbsp;&nbsp;} {<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">dep_destruct</span> <span class="id" title="var">H</span>.<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="tactic">constructor</span>; <span class="id" title="tactic">auto</span>.<br/>
-&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="tactic">apply</span> <a class="idref" href="OpSemProofs.properties_of_relations.html#V_rel_symmetric"><span class="id" title="instance">V_rel_symmetric</span></a>.<br/>
-&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="tactic">auto</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="tactic">symmetry</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="tactic">assumption</span>.<br/>
 &nbsp;&nbsp;}<br/>
 <span class="id" title="keyword">Qed</span>.<br/>
 
@@ -112,7 +119,13 @@
 <span class="id" title="keyword">Qed</span>.<br/>
 
 <br/>
-<span class="comment">(*&nbsp;Transitivity&nbsp;*)</span><br/>
+</div>
+
+<div class="doc">
+<a name="lab28"></a><h1 class="section">Transitivity</h1>
+
+</div>
+<div class="code">
 
 <br/>
 <span class="id" title="keyword">Instance</span> <a name="A_rel_transitive'"><span class="id" title="instance">A_rel_transitive'</span></a> {τ} :<br/>
@@ -145,26 +158,22 @@
 &nbsp;&nbsp;<a class="idref" href="http://coq.inria.fr/distrib/8.6/stdlib/Coq.Classes.RelationClasses.html#Transitive"><span class="id" title="class">Transitive</span></a> (<a class="idref" href="OpSemProofs.relations.html#V_rel"><span class="id" title="definition">V_rel</span></a> <a class="idref" href="OpSemProofs.properties_of_relations.html#a788b57bb5319497a4de11f3392dcbc3"><span class="id" title="variable">τ</span></a>).<br/>
 <span class="id" title="keyword">Proof</span>.<br/>
 &nbsp;&nbsp;<span class="id" title="tactic">repeat</span> <span class="id" title="tactic">intro</span>.<br/>
-&nbsp;&nbsp;<span class="id" title="tactic">induction</span> τ;<br/>
-&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">destruct_val</span> <span class="id" title="var">x</span>;<br/>
-&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">destruct_val</span> <span class="id" title="var">y</span>;<br/>
-&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">destruct_val</span> <span class="id" title="var">z</span>.<br/>
+&nbsp;&nbsp;<span class="id" title="tactic">induction</span> τ.<br/>
 &nbsp;&nbsp;{<br/>
-&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="tactic">transitivity</span> (<a class="idref" href="OpSemProofs.syntax.html#v_real"><span class="id" title="definition">v_real</span></a> <span class="id" title="var">r0</span>); <span class="id" title="tactic">auto</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="tactic">transitivity</span> <span class="id" title="var">y</span>; <span class="id" title="tactic">assumption</span>.<br/>
 &nbsp;&nbsp;} {<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="tactic">destruct</span> <span class="id" title="var">H</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">remember</span> (<a class="idref" href="OpSemProofs.syntax.html#v_lam"><span class="id" title="definition">v_lam</span></a> <span class="id" title="var">body1</span>).<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="tactic">destruct</span> <span class="id" title="var">H0</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">dep_destruct</span> <span class="id" title="var">Heqv</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="tactic">rename</span> <span class="id" title="var">body0</span> <span class="id" title="var">into</span> <span class="id" title="var">x_body</span>, <span class="id" title="var">body1</span> <span class="id" title="var">into</span> <span class="id" title="var">y_body</span>, <span class="id" title="var">body3</span> <span class="id" title="var">into</span> <span class="id" title="var">z_body</span>.<br/>
+
+<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="tactic">constructor</span>.<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="tactic">intros</span>.<br/>
 
 <br/>
-&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">remember</span> (<a class="idref" href="OpSemProofs.syntax.html#v_lam"><span class="id" title="definition">v_lam</span></a> <span class="id" title="var">body</span>).<br/>
-&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="tactic">destruct</span> <span class="id" title="var">H</span>.<br/>
-&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">remember</span> (<a class="idref" href="OpSemProofs.syntax.html#v_lam"><span class="id" title="definition">v_lam</span></a> <span class="id" title="var">body3</span>).<br/>
-&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">remember</span> (<a class="idref" href="OpSemProofs.syntax.html#v_lam"><span class="id" title="definition">v_lam</span></a> <span class="id" title="var">body1</span>).<br/>
-&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="tactic">destruct</span> <span class="id" title="var">H0</span>.<br/>
-&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">dep_destruct</span> <a class="idref" href="http://coq.inria.fr/distrib/8.6/stdlib/Coq.Init.Datatypes.html#44400027531d4bc3f586a1997dc874c0"><span class="id" title="notation">(</span></a><span class="id" title="var">Heqv</span><a class="idref" href="http://coq.inria.fr/distrib/8.6/stdlib/Coq.Init.Datatypes.html#44400027531d4bc3f586a1997dc874c0"><span class="id" title="notation">,</span></a> <span class="id" title="var">Heqv0</span><a class="idref" href="http://coq.inria.fr/distrib/8.6/stdlib/Coq.Init.Datatypes.html#44400027531d4bc3f586a1997dc874c0"><span class="id" title="notation">,</span></a> <span class="id" title="var">Heqv1</span><a class="idref" href="http://coq.inria.fr/distrib/8.6/stdlib/Coq.Init.Datatypes.html#44400027531d4bc3f586a1997dc874c0"><span class="id" title="notation">)</span></a>.<br/>
-
-<br/>
-&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="tactic">eapply</span> (<a class="idref" href="OpSemProofs.properties_of_relations.html#E_rel_transitive'"><span class="id" title="instance">E_rel_transitive'</span></a> <span class="id" title="var">IH</span>τ2 <span class="id" title="var">_</span> (<a class="idref" href="http://coq.inria.fr/distrib/8.6/stdlib/Coq.Init.Specif.html#proj1_sig"><span class="id" title="definition">proj1_sig</span></a> (<a class="idref" href="OpSemProofs.syntax.html#ty_subst1"><span class="id" title="definition">ty_subst1</span></a> <span class="id" title="var">body3</span> <span class="id" title="var">va0</span>))); [| <span class="id" title="tactic">apply</span> <span class="id" title="var">H0</span>; <span class="id" title="tactic">auto</span>].<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="tactic">eapply</span> (<a class="idref" href="OpSemProofs.properties_of_relations.html#E_rel_transitive'"><span class="id" title="instance">E_rel_transitive'</span></a> <span class="id" title="var">IH</span>τ2 <span class="id" title="var">_</span>); [| <span class="id" title="tactic">apply</span> <span class="id" title="var">H0</span>; <span class="id" title="tactic">eauto</span>].<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="tactic">apply</span> <span class="id" title="var">H</span>.<br/>
 
 <br/>
@@ -213,20 +222,14 @@
 <span class="id" title="keyword">Qed</span>.<br/>
 
 <br/>
-<span class="comment">(*&nbsp;Reflexivity&nbsp;*)</span><br/>
+</div>
 
-<br/>
-<span class="comment">(*&nbsp;reflexivity&nbsp;depends&nbsp;on&nbsp;the&nbsp;fundamental&nbsp;property.&nbsp;*)</span><br/>
+<div class="doc">
+<a name="lab29"></a><h1 class="section">Reflexivity</h1>
 
-<br/>
-<span class="id" title="keyword">Lemma</span> <a name="A_rel_subidentity"><span class="id" title="lemma">A_rel_subidentity</span></a> {τ} {<span class="id" title="var">A0</span> <span class="id" title="var">A1</span> : <a class="idref" href="OpSemProofs.integration.html#Event"><span class="id" title="definition">Event</span></a> (<a class="idref" href="OpSemProofs.syntax.html#val"><span class="id" title="inductive">val</span></a> <a class="idref" href="OpSemProofs.properties_of_relations.html#a788b57bb5319497a4de11f3392dcbc3"><span class="id" title="variable">τ</span></a>)}<br/>
-&nbsp;&nbsp;: <a class="idref" href="OpSemProofs.relations.html#A_rel"><span class="id" title="definition">A_rel</span></a> <a class="idref" href="OpSemProofs.properties_of_relations.html#a788b57bb5319497a4de11f3392dcbc3"><span class="id" title="variable">τ</span></a> <a class="idref" href="OpSemProofs.properties_of_relations.html#A0"><span class="id" title="variable">A0</span></a> <a class="idref" href="OpSemProofs.properties_of_relations.html#A1"><span class="id" title="variable">A1</span></a> <a class="idref" href="http://coq.inria.fr/distrib/8.6/stdlib/Coq.Init.Logic.html#d43e996736952df71ebeeae74d10a287"><span class="id" title="notation">-&gt;</span></a> <a class="idref" href="OpSemProofs.properties_of_relations.html#A0"><span class="id" title="variable">A0</span></a> <a class="idref" href="http://coq.inria.fr/distrib/8.6/stdlib/Coq.Init.Logic.html#1c39bf18749e5cc609e83c0a0ba5a372"><span class="id" title="notation">=</span></a> <a class="idref" href="OpSemProofs.properties_of_relations.html#A1"><span class="id" title="variable">A1</span></a>.<br/>
-<span class="id" title="keyword">Proof</span>.<br/>
-&nbsp;&nbsp;<span class="id" title="tactic">intros</span>.<br/>
-&nbsp;&nbsp;<span class="id" title="tactic">extensionality</span> <span class="id" title="var">v</span>.<br/>
-&nbsp;&nbsp;<span class="id" title="tactic">apply</span> <span class="id" title="var">H</span>.<br/>
-&nbsp;&nbsp;<span class="id" title="tactic">apply</span> <a class="idref" href="OpSemProofs.relations.html#fundamental_property_of_values"><span class="id" title="lemma">fundamental_property_of_values</span></a>.<br/>
-<span class="id" title="keyword">Qed</span>.<br/>
+    Depends on the fundamental property. 
+</div>
+<div class="code">
 
 <br/>
 <span class="id" title="keyword">Instance</span> <a name="E_rel_reflexive"><span class="id" title="instance">E_rel_reflexive</span></a> {τ} : <a class="idref" href="http://coq.inria.fr/distrib/8.6/stdlib/Coq.Classes.RelationClasses.html#Reflexive"><span class="id" title="class">Reflexive</span></a> (<a class="idref" href="OpSemProofs.relations.html#E_rel"><span class="id" title="definition">E_rel</span></a> <a class="idref" href="OpSemProofs.properties_of_relations.html#a788b57bb5319497a4de11f3392dcbc3"><span class="id" title="variable">τ</span></a>).<br/>
@@ -242,7 +245,35 @@
 <span class="id" title="keyword">Instance</span> <a name="V_rel_reflexive"><span class="id" title="instance">V_rel_reflexive</span></a> {τ} : <a class="idref" href="http://coq.inria.fr/distrib/8.6/stdlib/Coq.Classes.RelationClasses.html#Reflexive"><span class="id" title="class">Reflexive</span></a> (<a class="idref" href="OpSemProofs.relations.html#V_rel"><span class="id" title="definition">V_rel</span></a> <a class="idref" href="OpSemProofs.properties_of_relations.html#a788b57bb5319497a4de11f3392dcbc3"><span class="id" title="variable">τ</span></a>).<br/>
 <span class="id" title="keyword">Proof</span>.<br/>
 &nbsp;&nbsp;<span class="id" title="tactic">intros</span> <span class="id" title="var">v</span>.<br/>
-&nbsp;&nbsp;<span class="id" title="tactic">apply</span> <a class="idref" href="OpSemProofs.relations.html#fundamental_property_of_values"><span class="id" title="lemma">fundamental_property_of_values</span></a>.<br/>
+
+<br/>
+&nbsp;&nbsp;<span class="id" title="tactic">destruct</span> <span class="id" title="var">v</span> <span class="id" title="keyword">using</span> <a class="idref" href="OpSemProofs.syntax.html#wt_val_rect"><span class="id" title="lemma">wt_val_rect</span></a>; <span class="id" title="tactic">subst</span>; <span class="id" title="tactic">simpl</span> <span class="id" title="keyword">in</span> *. {<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="tactic">reflexivity</span>.<br/>
+&nbsp;&nbsp;} {<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="tactic">constructor</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="tactic">repeat</span> <span class="id" title="tactic">intro</span>.<br/>
+
+<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="tactic">pose</span> <span class="id" title="var">proof</span> <a class="idref" href="OpSemProofs.relations.html#fundamental_property"><span class="id" title="lemma">fundamental_property</span></a> <span class="id" title="var">body</span> <span class="id" title="keyword">as</span> <span class="id" title="var">fp</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="tactic">specialize</span> (<span class="id" title="var">fp</span> <span class="id" title="var">_</span> <span class="id" title="var">_</span> (<a class="idref" href="OpSemProofs.relations.html#G_rel_cons"><span class="id" title="constructor">G_rel_cons</span></a> <span class="id" title="var">H</span> <a class="idref" href="OpSemProofs.relations.html#G_rel_nil"><span class="id" title="constructor">G_rel_nil</span></a>)).<br/>
+
+<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">elim_sig_exprs</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">elim_erase_eqs</span>.<br/>
+
+<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="tactic">apply</span> <span class="id" title="var">fp</span>; <span class="id" title="tactic">auto</span>.<br/>
+&nbsp;&nbsp;}<br/>
+<span class="id" title="keyword">Qed</span>.<br/>
+
+<br/>
+<span class="id" title="keyword">Lemma</span> <a name="A_rel_subidentity"><span class="id" title="lemma">A_rel_subidentity</span></a> {τ} {<span class="id" title="var">A0</span> <span class="id" title="var">A1</span> : <a class="idref" href="OpSemProofs.integration.html#Event"><span class="id" title="definition">Event</span></a> (<a class="idref" href="OpSemProofs.syntax.html#val"><span class="id" title="inductive">val</span></a> <a class="idref" href="OpSemProofs.properties_of_relations.html#a788b57bb5319497a4de11f3392dcbc3"><span class="id" title="variable">τ</span></a>)}<br/>
+&nbsp;&nbsp;: <a class="idref" href="OpSemProofs.relations.html#A_rel"><span class="id" title="definition">A_rel</span></a> <a class="idref" href="OpSemProofs.properties_of_relations.html#a788b57bb5319497a4de11f3392dcbc3"><span class="id" title="variable">τ</span></a> <a class="idref" href="OpSemProofs.properties_of_relations.html#A0"><span class="id" title="variable">A0</span></a> <a class="idref" href="OpSemProofs.properties_of_relations.html#A1"><span class="id" title="variable">A1</span></a> <a class="idref" href="http://coq.inria.fr/distrib/8.6/stdlib/Coq.Init.Logic.html#d43e996736952df71ebeeae74d10a287"><span class="id" title="notation">-&gt;</span></a> <a class="idref" href="OpSemProofs.properties_of_relations.html#A0"><span class="id" title="variable">A0</span></a> <a class="idref" href="http://coq.inria.fr/distrib/8.6/stdlib/Coq.Init.Logic.html#1c39bf18749e5cc609e83c0a0ba5a372"><span class="id" title="notation">=</span></a> <a class="idref" href="OpSemProofs.properties_of_relations.html#A1"><span class="id" title="variable">A1</span></a>.<br/>
+<span class="id" title="keyword">Proof</span>.<br/>
+&nbsp;&nbsp;<span class="id" title="tactic">intros</span>.<br/>
+&nbsp;&nbsp;<span class="id" title="tactic">extensionality</span> <span class="id" title="var">v</span>.<br/>
+&nbsp;&nbsp;<span class="id" title="tactic">apply</span> <span class="id" title="var">H</span>.<br/>
+&nbsp;&nbsp;<span class="id" title="tactic">reflexivity</span>.<br/>
 <span class="id" title="keyword">Qed</span>.<br/>
 
 <br/>
@@ -260,6 +291,15 @@
 <br/>
 <span class="id" title="keyword">Instance</span> <a name="rel_expr_reflexive"><span class="id" title="instance">rel_expr_reflexive</span></a> {<span class="id" title="var">Γ</span> τ} : <a class="idref" href="http://coq.inria.fr/distrib/8.6/stdlib/Coq.Classes.RelationClasses.html#Reflexive"><span class="id" title="class">Reflexive</span></a> (<a class="idref" href="OpSemProofs.relations.html#related_exprs"><span class="id" title="definition">related_exprs</span></a> <a class="idref" href="OpSemProofs.properties_of_relations.html#1b004e48cd1f64e22d5c000cf0d7f047"><span class="id" title="variable">Γ</span></a> <a class="idref" href="OpSemProofs.properties_of_relations.html#a788b57bb5319497a4de11f3392dcbc3"><span class="id" title="variable">τ</span></a>)<br/>
 &nbsp;&nbsp;:= <a class="idref" href="OpSemProofs.relations.html#fundamental_property"><span class="id" title="lemma">fundamental_property</span></a>.<br/>
+
+<br/>
+</div>
+
+<div class="doc">
+<a name="lab30"></a><h1 class="section">Proving expressions are related</h1>
+
+</div>
+<div class="code">
 
 <br/>
 <span class="id" title="keyword">Lemma</span> <a name="same_substitution_suffices"><span class="id" title="lemma">same_substitution_suffices</span></a> {<span class="id" title="var">Γ</span> τ} (<span class="id" title="var">e0</span> <span class="id" title="var">e1</span> : <a class="idref" href="OpSemProofs.syntax.html#expr"><span class="id" title="inductive">expr</span></a> <a class="idref" href="OpSemProofs.properties_of_relations.html#1b004e48cd1f64e22d5c000cf0d7f047"><span class="id" title="variable">Γ</span></a> <a class="idref" href="OpSemProofs.properties_of_relations.html#a788b57bb5319497a4de11f3392dcbc3"><span class="id" title="variable">τ</span></a>) :<br/>
