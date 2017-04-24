@@ -18,6 +18,8 @@ coq: Makefile.coq
 
 html: Makefile.coq
 	@$(MAKE) -f Makefile.coq html
+# pandoc --from markdown_github-hard_line_breaks --to html --standalone -o html/index.html < README.md
+	cp README.md html
 	cp $(EXTRA_DIR)/resources/* html
 
 Makefile.coq: auto-subst Makefile _CoqProject src/*.v
@@ -36,6 +38,9 @@ pages: html
 	rm -f pages/*
 	cp html/* pages/
 
+remind-me-how-to-commit-to-pages-and-really-I-should-automate-this:
+	@echo '(make pages && cd pages && git add *.html *.js *.css *.md && git commit -am "$$(..; git rev-parse HEAD)")'
+
 graph: dep-graph/graph.pdf
 
 dep-graph/graph.pdf: dep-graph/graph.dot
@@ -48,5 +53,4 @@ dep-graph/graph.dpd: src/dep.v coq
 	mkdir -p dep-graph
 	coqc -R ./auto-subst/theories Autosubst -R ./src OpSemProofs src/dep.v
 
-
-.PHONY: all coq graph html
+.PHONY: all coq graph html pages remind-me-how-to-commit-to-pages-and-really-I-should-automate-this
