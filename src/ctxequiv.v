@@ -16,6 +16,7 @@ Inductive u_ctx_frame :=
 | uc_factor
 | uc_observe_l (ur : u_expr)
 | uc_observe_r (ul : u_expr)
+| uc_unop (op : unop)
 | uc_binop_l (op : binop) (ur : u_expr)
 | uc_binop_r (op : binop) (ul : u_expr)
 | uc_lam (τa : Ty)
@@ -50,14 +51,14 @@ Inductive ctx_frame : Env Ty -> Ty -> Effect -> Env Ty -> Ty -> Effect -> Type :
 | c_observe_r {Γ ϕl} :
     expr Γ ℝ ϕl ->
     (FRAME Γ ⊢ [Γ ⊢ ℝ, ObsR] : ℝ, ObsNone)
-| c_binop_l {Γ ϕl ϕr} :
-    binop ->
+| c_unop {Γ ϕ} (op : unop) :
+    (FRAME Γ ⊢ [Γ ⊢ ℝ, ϕ] : ℝ, ϕ)
+| c_binop_l {Γ ϕl ϕr ϕ} (op : binop) (Hϕ : ϕ = δϕ2 op ϕr) :
     expr Γ ℝ ϕr ->
-    (FRAME Γ ⊢ [Γ ⊢ ℝ, ϕl] : ℝ, ϕr)
-| c_binop_r {Γ ϕl ϕr} :
-    binop ->
+    (FRAME Γ ⊢ [Γ ⊢ ℝ, ϕl] : ℝ, ϕ)
+| c_binop_r {Γ ϕl ϕr ϕ} (op : binop) (Hϕ : ϕ = δϕ2 op ϕr) :
     expr Γ ℝ ϕl ->
-    (FRAME Γ ⊢ [Γ ⊢ ℝ, ϕr] : ℝ, ϕr)
+    (FRAME Γ ⊢ [Γ ⊢ ℝ, ϕr] : ℝ, ϕ)
 | c_lam {Γ τa ϕ τr} :
     (FRAME Γ ⊢ [τa :: Γ ⊢ τr, ϕ] : τa ~~ ϕ ~> τr, ObsNone)
 | c_hide {Γ} :
@@ -78,6 +79,7 @@ Instance Rename_u_ctx_frame : Rename u_ctx_frame :=
     | uc_factor => uc_factor
     | uc_observe_l er => uc_observe_l (rename σ er)
     | uc_observe_r el => uc_observe_r (rename σ el)
+    | uc_unop op => uc_unop op
     | uc_binop_l op er => uc_binop_l op (rename σ er)
     | uc_binop_r op el => uc_binop_r op (rename σ el)
     | uc_lam τa => uc_lam τa
@@ -112,6 +114,7 @@ Instance u_plug_frame : Plug.type u_ctx_frame u_expr u_expr :=
       | uc_factor => u_factor e
       | uc_observe_l er => u_observe e er
       | uc_observe_r el => u_observe el e
+      | uc_unop op => u_unop op e
       | uc_binop_l op er => u_binop op e er
       | uc_binop_r op el => u_binop op el e
       | uc_lam τa => u_lam τa e
@@ -137,8 +140,9 @@ Instance plug_frame {Γo τo ϕo Γh τh ϕh}
       | c_factor => fun e => e_factor e
       | c_observe_l er => fun e => e_observe e er
       | c_observe_r el => fun e => e_observe el e
-      | c_binop_l op er => fun e => e_binop op e er
-      | c_binop_r op el => fun e => e_binop op el e
+      | c_unop op => fun e => e_unop op e
+      | c_binop_l op Hϕ er => fun e => e_binop op Hϕ e er
+      | c_binop_r op Hϕ el => fun e => e_binop op Hϕ el e
       | c_lam => fun e => e_lam e
       | c_hide => fun e => e_hide_observable e
       end
@@ -164,8 +168,9 @@ Definition erase_ctx_frame {Γo τo ϕo Γh τh ϕh} (f : (FRAME Γo ⊢ [Γh �
   | c_factor => uc_factor
   | c_observe_l er => uc_observe_l (erase er)
   | c_observe_r el => uc_observe_r (erase el)
-  | c_binop_l op er => uc_binop_l op (erase er)
-  | c_binop_r op el => uc_binop_r op (erase el)
+  | c_unop op => uc_unop op
+  | c_binop_l op _ er => uc_binop_l op (erase er)
+  | c_binop_r op _ el => uc_binop_r op (erase el)
   | @c_lam _ τa _ => uc_lam τa
   | c_hide => uc_hide
   end.
@@ -190,7 +195,7 @@ Definition ctx_equiv_by_both_μs {Γ τ ϕ} (e0 e1 : expr Γ τ ϕ) :=
   forall ϕo (C : (CTX · ⊢ [Γ ⊢ τ, ϕ] : ℝ, ϕo)),
     (forall A, μ C⟨e0⟩ A = μ C⟨e1⟩ A) /\
     (forall v A (H : ϕo = ObsR),
-        let C' := (rew [fun ϕo => CTX · ⊢ [Γ ⊢ τ, ϕ] : ℝ, ϕo] H in C) in
+        let C' := (rew [fun ϕo => (CTX · ⊢ [Γ ⊢ τ, ϕ] : ℝ, ϕo)] H in C) in
         obs_μ C'⟨e0⟩ v A = obs_μ C'⟨e1⟩ v A).
 
 Lemma ctx_equivs_equiv {Γ τ ϕ} (e0 e1 : expr Γ τ ϕ) :
@@ -228,6 +233,7 @@ Proof.
     apply compat_app ||
     apply compat_factor ||
     apply compat_observe ||
+    apply compat_unop ||
     apply compat_binop ||
     apply compat_plus ||
     apply compat_lam ||

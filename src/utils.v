@@ -1,4 +1,5 @@
 Require Export nnr.
+Require Export partial_fn_utils.
 Require Export Coq.Logic.FunctionalExtensionality.
 Require Export Coq.Logic.Eqdep_dec.
 Require Export Coq.Program.Basics.
@@ -6,18 +7,12 @@ Require Export Coq.Program.Equality.
 Require Export Coq.Program.Tactics.
 Require Export Coq.setoid_ring.Ring_theory.
 Require Import Coq.Classes.Morphisms.
-Require Import List.
+Require Import Coq.Lists.List.
 
 Export EqNotations.
 Open Scope ennr.
 
 Notation "a  '⨉'  b" := (prod a b) (at level 40, left associativity).
-
-Definition fromOption {A} (d : A) (opt : option A) : A :=
-  match opt with
-  | Some a' => a'
-  | None => d
-  end.
 
 Definition option0 : option R+ -> R+ := fromOption 0.
 
@@ -37,8 +32,16 @@ Definition option_bind {A B} (t : option A) (f : A -> option B) : option B :=
   | Some a => f a
   | None => None
   end.
-(* Notation "f =<< x" := (option_bind x f) (at level 20). *)
+Notation "f o=<< x" := (option_bind x f) (at level 20).
 (* Notation "x >>= f" := (option_bind x f) (at level 20). *)
+
+Definition option_le {X} (x y : option X) : Prop :=
+  match x, y with
+  | None, _ => True
+  | _, None => False
+  | Some x', Some y' => x' = y'
+  end.
+Infix "o<=" := option_le (at level 70, no associativity).
 
 Definition id {A} := @Datatypes.id A.
 

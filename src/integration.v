@@ -111,6 +111,9 @@ Infix ">>=" := meas_bind (at level 20).
 Definition fold_bind {A B} (μ : Meas A) (f : A -> Meas B) V :
   integration (fun a => f a V) μ = (μ >>= f) V := eq_refl.
 
+Definition empty_meas A : Meas A := fun a => 0.
+Arguments empty_meas _ _ /.
+
 Definition dirac {A} (v : A) : Meas A :=
   fun e => indicator e v.
 
@@ -158,6 +161,18 @@ Arguments preimage {_ _ _} _ _ _ /.
 Definition pushforward {A B} (μ : Meas A) (f : A -> B) : Meas B :=
   μ ∘ preimage f.
 
+(** two different ways to convert emptiness in an option to emptiness in a
+    measure. *)
+Definition option_meas {A} (oμ : option (Meas A)) : Meas A :=
+  fromOption (empty_meas _) oμ.
+
+Definition meas_option {A} (μo : Meas (option A)) : Meas A :=
+  fun ev => μo (fun oa =>
+                  match oa with
+                  | Some x => ev x
+                  | _ => false
+                  end).
+
 Axiom μEntropy_proj_is_lebesgue : forall n : nat,
     pushforward μEntropy (fun σ => proj1_sig (σ n)) = lebesgue_01_ivl.
 
@@ -192,6 +207,25 @@ Proof.
   apply bind_of_pushforward.
 Qed.
 
+Lemma integration_of_0 :
+  forall {A} (μ : Meas A),
+    integration (fun _ => 0) μ = 0.
+Proof.
+  intros.
+  replace 0 with (0 * 0) by ring.
+  rewrite <- integration_linear_mult_r.
+  ring.
+Qed.
+
+Lemma bind_empty {A B} f :
+  empty_meas A >>= f = empty_meas B.
+Proof.
+  extensionality ev.
+  setoid_rewrite riemann_def_of_lebesgue_integration.
+  unfold empty_meas.
+  apply integration_of_0.
+Qed.
+
 Lemma integration_linear_in_meas {A B} (μ : Meas A) (s : R+) (f : A -> Meas B) :
   (fun ev => s * μ ev) >>= f =
   (fun ev => s * (μ >>= f) ev).
@@ -200,6 +234,89 @@ Proof.
   setoid_rewrite riemann_def_of_lebesgue_integration.
   rewrite <- integration_linear_mult_l.
   auto.
+Qed.
+
+Definition score_meas {X} (w : X -> R+) (μ : Meas X) : Meas X :=
+  μ >>= (fun x A => w x * indicator A x).
+
+Lemma bind_of_score {A B} w μ (f : A -> Meas B) :
+  score_meas w μ >>= f = μ >>= (fun a ev => (w a) * f a ev).
+Proof.
+  unfold score_meas.
+  rewrite meas_bind_assoc.
+  integrand_extensionality x.
+  rewrite integration_linear_in_meas.
+  fold (dirac x).
+  rewrite meas_id_left.
+  reflexivity.
+Qed.
+
+
+Lemma bind_meas_option {A B} μ (f : A -> Meas B) :
+  meas_option μ >>= f =
+  μ >>= (fun x ev => option0 (flip f ev <$> x)).
+Proof.
+  intros.
+  extensionality ev.
+  setoid_rewrite riemann_def_of_lebesgue_integration.
+  integrand_extensionality t.
+  unfold meas_option.
+  f_equal.
+  extensionality x.
+  destruct x; cbn; auto.
+  destruct ennr_gt_dec; auto.
+  contradict e.
+  destruct t; cbn; auto.
+  apply RIneq.Rle_not_lt.
+  auto.
+Qed.
+
+Lemma push_score {X Y} (f : X -> R+) (g : X -> option Y) (g_inv : Y -> option X) (μ : Meas X) :
+  partial_bijection g g_inv ->
+  (forall x, g x = None -> f x = 0) ->
+  pushforward (score_meas f μ) g =
+  score_meas (fun y => option0 (f <$> (g_inv o=<< y))) (pushforward μ g).
+Proof.
+  intros.
+  unfold score_meas.
+  rewrite 2 pushforward_as_bind.
+  repeat rewrite meas_bind_assoc.
+  integrand_extensionality x.
+  unfold compose.
+  rewrite meas_id_left.
+  rewrite integration_linear_in_meas.
+  fold (dirac x).
+  rewrite meas_id_left.
+  remember (g x).
+  destruct o; cbn. {
+    rewrite (proj1 (H x y)); auto.
+  } {
+    rewrite H0; auto.
+  }
+Qed.
+
+Lemma push_score' {X Y}
+      (f : X -> R+) (g : X -> Y)
+      (g_inv : Y -> option X)
+      (μ : Meas X) :
+  let f' x := option0 (f <$> x) in
+  (forall x, f x = f' (g_inv (g x))) ->
+  pushforward (score_meas f μ) g =
+  score_meas (fun y => f' (g_inv y)) (pushforward μ g).
+Proof.
+  intros.
+  unfold score_meas.
+  rewrite 2 pushforward_as_bind.
+  repeat rewrite meas_bind_assoc.
+  integrand_extensionality x.
+  unfold compose.
+  rewrite meas_id_left.
+
+  rewrite integration_linear_in_meas.
+  fold (dirac x).
+  rewrite meas_id_left.
+  f_equal.
+  apply H.
 Qed.
 
 (* Lemma 3 *)
@@ -367,8 +484,53 @@ Proof.
 Qed.
 
 (* Is this even true? *)
-Axiom RN_deriv_is_coq_deriv : forall f inv_f D_f_inv (H : derivable f),
-    (forall x, f (inv_f x) = x) ->
-    (forall x, inv_f (f x) = x) ->
-    (forall x, D_f_inv x = / (ennr_abs (derive f H (inv_f x)))) ->
-    is_RN_deriv (pushforward lebesgue_measure f) lebesgue_measure D_f_inv.
+Axiom RN_deriv_is_coq_deriv_partial :
+  forall (f f_inv : R -> option R) (D_f_inv : R -> option R+) (H : partially_derivable f),
+    (* (forall y, f o=<< (f_inv o=<< y) o<= y) -> *)
+    (* (forall x, f_inv o=<< (f o=<< x) o<= x) -> *)
+    partial_bijection f f_inv ->
+    (forall y, D_f_inv y = ennr_inv <$> (ennr_abs <$> (partially_derive f H o=<< (f_inv y)))) ->
+    is_RN_deriv
+      (meas_option (pushforward lebesgue_measure f))
+      lebesgue_measure
+      (option0 ∘ D_f_inv).
+
+Lemma RN_deriv_is_coq_deriv_total :
+  forall (f f_inv : R -> R) (D_f_inv : R -> R+) (H : derivable f),
+    (forall y, f (f_inv y) = y) ->
+    (forall x, f_inv (f x) = x) ->
+    (forall y, D_f_inv y = / (ennr_abs (derive f H (f_inv y)))) ->
+    is_RN_deriv
+      (pushforward lebesgue_measure f)
+      lebesgue_measure
+      D_f_inv.
+Proof.
+  intros.
+  pose proof RN_deriv_is_coq_deriv_partial (Some ∘ f) (Some ∘ f_inv) (Some ∘ D_f_inv).
+  unfold compose in *.
+  cbn in *.
+
+  replace (meas_option (pushforward lebesgue_measure (fun x => Some (f x))))
+  with (pushforward lebesgue_measure f)
+    in * by reflexivity.
+
+  unshelve eapply H3; clear H3; intros. {
+    repeat intro.
+    unfold compose.
+    cbn.
+    apply H.
+  } {
+    split; intros. {
+      inject H3.
+      rewrite H1.
+      reflexivity.
+    } {
+      inject H3.
+      rewrite H0.
+      reflexivity.
+    }
+  } {
+     rewrite H2.
+     reflexivity.
+  }
+Qed.

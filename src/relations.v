@@ -774,24 +774,73 @@ Module CtxEquivCases <: CASES CtxEquivBase.
     auto.
   Qed.
 
-  Definition op_in (op : binop) (v v' : val ℝ) : Meas (val ℝ) :=
-    match (v : expr _ _ _), (v' : expr _ _ _) with
-    | e_real r, e_real r' => dirac (v_real (δ op r r'))
+  Definition unop_in (op : unop) (v : val ℝ) : Meas (val ℝ) :=
+    match (v : expr _ _ _) with
+    | e_real r =>
+      match δ1 op r with
+      | Some r' => dirac (v_real r')
+      | None => empty_meas _
+      end
+    | _ => fun A => 0
+    end.
+
+  Definition binop_in (op : binop) (vl vr : val ℝ) : Meas (val ℝ) :=
+    match (vl : expr _ _ _), (vr : expr _ _ _) with
+    | e_real rl, e_real rr =>
+      match δ2 op rl rr with
+      | Some r => dirac (v_real r)
+      | None => empty_meas _
+      end
     | _, _ => fun A => 0
     end.
 
-  Lemma by_μe_eq_μEntropy_op (op : binop)
-        {ϕl ϕr}
+  Lemma by_μe_eq_μEntropy_unop (op : unop) {ϕ} (e : expr · ℝ ϕ) :
+    μ (e_unop op e) =
+    μ e >>= unop_in op.
+  Proof.
+    extensionality A.
+    rewrite μe_eq_μEntropy.
+
+    integrand_extensionality σ.
+    unfold eval_in.
+
+    decide_eval (e_unop op e) σ as [v w E u]; simpl. {
+      destruct_val v.
+      d_destruct E; try absurd_val.
+
+      decide_eval as [ve we Ee ue].
+      destruct (ue _ _ E); subst.
+
+      unfold unop_in; simpl.
+      rewrite e1.
+      reflexivity.
+    } {
+      decide_eval as [ve we exe ue].
+      destruct_val ve.
+      unfold unop_in; simpl.
+
+      remember (δ1 _ _).
+
+      destruct o. {
+        econtradict not_ex.
+      } {
+        cbn.
+        ring.
+      }
+    }
+  Qed.
+
+  Lemma by_μe_eq_μEntropy_binop {ϕl ϕr ϕ} (op : binop) Hϕ
         (el : expr · ℝ ϕl)
         (er : expr · ℝ ϕr) :
-    μ (e_binop op el er) =
-    μ el >>= (fun vl => μ er >>= (fun vr => op_in op vl vr)).
+    μ (e_binop (ϕ := ϕ) op Hϕ el er) =
+    μ el >>= (fun vl => μ er >>= (fun vr => binop_in op vl vr)).
   Proof.
     extensionality A.
 
     rewrite μe_eq_μEntropy2.
     set (f σ0 σ1 A :=
-           option0 (((fun vl vr => op_in op vl vr A) <$> ev el σ0) <*> ev er σ1)
+           option0 (((fun vl vr => binop_in op vl vr A) <$> ev el σ0) <*> ev er σ1)
            * ew er σ1 * ew el σ0).
     transitivity ((μEntropy >>= (fun σ => f (π 0 σ) (π 1 σ))) A). {
       subst f.
@@ -800,7 +849,7 @@ Module CtxEquivCases <: CASES CtxEquivBase.
       integrand_extensionality σ.
 
       unfold eval_in.
-      decide_eval (e_binop op el er) σ as [v0 w0 ex0 u0]. {
+      decide_eval (e_binop op Hϕ el er) σ as [v0 w0 ex0 u0]. {
         dependent destruction ex0; try absurd_val.
         decide_eval el (π 0 σ) as [vl wl exl ul].
         decide_eval er (π 1 σ) as [vr wr exr ur].
@@ -811,13 +860,17 @@ Module CtxEquivCases <: CASES CtxEquivBase.
         destruct (ul _ _ ex0_1), (ur _ _ ex0_2); subst.
         d_destruct (H, H1).
 
-        unfold op_in, dirac; simpl.
+        unfold binop_in, dirac; simpl.
+        rewrite e.
         ring.
       } {
         decide_eval el (π 0 σ) as [vl wl exl ul].
         decide_eval er (π 1 σ) as [vr wr exr ur].
         destruct_val vr.
         destruct_val vl.
+        cbn.
+        remember (δ2 _ _ _).
+        destruct o; cbn; try ring.
         econtradict not_ex.
       }
     } {
@@ -826,33 +879,82 @@ Module CtxEquivCases <: CASES CtxEquivBase.
     }
   Qed.
 
-  Definition obs_op_in (op : binop) (vl : val ℝ) (er : expr · ℝ ObsR) (v : val ℝ)
+  Definition obs_unop_in (op : unop) (e : expr · ℝ ObsR) (v : val ℝ)
+    : Entropy -> Meas unit :=
+    match (v : expr _ _ _) with
+    | e_real rv =>
+      match δ1_inv op rv with
+      | Some ri =>
+        fun σ A =>
+          indicator A tt
+          * obs e (v_real ri) σ
+          / ennr_abs (δ1_partial_deriv op ri)
+      | None => fun _ _ => 0
+      end
+    | _ => const (empty_meas _)
+    end.
+
+  Definition obs_binop_in (op : binop) (vl : val ℝ) (er : expr · ℝ ObsR) (v : val ℝ)
     : Entropy -> Meas unit :=
     match (vl : expr _ _ _), (v : expr _ _ _) with
     | e_real rl, e_real rv =>
-      match δ_unique_inv op rl rv with
+      match δ2_inv op rl rv with
       | Some ri =>
         fun σ A =>
           indicator A tt
           * obs er (v_real ri) σ
-          / ennr_abs (δ_partial_deriv_2 op rl ri)
-      | None => fun _ _ => 0
+          / ennr_abs (δ2_partial_deriv op rl ri)
+      | None => const (empty_meas _)
       end
     | _, _ => fun _ _ => 0
     end.
 
-  Lemma obs_help_op {ϕl} op
+  Lemma obs_help_unop op
+        (e : expr · ℝ ObsR) :
+    obs_μ (e_unop op e) =
+    fun v => μEntropy >>= obs_unop_in op e v.
+  Proof.
+    extensionality v.
+    extensionality A.
+
+    integrand_extensionality σ.
+
+    destruct_val v.
+    unfold obs.
+    destruct obs_eval_dec as [w E u | not_ex]. {
+      d_destruct E.
+      cbn.
+      rewrite e1.
+      unfold ennr_div.
+      enough (w0 = obs e (v_real r0) σ) by (subst; ring).
+
+      unfold obs.
+      destruct is_v0.
+      destruct obs_eval_dec as [w' E' u' | not_ex]; eauto.
+      econtradict not_ex.
+    } {
+      cbn.
+      remember (δ1_inv _ _).
+      destruct o; unfold const; try ring.
+
+      unfold obs, ennr_div.
+      destruct obs_eval_dec; try ring.
+      econtradict not_ex.
+    }
+  Qed.
+
+  Lemma obs_help_binop {ϕl} op Hϕ
         (el : expr · ℝ ϕl)
         (er : expr · ℝ ObsR) :
-    obs_μ (e_binop op el er) =
-    fun v => μ el >>= (fun vl => μEntropy >>= obs_op_in op vl er v).
+    obs_μ (e_binop op Hϕ el er) =
+    fun v => μ el >>= (fun vl => μEntropy >>= obs_binop_in op vl er v).
   Proof.
     extensionality v.
     extensionality A.
 
     rewrite μe_eq_μEntropy.
     set (f σl σr A :=
-           option0 ((fun vl => obs_op_in op vl er v σr A)
+           option0 ((fun vl => obs_binop_in op vl er v σr A)
                       <$> ev el σl)
            * ew el σl).
     transitivity ((μEntropy >>= (fun σ => f (π 0 σ) (π 1 σ))) A). {
@@ -891,12 +993,16 @@ Module CtxEquivCases <: CASES CtxEquivBase.
         destruct_val vl.
         destruct_val v.
         cbn.
-        remember (δ_unique_inv _ _ _).
-        destruct o; unfold const; try ring.
-
-        unfold obs, ennr_div.
-        destruct obs_eval_dec; try ring.
-        econtradict not_ex.
+        remember (δ2_inv _ _ _).
+        destruct o. {
+          unfold obs, ennr_div.
+          destruct obs_eval_dec; try ring.
+          econtradict not_ex.
+        } {
+          unfold const.
+          cbn.
+          ring.
+        }
       }
     } {
       rewrite pick_2_entropies.
@@ -911,25 +1017,21 @@ Module CtxEquivCases <: CASES CtxEquivBase.
     }
   Qed.
 
-  Lemma case_binop : forall op ϕl ϕr el0 el1 er0 er1,
-      E_rel ℝ ϕl el0 el1 ->
-      E_rel ℝ ϕr er0 er1 ->
-      E_rel ℝ _ (e_binop op el0 er0) (e_binop op el1 er1).
+  Lemma case_unop : forall op ϕ e0 e1,
+      E_rel ℝ ϕ e0 e1 ->
+      E_rel ℝ _ (e_unop op e0) (e_unop op e1).
   Proof.
     split; intros. {
-      do 2 rewrite by_μe_eq_μEntropy_op.
+      do 2 rewrite by_μe_eq_μEntropy_unop.
 
-      coarsen vl.
-      coarsen vr.
+      coarsen v.
 
-      destruct_val vl0.
-      destruct_val vl1.
-      destruct_val vr0.
-      destruct_val vr1.
+      destruct_val v0.
+      destruct_val v1.
 
-      hnf in Hvl, Hvr.
-      d_destruct (Hvl, Hvr).
-      unfold op_in; simpl.
+      inject Hv.
+      unfold unop_in; simpl.
+      destruct δ1; auto.
 
       unfold dirac, indicator.
       f_equal.
@@ -941,7 +1043,57 @@ Module CtxEquivCases <: CASES CtxEquivBase.
       subst e0' e1'.
       cbn.
 
-      rewrite 2 obs_help_op.
+      rewrite 2 obs_help_unop.
+
+      destruct H as [_ ?].
+      specialize (H eq_refl eq_refl).
+      cbn in H.
+
+      destruct_val v.
+      unfold obs_unop_in, ">>="; cbn.
+      destruct δ1_inv; auto.
+      unfold ennr_div.
+      rewrite <- 2 integration_linear_mult_r.
+      f_equal.
+      apply H.
+    }
+  Qed.
+
+  Lemma case_binop : forall ϕl ϕr ϕ op Hϕ el0 el1 er0 er1,
+      E_rel ℝ ϕl el0 el1 ->
+      E_rel ℝ ϕr er0 er1 ->
+      E_rel ℝ ϕ (e_binop op Hϕ el0 er0) (e_binop op Hϕ el1 er1).
+  Proof.
+    split; intros. {
+      do 2 rewrite by_μe_eq_μEntropy_binop.
+
+      coarsen vl.
+      coarsen vr.
+
+      destruct_val vl0.
+      destruct_val vl1.
+      destruct_val vr0.
+      destruct_val vr1.
+
+      inject Hvl.
+      inject Hvr.
+      unfold binop_in; simpl.
+      destruct δ2; auto.
+
+      unfold dirac, indicator.
+      f_equal.
+      apply HA.
+      reflexivity.
+    } {
+      subst.
+      d_destruct Hτ.
+      subst e0' e1'.
+      cbn.
+
+      generalize_refl (δϕ2 op ϕr); subst; cbn.
+
+      assert (ϕr = ObsR) by (destruct op, ϕr; auto); subst.
+      rewrite 2 obs_help_binop.
 
       coarsen vl.
 
@@ -954,8 +1106,8 @@ Module CtxEquivCases <: CASES CtxEquivBase.
       cbn in H0.
 
       destruct_val v.
-      unfold obs_op_in, ">>="; cbn.
-      destruct δ_unique_inv; auto.
+      unfold obs_binop_in, ">>="; cbn.
+      destruct δ2_inv; auto.
       unfold ennr_div.
       rewrite <- 2 integration_linear_mult_r.
       f_equal.

@@ -82,10 +82,13 @@ Module Log_rel1.
          E_rel ℝ ϕ0 e0 ->
          E_rel ℝ _ e1 ->
          E_rel ℝ _ (e_observe e0 e1))
-      (case_binop : forall ϕl ϕr op el er,
+      (case_unop : forall ϕ op e,
+          E_rel ℝ ϕ e ->
+          E_rel ℝ _ (e_unop op e))
+      (case_binop : forall ϕl ϕr ϕ op Hϕ el er,
           E_rel ℝ ϕl el ->
           E_rel ℝ ϕr er ->
-          E_rel ℝ _ (e_binop op el er))
+          E_rel ℝ ϕ (e_binop op Hϕ el er))
       (case_hide : forall e,
           E_rel ℝ ObsR e ->
           E_rel ℝ ObsNone (e_hide_observable e)).
@@ -202,10 +205,18 @@ Module Log_rel1.
       apply case_observe; auto.
     Qed.
 
-    Lemma compat_binop Γ op ϕl el ϕr er :
+    Lemma compat_unop Γ op ϕ e :
+      expr_rel Γ ℝ ϕ e ->
+      expr_rel Γ ℝ _ (e_unop op e).
+    Proof.
+      common.
+      apply case_unop; auto.
+    Qed.
+
+    Lemma compat_binop Γ ϕl ϕr ϕ op Hϕ el er :
       expr_rel Γ ℝ ϕl el ->
       expr_rel Γ ℝ ϕr er ->
-      expr_rel Γ ℝ _ (e_binop op el er).
+      expr_rel Γ ℝ ϕ (e_binop op Hϕ el er).
     Proof.
       common.
       apply case_binop; auto.
@@ -230,6 +241,7 @@ Module Log_rel1.
       - apply compat_factor; auto.
       - apply compat_sample.
       - apply compat_observe; auto.
+      - apply compat_unop; auto.
       - apply compat_binop; auto.
       - apply compat_hide; auto.
     Qed.
@@ -305,10 +317,13 @@ Module Log_rel1_prop.
          E_rel ℝ ϕ0 e0 ->
          E_rel ℝ _ e1 ->
          E_rel ℝ _ (e_observe e0 e1))
-      (case_binop : forall ϕl ϕr op el er,
+      (case_unop : forall ϕ op e,
+          E_rel ℝ ϕ e ->
+          E_rel ℝ _ (e_unop op e))
+      (case_binop : forall ϕl ϕr ϕ op Hϕ el er,
           E_rel ℝ ϕl el ->
           E_rel ℝ ϕr er ->
-          E_rel ℝ _ (e_binop op el er))
+          E_rel ℝ ϕ (e_binop op Hϕ el er))
       (case_hide : forall e,
           E_rel ℝ ObsR e ->
           E_rel ℝ ObsNone (e_hide_observable e)).
@@ -425,10 +440,18 @@ Module Log_rel1_prop.
       apply case_observe; auto.
     Qed.
 
-    Lemma compat_binop Γ op ϕl el ϕr er :
+    Lemma compat_unop Γ op ϕ e :
+      expr_rel Γ ℝ ϕ e ->
+      expr_rel Γ ℝ _ (e_unop op e).
+    Proof.
+      common.
+      apply case_unop; auto.
+    Qed.
+
+    Lemma compat_binop Γ ϕl ϕr ϕ op Hϕ el er :
       expr_rel Γ ℝ ϕl el ->
       expr_rel Γ ℝ ϕr er ->
-      expr_rel Γ ℝ _ (e_binop op el er).
+      expr_rel Γ ℝ ϕ (e_binop op Hϕ el er).
     Proof.
       common.
       apply case_binop; auto.
@@ -453,6 +476,7 @@ Module Log_rel1_prop.
       - apply compat_factor; auto.
       - apply compat_sample.
       - apply compat_observe; auto.
+      - apply compat_unop; auto.
       - apply compat_binop; auto.
       - apply compat_hide; auto.
     Qed.
@@ -536,10 +560,13 @@ Module Log_rel2.
          E_rel ℝ ϕl el0 el1 ->
          E_rel ℝ _ er0 er1 ->
          E_rel ℝ _ (e_observe el0 er0) (e_observe el1 er1))
-      (case_binop : forall op ϕl ϕr el0 el1 er0 er1,
+      (case_unop : forall op ϕ e0 e1,
+          E_rel ℝ ϕ e0 e1 ->
+          E_rel ℝ _ (e_unop op e0) (e_unop op e1))
+      (case_binop : forall ϕl ϕr ϕ op Hϕ el0 el1 er0 er1,
           E_rel ℝ ϕl el0 el1 ->
           E_rel ℝ ϕr er0 er1 ->
-          E_rel ℝ _ (e_binop op el0 er0) (e_binop op el1 er1))
+          E_rel ℝ ϕ (e_binop op Hϕ el0 er0) (e_binop op Hϕ el1 er1))
       (case_hide : forall e0 e1,
           E_rel ℝ ObsR e0 e1 ->
           E_rel ℝ ObsNone (e_hide_observable e0) (e_hide_observable e1)).
@@ -659,12 +686,42 @@ Module Log_rel2.
       apply case_observe; auto.
     Qed.
 
-    Lemma compat_binop Γ op ϕl el0 el1 ϕr er0 er1 :
-      expr_rel Γ ℝ ϕl el0 el1 ->
-      expr_rel Γ ℝ ϕr er0 er1 ->
-      expr_rel Γ ℝ _ (e_binop op el0 er0) (e_binop op el1 er1).
+    Lemma compat_unop Γ op ϕ e0 e1 :
+      expr_rel Γ ℝ ϕ e0 e1 ->
+      expr_rel Γ ℝ _ (e_unop op e0) (e_unop op e1).
     Proof.
       common.
+      apply case_unop; auto.
+    Qed.
+
+    Lemma compat_binop Γ ϕl ϕr ϕ op Hϕ el0 el1 er0 er1 :
+      expr_rel Γ ℝ ϕl el0 el1 ->
+      expr_rel Γ ℝ ϕr er0 er1 ->
+      expr_rel Γ ℝ ϕ (e_binop op Hϕ el0 er0) (e_binop op Hϕ el1 er1).
+    Proof.
+      intros.
+      intros ρ0 ρ1 Hρ.
+      repeat match goal with
+             | [ H : expr_rel _ _ _ _ _ |- _ ] =>
+               specialize (H ρ0 ρ1 Hρ)
+             end.
+      elim_sig_exprs.
+
+      expr_destruct e3; try solve [inversion He3].
+      expr_destruct e4; inject He4.
+      inject He3.
+
+      assert (ϕl0 = ϕl /\ ϕl1 = ϕl /\ ϕr0 = ϕr /\ ϕr1 = ϕr). {
+        repeat split;
+          eapply proj2;
+          eapply expr_type_unique;
+          etransitivity; try eassumption;
+            eauto.
+      }
+      destruct H1 as [? [? [? ?]]]; subst.
+      elim_erase_eqs.
+      d_destruct (Hϕ0, Hϕ1).
+
       apply case_binop; auto.
     Qed.
 
@@ -687,6 +744,7 @@ Module Log_rel2.
       - apply compat_factor; auto.
       - apply compat_sample.
       - apply compat_observe; auto.
+      - apply compat_unop; auto.
       - apply compat_binop; auto.
       - apply compat_hide; auto.
     Qed.

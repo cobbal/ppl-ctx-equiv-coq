@@ -55,158 +55,305 @@ Proof.
   apply effect_eq_dec.
 Defined.
 
-Inductive binop :=
-| Add
-| ConstDouble
-| ConstCube
-(* | Mult *)
+Inductive unop :=
+| Log
+| Exp
 .
 
-Definition δ (op : binop) : R -> R -> R :=
+Inductive binop :=
+| Add
+| Mult
+| CheckedNonZeroMult
+.
+
+Definition unop_effect (op : unop) : Effect := ObsR.
+
+Definition binop_effect (op : binop) : Effect :=
   match op with
-  | Add => Rplus
-  | ConstDouble => fun _ => Rmult 2
-  (* | Mult => Rmult *)
-  | ConstCube => fun _ => Rcube
+  | Mult => ObsNone
+  | _ => ObsR
+  end.
+
+Definition effect_compose (ϕ0 ϕ1 : Effect) : Effect :=
+  match ϕ0, ϕ1 with
+  | ObsR, ObsR => ObsR
+  | _, _ => ObsNone
+  end.
+
+Lemma effect_compose_id_r ϕ : effect_compose ϕ ObsR = ϕ.
+Proof.
+  destruct ϕ; reflexivity.
+Qed.
+
+Definition δϕ1 (op : unop) : Effect -> Effect := effect_compose (unop_effect op).
+Definition δϕ2 (op : binop) : Effect -> Effect := effect_compose (binop_effect op).
+
+Definition δ1 (op : unop) : R -> option R :=
+  match op with
+  | Log =>
+    fun x =>
+      match Rlt_dec 0 x with
+      | left H => Some (ln x)
+      | right _ => None
+      end
+  | Exp => fun x => Some (exp x)
+  end.
+
+Definition δ2 (op : binop) : R -> R -> option R :=
+  match op with
+  | Add => fun x y => Some (x + y)%R
+  | Mult => fun x y => Some (x * y)%R
+  | CheckedNonZeroMult =>
+    fun x y =>
+      if Req_EM_T x 0
+      then None
+      else Some (x * y)%R
   (* | Mult => Rmult *)
   end.
+
+(** It becomes useful for dealing with the standard library derivatives to know
+    partiality before applying the last argument. Kinda a hack, but oh well. *)
+
+Definition weird_δ2 (op : binop) : R -> option (R -> R) :=
+  match op with
+  | Add => fun x => Some (fun y => x + y)%R
+  | Mult => fun x => Some (fun y => x * y)%R
+  | CheckedNonZeroMult =>
+    fun x =>
+      if Req_EM_T x 0
+      then None
+      else Some (fun y => x * y)%R
+  end.
+
+Lemma weird_δ2_correct op x y :
+  δ2 op x y = weird_δ2 op x <*> Some y.
+Proof.
+  destruct op; cbn; auto.
+  destruct Req_EM_T; auto.
+Qed.
+
+(* if {v0} = op^-1(·)({v})
+   then return v0 *)
+Definition δ1_inv (op : unop) : R -> option R :=
+  (match op with
+   | Log => δ1 Exp
+   | Exp => δ1 Log
+   end)%R.
 
 (* if {v1} = op^-1(v0, ·)({v})
    then return v1 *)
-Definition δ_unique_inv (op : binop) (v0 : R) (v : R) : option R :=
+Definition δ2_inv (op : binop) (v0 : R) (v : R) : option R :=
   (match op with
    | Add => Some (v - v0)
-   | ConstDouble => Some (v / 2)
-   | ConstCube => Some (Rcube_root v)
-   (* | Mult => *)
-     (* if Req_EM_T v0 0 *)
-     (* then None *)
-     (* else Some (v / v0)%R *)
-     (* Some (v / v0) *)
+   | Mult => None
+   | CheckedNonZeroMult =>
+     if Req_EM_T v0 0
+     then None
+     else Some (v / v0)
    end)%R.
 
-Definition δ_unique_inv_cheating (op : binop) (v0 : R) (v : R) : R :=
-  (match op with
-   | Add => v - v0
-   | ConstDouble => v / 2
-   | ConstCube => Rcube_root v
-   end)%R.
-
-Lemma δ_unique_inv_is_an_inverse op v0 v1 v :
-  δ_unique_inv op v0 v = Some v1 -> δ op v0 v1 = v.
+Lemma δ1_inv_sound {op v0 v} :
+  δ1_inv op v = Some v0 ->
+  δ1 op v0 = Some v.
 Proof.
-  destruct op; cbn; intros; try inject H; try solve [field].
-  apply Rcube_of_cube_root.
-Qed.
-
-Lemma δ_inv_get_away_with_cheating op v0 v :
-  δ_unique_inv op v0 v = Some (δ_unique_inv_cheating op v0 v).
-Proof.
-  destruct op; cbn; eexists; try reflexivity.
-Qed.
-
-Lemma δ_inv_cheat_left op v0 v1 :
-  δ_unique_inv_cheating op v0 (δ op v0 v1) = v1.
-Proof.
-  destruct op; cbn; try field.
-  apply Rcube_root_of_cube.
-Qed.
-
-Lemma δ_inv_cheat_right op v0 v :
-  δ op v0 (δ_unique_inv_cheating op v0 v) = v.
-Proof.
-  destruct op; cbn; try field.
-  apply Rcube_of_cube_root.
-Qed.
-
-Lemma δ_unique_inv_is_complete op v0 v1 :
-  δ_unique_inv op v0 (δ op v0 v1) = Some v1 \/
-  exists v1', v1 <> v1' /\ δ op v0 v1 = δ op v0 v1'.
-Proof.
-  destruct op; cbn; try solve [left; f_equal; field]. {
-    setoid_rewrite Rcube_root_of_cube.
-    tauto.
-  }
-  (*
-  {
-    destruct Req_EM_T. {
-      subst.
-      right.
-      exists (v1 + 1)%R.
-      split; try Fourier.fourier.
-      apply Rlt_not_eq.
-      Fourier.fourier.
-      ring.
-    } {
-      left.
+  destruct op; cbn; intros; try inject H. {
+    destruct Rlt_dec. {
       f_equal.
-      field.
+      apply ln_exp.
+    } {
+      contradict n.
+      apply exp_pos.
+    }
+  } {
+    destruct Rlt_dec; inject H.
+    rewrite exp_ln; auto.
+  }
+Qed.
+
+Lemma δ1_inv_complete {op v0 v} :
+  (* unop_effect op = ObsR -> (* This is always true for now *) *)
+  δ1 op v0 = Some v ->
+  δ1_inv op v = Some v0.
+Proof.
+  destruct op; cbn; intros. {
+    destruct Rlt_dec; inject H.
+    rewrite exp_ln; auto.
+  } {
+    inject H.
+    destruct Rlt_dec. {
+      rewrite ln_exp.
       auto.
+    } {
+      contradict n.
+      apply exp_pos.
     }
   }
-*)
 Qed.
-Global Opaque δ_unique_inv.
-Global Opaque δ_unique_inv_cheating.
 
-Definition δ_partial_deriv_2 (op : binop) (v0 v1 : R) : R :=
+Lemma δ2_inv_sound {op v0 v1 v} :
+  δ2_inv op v0 v = Some v1 ->
+  δ2 op v0 v1 = Some v.
+Proof.
+  destruct op; cbn; intros;
+    try destruct Req_EM_T;
+    inject H;
+    f_equal;
+    field;
+    assumption.
+Qed.
+
+Lemma δ2_inv_complete {op v0 v1 v} :
+  binop_effect op = ObsR ->
+  δ2 op v0 v1 = Some v ->
+  δ2_inv op v0 v = Some v1.
+Proof.
+  destruct op; try discriminate; cbn; intros. {
+    inject H0.
+    f_equal.
+    ring.
+  } {
+    destruct Req_EM_T; try discriminate.
+    inject H0.
+    f_equal.
+    field.
+    auto.
+  }
+Qed.
+
+(* Need this for opacity without having to deal with classical axioms, maybe
+   there's a nicer way to package it? *)
+Lemma δ2_inv_checked_fail r :
+      δ2_inv CheckedNonZeroMult 0 r = None.
+Proof.
+  cbn.
+  destruct Req_EM_T; auto; contradiction.
+Qed.
+Global Opaque δ1_inv δ2_inv.
+
+(* Lemma δ1_unique_inv_uniqueness op v v0 v0' : *)
+(*   δ1 op v0 = Some v -> *)
+(*   δ1_unique_inv op v = Some v0' -> *)
+(*   v0 = v0'. *)
+(* Proof. *)
+(*   intros. *)
+(*   apply δ1_unique_inv_is_complete in H. *)
+(*   rewrite H in H0. *)
+(*   inject H0. *)
+(*   reflexivity. *)
+(* Qed. *)
+
+(* Lemma δ2_unique_inv_uniqueness op v v0 v1 v1' : *)
+(*   δ2 op v0 v1 = Some v -> *)
+(*   δ2_unique_inv op v0 v = Some v1' -> *)
+(*   v1 = v1'. *)
+(* Proof. *)
+(*   intros. *)
+(*   destruct op; cbn in *; try destruct Req_EM_T; try inject H0; try inject H; field; auto. *)
+(* Qed. *)
+
+(* Lemma δ2_unique_inv_minimal op v v0 v1 : *)
+(*   δ2 op v0 v1 = None -> *)
+(*   δ2_inv op v0 v <> Some v1. *)
+(* Proof. *)
+(*   repeat intro. *)
+(*   apply δ2_inv_sound in H0. *)
+(*   rewrite H in H0. *)
+(*   discriminate. *)
+(* Qed. *)
+
+Definition δ1_partial_deriv (op : unop) (v0 : R) : R :=
   match op with
-  | Add => 1
-  | ConstDouble => 2
-  | ConstCube => 3 * (v1 * v1)
-  (* | Mult => v0 *)
+  | Log => / v0
+  | Exp => exp v0
   end.
 
-Lemma δ_partial_deriv_2_correct op v0 v1 :
-  derivable_pt_lim (δ op v0) v1 (δ_partial_deriv_2 op v0 v1).
-Proof.
-  destruct op. {
-    hnf; intros.
-    exists (mkposreal eps H).
-    intros.
-    replace (_ - _)%R with 0%R. {
-      unfold Rabs.
-      destruct Rcase_abs; Fourier.fourier.
-    } {
-      cbn; field; auto.
-    }
-  } {
-    hnf; intros.
-    exists (mkposreal eps H).
-    intros.
-    replace (_ - _)%R with 0%R. {
-      unfold Rabs.
-      destruct Rcase_abs; Fourier.fourier.
-    } {
-      cbn; field; auto.
-    }
-  } {
-    cbn.
-    clear v0.
-    pose proof (derivable_pt_lim_pow v1 3).
-    fold Rcube in H.
-    cbn in H.
-    ring_simplify in H.
-    ring_simplify.
-    assumption.
-  }
-  (*
-  {
-    cbn.
-    rewrite <- (Rmult_1_r v0) at 2.
-    apply derivable_pt_lim_scal.
-    apply derivable_pt_lim_id.
-  }
-*)
-Qed.
-Global Opaque δ_partial_deriv_2.
+Definition δ2_partial_deriv (op : binop) (v0 v1 : R) : R :=
+  match op with
+  | Add => 1
+  | Mult | CheckedNonZeroMult => v0
+  end.
 
-Definition δ_derivable op v0 : derivable (δ op v0).
+Lemma δ1_partial_deriv_correct op v0 :
+  forall junk,
+    δ1 op v0 <> None ->
+    derivable_pt_lim (fun v0' : R => fromOption junk (δ1 op v0')) v0 (δ1_partial_deriv op v0).
 Proof.
-  intro v1.
-  eexists.
-  apply δ_partial_deriv_2_correct.
-Defined.
+  intros.
+  destruct op. {
+    cbn in H.
+    destruct Rlt_dec; try contradiction.
+    hnf; intros.
+    destruct (derivable_pt_lim_ln _ r eps H0) as [δ Hδ].
+    assert (0 < Rmin δ v0)%R. {
+      destruct δ; cbn in *.
+      unfold Rmin.
+      destruct Rle_dec; auto.
+    }
+    exists (mkposreal _ H1); cbn; clear H1.
+    intros.
+    assert (Rabs h < δ)%R. {
+      clear_except H2.
+      unfold Rmin in *.
+      destruct Rle_dec;
+        try apply Rnot_le_lt in n;
+        try Fourier.fourier.
+    }
+    specialize (Hδ h H1 H3).
+    unfold compose.
+    destruct (Rlt_dec 0 v0); try contradiction.
+    destruct Rlt_dec. {
+      exact Hδ.
+    }
+
+    contradict n.
+    unfold Rabs, Rmin in *.
+    destruct Rle_dec, (Rcase_abs h); Fourier.fourier.
+  } {
+    apply derivable_pt_lim_exp.
+  }
+Qed.
+
+Lemma δ2_partial_deriv_correct op v0 v1 :
+  forall junk,
+    δ2 op v0 v1 <> None ->
+    derivable_pt_lim (fun v1' : R => fromOption junk (δ2 op v0 v1')) v1 (δ2_partial_deriv op v0 v1).
+Proof.
+  intros.
+  destruct op; try discriminate H; unfold compose; cbn in *. {
+    pose proof (derivable_pt_lim_plus (const v0) id v1 0 1).
+    specialize (H0 (derivable_pt_lim_const _ _) (derivable_pt_lim_id _)).
+    ring_simplify in H0.
+    exact H0.
+  } {
+    pose proof (derivable_pt_lim_mult (const v0) id v1 0 1).
+    specialize (H0 (derivable_pt_lim_const _ _) (derivable_pt_lim_id _)).
+    ring_simplify in H0.
+    exact H0.
+  } {
+    destruct Req_EM_T; try contradiction; cbn.
+    pose proof (derivable_pt_lim_mult (const v0) id v1 0 1).
+    specialize (H0 (derivable_pt_lim_const _ _) (derivable_pt_lim_id _)).
+    ring_simplify in H0.
+    exact H0.
+  }
+Qed.
+Global Opaque δ1_partial_deriv δ2_partial_deriv.
+
+Lemma δ1_partially_derivable op :
+  partially_derivable (δ1 op).
+Proof.
+  intros v0 junk H.
+  exists (δ1_partial_deriv op v0).
+  apply δ1_partial_deriv_correct; auto.
+Qed.
+
+Lemma δ2_partially_derivable op v0 :
+  partially_derivable (δ2 op v0).
+Proof.
+  intros v1 junk H.
+  exists (δ2_partial_deriv op v0 v1).
+  apply δ2_partial_deriv_correct; auto.
+Qed.
 
 (* u for untyped *)
 Inductive u_expr :=
@@ -214,6 +361,7 @@ Inductive u_expr :=
 | u_factor (u : u_expr)
 | u_sample
 | u_observe (u0 u1 : u_expr)
+| u_unop (op : unop) (u : u_expr)
 | u_binop (op : binop) (ul ur : u_expr)
 | u_real (r : R)
 | u_lam (τ : Ty) (body : {bind u_expr})
@@ -266,11 +414,16 @@ Inductive expr (Γ : Env Ty) : Ty -> Effect -> Type :=
             (e0 : expr Γ ℝ ϕ0)
             (e1 : expr Γ ℝ ObsR)
   : expr Γ ℝ ObsNone
-| e_binop {ϕl ϕr}
+| e_unop {ϕ}
+         (op : unop)
+         (e : expr Γ ℝ ϕ)
+  : expr Γ ℝ ϕ
+| e_binop {ϕl ϕr ϕ}
           (op : binop)
+          (Hϕ : ϕ = δϕ2 op ϕr)
           (el : expr Γ ℝ ϕl)
           (er : expr Γ ℝ ϕr)
-  : expr Γ ℝ ϕr
+  : expr Γ ℝ ϕ
 | e_hide_observable (e : expr Γ ℝ ObsR)
   : expr Γ ℝ ObsNone
 .
@@ -282,7 +435,8 @@ Arguments e_app {Γ τa τr ϕa ϕf ϕ} ef ea.
 Arguments e_factor {Γ ϕ} e.
 Arguments e_sample {Γ}.
 Arguments e_observe {Γ ϕ0} e0 e1.
-Arguments e_binop {Γ ϕl ϕr} op el er.
+Arguments e_unop {Γ ϕ} op e.
+Arguments e_binop {Γ ϕl ϕr ϕ} op Hϕ el er.
 Arguments e_hide_observable {Γ} e.
 
 Fixpoint erase {Γ τ ϕ} (e : expr Γ τ ϕ) : u_expr :=
@@ -294,7 +448,8 @@ Fixpoint erase {Γ τ ϕ} (e : expr Γ τ ϕ) : u_expr :=
   | e_factor e => u_factor (erase e)
   | e_sample => u_sample
   | e_observe el er => u_observe (erase el) (erase er)
-  | e_binop op el er => u_binop op (erase el) (erase er)
+  | e_unop op e => u_unop op (erase e)
+  | e_binop op Hϕ el er => u_binop op (erase el) (erase er)
   | e_hide_observable e => u_hide_observable (erase e)
   end.
 Coercion erase' {Γ τ ϕ} : expr Γ τ ϕ -> u_expr := erase.
@@ -324,7 +479,10 @@ Proof.
     inject H.
     auto.
   } {
-    eapply IHe0_2; eauto.
+    eapply IHe0; eauto.
+  } {
+    edestruct IHe0_2; eauto; subst.
+    auto.
   }
 Qed.
 
@@ -355,8 +513,13 @@ Proof.
     inject H.
     rewrite (IHx1 y1), (IHx2 y2); auto.
   } {
+    rewrite (IHx y); auto.
+  } {
     pose proof expr_type_unique x1 y1 H1.
+    pose proof expr_type_unique x2 y2 H2.
     inject H.
+    inject H0.
+    d_destruct Hϕ0.
     rewrite (IHx1 y1), (IHx2 y2); auto.
   } {
     erewrite IHx; eauto.
@@ -415,6 +578,7 @@ Ltac inject_erased :=
      | [ H : erase ?e = u_factor _ |- _ ] => go e H
      | [ H : erase ?e = u_sample |- _ ] => expr_destruct e; try inject H
      | [ H : erase ?e = u_observe _ _ |- _ ] => go e H
+     | [ H : erase ?e = u_unop _ _ |- _ ] => go e H
      | [ H : erase ?e = u_binop _ _ _ |- _ ] => go e H
      | [ H : erase ?e = u_real _ |- _ ] => go e H
      | [ H : erase ?e = u_lam _ _ |- _ ] => go e H
@@ -443,6 +607,19 @@ Ltac elim_sig_exprs :=
            | [ |- context [ @proj1_sig (expr ?Γ ?τ ?ϕ) _ ?pair ] ] =>
              doit Γ τ pair ltac:(cbn)
            end.
+
+Ltac generalize_refl target :=
+  let t := fresh "t" in
+  let t' := fresh "t" in
+  let Ht := fresh "Ht" in
+  set (t' := target) in *;
+  set (Ht := @eq_refl _ t') in *;
+  clearbody Ht;
+  set (t := t') in *;
+  change (t = t') in Ht;
+  clearbody t;
+  subst t'.
+
 Definition is_val (e : u_expr) : Prop :=
   match e with
   | u_real _ | u_lam _ _ => True
@@ -705,7 +882,8 @@ Fixpoint weaken {Γ τ ϕ} (e : expr Γ τ ϕ) Γw : expr (Γ ++ Γw) τ ϕ :=
   | e_factor e => e_factor (weaken e Γw)
   | e_sample => e_sample
   | e_observe e0 e1 => e_observe (weaken e0 Γw) (weaken e1 Γw)
-  | e_binop op el er => e_binop op (weaken el Γw) (weaken er Γw)
+  | e_unop op e => e_unop op (weaken e Γw)
+  | e_binop op Hϕ el er => e_binop op Hϕ (weaken el Γw) (weaken er Γw)
   | e_hide_observable e => e_hide_observable (weaken e Γw)
   end.
 
@@ -764,8 +942,14 @@ Proof.
     rewrite e, e0.
     auto.
   } {
+    edestruct IHe; eauto.
+    eexists (e_unop op _).
+    simpl.
+    rewrite e0.
+    auto.
+  }{
     edestruct IHe1, IHe2; eauto.
-    eexists (e_binop op _ _).
+    eexists (e_binop op Hϕ _ _).
     simpl.
     rewrite e, e0.
     auto.
@@ -919,8 +1103,14 @@ Proof.
     rewrite e, e0.
     reflexivity.
   } {
+    edestruct IHe; auto.
+    exists (e_unop op x).
+    simpl.
+    rewrite e0.
+    reflexivity.
+  } {
     edestruct IHe1, IHe2; auto.
-    exists (e_binop op x x0).
+    exists (e_binop op Hϕ x x0).
     simpl.
     rewrite e, e0.
     reflexivity.
@@ -982,16 +1172,26 @@ Inductive eval (σ : Entropy) : forall {τ ϕ} (e : expr · τ ϕ) (v : val τ) 
   : (EVAL (π 0 σ) ⊢ e0 ⇓ v, w0) ->
     (OBS_EVAL (π 1 σ) ⊢ e1 ⇓ v, w1) ->
     (EVAL σ ⊢ e_observe e0 e1 ⇓ v, w0 * w1)
+| EUnop {op : unop}
+        {ϕ}
+        {e0 : expr · ℝ ϕ}
+        {r0 r : R}
+        {is_v0}
+        {w0 : R+}
+  : (EVAL σ ⊢ e0 ⇓ mk_val (e_real r0) is_v0, w0) ->
+    δ1 op r0 = Some r ->
+    (EVAL σ ⊢ e_unop op e0 ⇓ v_real r, w0)
 | EBinop {op : binop}
-         {ϕ0 ϕ1}
+         {ϕ0 ϕ1 ϕ}
          {e0 : expr · ℝ ϕ0}
          {e1 : expr · ℝ ϕ1}
-         {r0 r1 : R}
-         {is_v0 is_v1}
+         {r0 r1 r : R}
+         {is_v0 is_v1 Hϕ}
          {w0 w1 : R+}
   : (EVAL (π 0 σ) ⊢ e0 ⇓ mk_val (e_real r0) is_v0, w0) ->
     (EVAL (π 1 σ) ⊢ e1 ⇓ mk_val (e_real r1) is_v1, w1) ->
-    (EVAL σ ⊢ e_binop op e0 e1 ⇓ v_real (δ op r0 r1), w0 * w1)
+    δ2 op r0 r1 = Some r ->
+    (EVAL σ ⊢ e_binop (ϕ := ϕ) op Hϕ e0 e1 ⇓ v_real r, w0 * w1)
 | EHide {v w}
         {e : expr · ℝ ObsR}
   : (EVAL σ ⊢ e ⇓ v, w) ->
@@ -1010,15 +1210,21 @@ eval_obs (σ : Entropy) : forall (e : expr · ℝ ObsR) (v : val ℝ) (w : R+), 
     (EVAL (π 1 σ) ⊢ ea ⇓ va, w1) ->
     (OBS_EVAL (π 2 σ) ⊢ proj1_sig (ty_subst1 body va) ⇓ vr, w2) ->
     (OBS_EVAL σ ⊢ e_app ef ea ⇓ vr, w0 * w1 * w2)
+| OUnop {op : unop}
+        {e0 : expr · ℝ ObsR}
+        {r0 r : R} {is_v0} {w0 : R+}
+  : δ1_inv op r = Some r0 ->
+    (OBS_EVAL σ ⊢ e0 ⇓ mk_val (e_real r0) is_v0, w0) ->
+    (OBS_EVAL σ ⊢ e_unop op e0 ⇓ v_real r, w0 / ennr_abs (δ1_partial_deriv op r0))
 | OBinop {op : binop}
          {ϕ0}
          {e0 : expr · ℝ ϕ0}
          {e1 : expr · ℝ ObsR}
-         {r0 r1 r : R} {is_v0 is_v1} {w0 w1 : R+}
+         {r0 r1 r : R} {is_v0 is_v1 Hϕ} {w0 w1 : R+}
   : (EVAL (π 0 σ) ⊢ e0 ⇓ mk_val (e_real r0) is_v0, w0) ->
-    δ_unique_inv op r0 r = Some r1 ->
+    δ2_inv op r0 r = Some r1 ->
     (OBS_EVAL (π 1 σ) ⊢ e1 ⇓ mk_val (e_real r1) is_v1, w1) ->
-    (OBS_EVAL σ ⊢ e_binop op e0 e1 ⇓ v_real r, w0 * w1 / ennr_abs (δ_partial_deriv_2 op r0 r1))
+    (OBS_EVAL σ ⊢ e_binop op Hϕ e0 e1 ⇓ v_real r, w0 * w1 / ennr_abs (δ2_partial_deriv op r0 r1))
 | OSample {r : R}
   : (0 <= r <= 1)%R ->
     (OBS_EVAL σ ⊢ e_sample ⇓ v_real r, 1)

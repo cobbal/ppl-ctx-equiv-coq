@@ -36,23 +36,27 @@ Module DeterminismBase <: BASE.
   Arguments eval_ex_unique {τ ϕ V_rel_τ e σ} v w Hv Heval Hu.
   Arguments eval_not_ex {τ ϕ V_rel_τ e σ} H.
 
-  Inductive E_rel'_obs_eval (e : expr · ℝ ObsR) σ (v : val ℝ) : Type :=
+  (* Note: this type is only inhabited when τ = ℝ and ϕ = ObsR *)
+  Inductive E_rel'_obs_eval σ (v : val ℝ) : forall {ϕ τ} (e : expr · τ ϕ), Type :=
   | oeval_ex_unique
+      e
       (w : R+)
       (Heval : OBS_EVAL σ ⊢ e ⇓ v, w)
-      (Hu : forall w', (OBS_EVAL σ ⊢ e ⇓ v, w' -> w' = w))
+      (Hu : forall w', (OBS_EVAL σ ⊢ e ⇓ v, w' -> w' = w)) :
+      E_rel'_obs_eval σ v e
   | oeval_not_ex
-      (H : {w : R+ & OBS_EVAL σ ⊢ e ⇓ v, w} -> False).
-  Arguments oeval_ex_unique {e σ v} w Heval Hu.
-  Arguments oeval_not_ex {e σ v} H.
+      e
+      (H : {w : R+ & OBS_EVAL σ ⊢ e ⇓ v, w} -> False) :
+      E_rel'_obs_eval σ v e.
+  Arguments oeval_ex_unique {σ v e} w Heval Hu.
+  Arguments oeval_not_ex {σ v e} H.
 
   (* well this is clear... *)
   Definition E_rel' τ ϕ {V_rel_τ : rel (val τ)} : rel (expr · τ ϕ) :=
     fun e => forall σ,
         @E_rel'_eval τ ϕ V_rel_τ e σ ⨉
-        forall (Hτ : τ = ℝ) (Hϕ : ϕ = ObsR) (v : val ℝ),
-          E_rel'_obs_eval
-            (rew [fun t => expr · t ObsR] Hτ in rew [expr · τ] Hϕ in e) σ v.
+                     forall (Hτ : τ = ℝ) (Hϕ : ϕ = ObsR) (v : val ℝ),
+                       E_rel'_obs_eval σ v e.
 End DeterminismBase.
 
 Module DeterminismCases : CASES DeterminismBase.
@@ -145,10 +149,8 @@ Module DeterminismCases : CASES DeterminismBase.
           cbn in *.
           destruct Hbody as [_ Hbody].
           specialize (Hbody eq_refl eq_refl v).
-          destruct Hbody as [wr Er ur | not_ex]. {
-            cbn in *.
-
-            apply (oeval_ex_unique (wf * wa * wr)). {
+          d_destruct Hbody. {
+            apply (oeval_ex_unique (wf * wa * w)). {
               econstructor; eauto.
             } {
               intros.
@@ -160,14 +162,14 @@ Module DeterminismCases : CASES DeterminismBase.
               d_destruct H0.
               elim_sig_exprs.
               elim_erase_eqs.
-              specialize (ur _ H).
-              inject ur.
+              specialize (Hu _ H).
+              inject Hu.
               auto.
             }
           } {
             right.
-            contradict not_ex.
-            destruct not_ex as [w E].
+            contradict H.
+            destruct H as [w E].
             d_destruct E; try absurd_val.
 
             specialize (uf _ _ e).
@@ -182,10 +184,9 @@ Module DeterminismCases : CASES DeterminismBase.
         }
       } {
         split;
-          right;
+          intros;
           subst;
-          try subst e';
-          cbn in *;
+          right;
           contradict not_ex.
         {
           destruct not_ex as [[v w] E].
@@ -199,10 +200,9 @@ Module DeterminismCases : CASES DeterminismBase.
       }
     } {
       split;
-        right;
+        intros;
         subst;
-        try subst e';
-        cbn in *;
+        right;
         contradict not_ex.
       {
         destruct not_ex as [[v w] E].
@@ -269,9 +269,6 @@ Module DeterminismCases : CASES DeterminismBase.
         auto.
     } {
       intros.
-      replace Hτ with (eq_refl ℝ) in * by (apply UIP_dec, ty_eq_dec).
-      replace Hϕ with (eq_refl ObsR) in * by (apply UIP_dec, effect_eq_dec).
-      cbn.
       clear Hτ Hϕ.
 
       destruct_val v.
@@ -311,24 +308,23 @@ Module DeterminismCases : CASES DeterminismBase.
     destruct X as [[vl wl Hl El ul | not_ex] _]. {
       destruct X0 as [_ X0].
       specialize (X0 eq_refl eq_refl vl).
-      cbn in X0.
-      destruct X0 as [wr Er ur | not_ex]. {
-        apply (eval_ex_unique vl (wl * wr)); auto. {
+      d_destruct X0. {
+        apply (eval_ex_unique vl (wl * w)); auto. {
           constructor; auto.
         } {
           intros.
           d_destruct H; try absurd_val.
           specialize (ul _ _ H).
           inject ul.
-          specialize (ur _ e).
-          inject ur.
+          specialize (Hu _ e).
+          inject Hu.
           auto.
         }
       } {
         right.
-        contradict not_ex.
+        contradict H.
 
-        destruct not_ex as [[v w] ?].
+        destruct H as [[v w] ?].
         d_destruct y; try absurd_val.
         specialize (ul _ _ y).
         inject ul.
@@ -344,10 +340,101 @@ Module DeterminismCases : CASES DeterminismBase.
     }
   Qed.
 
-  Lemma case_binop : forall ϕl ϕr op el er,
+  Lemma case_unop : forall ϕ op e,
+      E_rel ℝ ϕ e ->
+      E_rel ℝ _ (e_unop op e).
+  Proof.
+    repeat intro.
+    specialize (X σ).
+
+    split. {
+      destruct X as [[v w Hv E u | not_ex] _]. {
+        destruct_val v.
+        remember (δ1 op r).
+        destruct o. {
+          apply (eval_ex_unique (v_real r0) w); auto. {
+            econstructor; eauto.
+          } {
+            intros.
+            d_destruct H; try absurd_val.
+            destruct (u _ _ H); subst.
+            inject H0.
+            rewrite <- Heqo in e1.
+            inject e1.
+            auto.
+          }
+        } {
+          right.
+          intros.
+          destruct X as [[v' w'] E'].
+          d_destruct E'; try absurd_val.
+          specialize (u _ _ E').
+          destruct u.
+          inject H.
+          rewrite <- Heqo in e1.
+          discriminate e1.
+        }
+      } {
+        eapply eval_not_ex. {
+          intros [[v w] E].
+          d_destruct E; try absurd_val.
+          destruct is_v0.
+          contradict not_ex.
+          eexists (_, _); eauto.
+        }
+      }
+    } {
+      destruct X as [_ X].
+      intros.
+      subst.
+      d_destruct Hτ.
+      specialize (X eq_refl eq_refl).
+      cbn in *.
+
+      destruct_val v.
+
+      remember (δ1_inv op r) as rr.
+      destruct rr as [rr |]. {
+        specialize (X (v_real rr)).
+        d_destruct X. {
+          eapply oeval_ex_unique. {
+            econstructor; eauto.
+          } {
+            intros.
+
+            d_destruct H; try absurd_val.
+            rewrite <- Heqrr in e1.
+            inject e1.
+            destruct is_v0.
+
+            destruct (Hu _ H).
+            reflexivity.
+          }
+        } {
+          apply oeval_not_ex.
+          intros [w' E'].
+          contradict H.
+          d_destruct E'.
+          destruct is_v0.
+          rewrite <- Heqrr in e1.
+          inject e1.
+          eauto.
+        }
+      } {
+        eapply oeval_not_ex. {
+          intros [w' E'].
+          d_destruct E'.
+          rewrite <- Heqrr in e1.
+          discriminate e1.
+        }
+      }
+    }
+  Qed.
+
+  Lemma case_binop : forall ϕl ϕr ϕ op Hϕ el er,
       E_rel ℝ ϕl el ->
       E_rel ℝ ϕr er ->
-      E_rel ℝ _ (e_binop op el er).
+      E_rel ℝ ϕ (e_binop op Hϕ el er).
   Proof.
     repeat intro.
     specialize (X (π 0 σ)).
@@ -359,18 +446,35 @@ Module DeterminismCases : CASES DeterminismBase.
           destruct_val vl.
           destruct_val vr.
 
-          apply (eval_ex_unique (v_real (δ op r r0)) (wl * wr)); auto. {
-            econstructor; eauto.
+          remember (δ2 op r r0).
+          destruct o. {
+            apply (eval_ex_unique (v_real r1) (wl * wr)); auto. {
+              econstructor; eauto.
+            } {
+              intros.
+
+              d_destruct H; try absurd_val.
+
+              destruct (ul _ _ H); subst.
+              destruct (ur _ _ H0); subst.
+              inject H1.
+              inject H2.
+              rewrite <- Heqo in e.
+              inject e.
+              auto.
+            }
           } {
-            intros.
+            apply eval_not_ex.
+            intros [[v w] E].
+            d_destruct E; try absurd_val.
 
-            d_destruct H; try absurd_val.
-
-            destruct (ul _ _ H); subst.
-            destruct (ur _ _ H0); subst.
+            destruct (ul _ _ E1).
+            destruct (ur _ _ E2).
+            inject H.
             inject H1.
-            inject H2.
-            auto.
+
+            rewrite <- Heqo in e.
+            discriminate e.
           }
         } {
           right.
@@ -385,18 +489,39 @@ Module DeterminismCases : CASES DeterminismBase.
         destruct X0 as [_ X0].
         destruct_val vl.
         destruct_val v.
-        remember (δ_unique_inv op r r0) as rr.
-        replace Hτ with (eq_refl ℝ) in * by (apply UIP_dec, ty_eq_dec).
-        cbn in *.
+        assert (ϕr = ObsR). {
+          destruct ϕr; auto.
+          destruct op; discriminate Hϕ0.
+        }
+        subst ϕr.
+        assert (binop_effect op = ObsR). {
+          setoid_rewrite effect_compose_id_r in Hϕ0.
+          auto.
+        }
+
+        enough (E_rel'_obs_eval σ (v_real r0) (rew Hϕ0 in (e_binop op eq_refl el er))). {
+          d_destruct Hϕ0.
+          exact H0.
+        }
+
+        d_destruct Hτ.
+        remember (δ2_inv op r r0) as rr.
         destruct rr as [rr |]. {
+          intros.
+          pose proof (δ2_inv_sound (eq_sym Heqrr)).
+
           specialize (X0 eq_refl eq_refl (v_real rr)).
           cbn in *.
-          destruct X0 as [wr Er ur | not_ex]. {
+          d_destruct X0. {
             eapply oeval_ex_unique. {
-              econstructor; eauto.
+              destruct op; cbn in Hϕ0; d_destruct Hϕ0;
+                econstructor; eauto.
             } {
               intros.
-              d_destruct H.
+              generalize_refl (δϕ2 op ObsR).
+              subst.
+              cbn in *.
+              d_destruct H1.
               destruct is_v0, is_v1.
 
               specialize (ul _ _ e).
@@ -404,17 +529,18 @@ Module DeterminismCases : CASES DeterminismBase.
               d_destruct H.
               subst.
 
-              rewrite e2 in *.
-              inject Heqrr.
+              rewrite <- Heqrr in e2.
+              inject e2.
 
-              specialize (ur _ H1).
+              specialize (Hu _ H3).
               subst.
               auto.
             }
           } {
             right.
-            contradict not_ex.
-            destruct not_ex as [w H].
+            contradict H.
+            destruct H as [w H].
+            generalize_refl (δϕ2 op ObsR); subst; cbn in *.
             d_destruct H.
             destruct is_v0, is_v1.
 
@@ -422,14 +548,17 @@ Module DeterminismCases : CASES DeterminismBase.
             d_destruct ul.
             d_destruct H.
             subst.
-            rewrite e2 in *.
-            inject Heqrr.
+
+            rewrite <- Heqrr in e2.
+            inject e2.
+
             eexists; eauto.
           }
         } {
           right.
-          intros [w H].
-          d_destruct H.
+          destruct op; d_destruct Heqrr.
+          intros [w H0].
+          d_destruct (Hϕ0, H0).
           destruct is_v0, is_v1.
 
           specialize (ul _ _ e).
@@ -441,20 +570,23 @@ Module DeterminismCases : CASES DeterminismBase.
         }
       }
     } {
-      split;
-        right;
-        subst;
-        try subst e';
-        cbn in *;
+      split. {
+        right.
         contradict not_ex.
-      {
         destruct not_ex as [[v w] E].
         d_destruct E; try absurd_val.
         eexists (_, _); eauto.
       } {
-        replace Hτ with (eq_refl ℝ) in * by (apply UIP_dec, ty_eq_dec).
-        cbn in *.
+        intros.
+        enough (E_rel'_obs_eval σ v (rew Hϕ0 in (e_binop op Hϕ el er))). {
+          d_destruct Hϕ0.
+          exact H.
+        }
+        right.
+        contradict not_ex.
         destruct not_ex as [w E].
+        subst.
+        generalize_refl (δϕ2 op ϕr); subst; cbn in *.
         d_destruct E; try absurd_val.
         eexists (_, _); eauto.
       }
@@ -543,7 +675,7 @@ Proof.
   elim_sig_exprs.
   elim_erase_eqs.
 
-  destruct fp. {
+  d_destruct fp. {
     eapply obs_eval_dec_ex_unique; eauto.
   } {
     apply obs_eval_dec_not_ex.
