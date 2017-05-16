@@ -111,26 +111,20 @@ Definition δ2 (op : binop) : R -> R -> option R :=
   (* | Mult => Rmult *)
   end.
 
-(** It becomes useful for dealing with the standard library derivatives to know
-    partiality before applying the last argument. Kinda a hack, but oh well. *)
+Definition opt_dom {X Y} (f : X -> option Y) : X -> bool :=
+  fun x => if f x then true else false.
+Arguments opt_dom {X Y} f x /.
 
-Definition weird_δ2 (op : binop) : R -> option (R -> R) :=
-  match op with
-  | Add => fun x => Some (fun y => x + y)%R
-  | Mult => fun x => Some (fun y => x * y)%R
-  | CheckedNonZeroMult =>
-    fun x =>
-      if Req_EM_T x 0
-      then None
-      else Some (fun y => x * y)%R
-  end.
+Definition δ1_dom op := opt_dom (δ1 op).
+Definition δ1' op r := fromOption R0 (δ1 op r).
 
-Lemma weird_δ2_correct op x y :
-  δ2 op x y = weird_δ2 op x <*> Some y.
-Proof.
-  destruct op; cbn; auto.
-  destruct Req_EM_T; auto.
-Qed.
+Definition δ2_dom op r0 := opt_dom (δ2 op r0).
+Definition δ2' op r0 r1 := fromOption R0 (δ2 op r0 r1).
+
+Arguments δ1_dom op /.
+Arguments δ2_dom op r0 /.
+Arguments δ1' op r /.
+Arguments δ2' op r0 r1 /.
 
 (* if {v0} = op^-1(·)({v})
    then return v0 *)
@@ -151,6 +145,18 @@ Definition δ2_inv (op : binop) (v0 : R) (v : R) : option R :=
      then None
      else Some (v / v0)
    end)%R.
+
+Definition δ1'_inv op r := fromOption R0 (δ1_inv op r).
+Definition δ2'_inv op r0 r1 := fromOption R0 (δ2_inv op r0 r1).
+
+Arguments δ1'_inv op r /.
+Arguments δ2'_inv op r0 r1 /.
+
+Definition δ1'_im op := opt_dom (δ1_inv op).
+Definition δ2'_im op r0 := opt_dom (δ2_inv op r0).
+
+Arguments δ1'_im op /.
+Arguments δ2'_im op r0 /.
 
 Lemma δ1_inv_sound {op v0 v} :
   δ1_inv op v = Some v0 ->
@@ -230,37 +236,6 @@ Proof.
 Qed.
 Global Opaque δ1_inv δ2_inv.
 
-(* Lemma δ1_unique_inv_uniqueness op v v0 v0' : *)
-(*   δ1 op v0 = Some v -> *)
-(*   δ1_unique_inv op v = Some v0' -> *)
-(*   v0 = v0'. *)
-(* Proof. *)
-(*   intros. *)
-(*   apply δ1_unique_inv_is_complete in H. *)
-(*   rewrite H in H0. *)
-(*   inject H0. *)
-(*   reflexivity. *)
-(* Qed. *)
-
-(* Lemma δ2_unique_inv_uniqueness op v v0 v1 v1' : *)
-(*   δ2 op v0 v1 = Some v -> *)
-(*   δ2_unique_inv op v0 v = Some v1' -> *)
-(*   v1 = v1'. *)
-(* Proof. *)
-(*   intros. *)
-(*   destruct op; cbn in *; try destruct Req_EM_T; try inject H0; try inject H; field; auto. *)
-(* Qed. *)
-
-(* Lemma δ2_unique_inv_minimal op v v0 v1 : *)
-(*   δ2 op v0 v1 = None -> *)
-(*   δ2_inv op v0 v <> Some v1. *)
-(* Proof. *)
-(*   repeat intro. *)
-(*   apply δ2_inv_sound in H0. *)
-(*   rewrite H in H0. *)
-(*   discriminate. *)
-(* Qed. *)
-
 Definition δ1_partial_deriv (op : unop) (v0 : R) : R :=
   match op with
   | Log => / v0
@@ -273,33 +248,42 @@ Definition δ2_partial_deriv (op : binop) (v0 v1 : R) : R :=
   | Mult | CheckedNonZeroMult => v0
   end.
 
+Definition δ1'_partial_deriv_inv op v : R+ :=
+  if δ1_inv op v
+  then / ennr_abs (δ1_partial_deriv op (δ1'_inv op v))
+  else 0.
+
+Definition δ2'_partial_deriv_inv op v0 v : R+ :=
+  if δ2_inv op v0 v
+  then / ennr_abs (δ2_partial_deriv op v0 (δ2'_inv op v0 v))
+  else 0.
+
 Lemma δ1_partial_deriv_correct op v0 :
   forall junk,
-    δ1 op v0 <> None ->
+    δ1_dom op v0 = true ->
     derivable_pt_lim (fun v0' : R => fromOption junk (δ1 op v0')) v0 (δ1_partial_deriv op v0).
 Proof.
   intros.
   destruct op. {
-    cbn in H.
-    destruct Rlt_dec; try contradiction.
+    cbn in *.
+    destruct Rlt_dec; inversion_clear H.
     hnf; intros.
-    destruct (derivable_pt_lim_ln _ r eps H0) as [δ Hδ].
+    destruct (derivable_pt_lim_ln _ r eps H) as [δ Hδ].
     assert (0 < Rmin δ v0)%R. {
       destruct δ; cbn in *.
       unfold Rmin.
       destruct Rle_dec; auto.
     }
-    exists (mkposreal _ H1); cbn; clear H1.
+    exists (mkposreal _ H0); cbn; clear H0.
     intros.
     assert (Rabs h < δ)%R. {
-      clear_except H2.
+      clear_except H1.
       unfold Rmin in *.
       destruct Rle_dec;
         try apply Rnot_le_lt in n;
         try Fourier.fourier.
     }
-    specialize (Hδ h H1 H3).
-    unfold compose.
+    specialize (Hδ h H0 H2).
     destruct (Rlt_dec 0 v0); try contradiction.
     destruct Rlt_dec. {
       exact Hδ.
@@ -315,7 +299,7 @@ Qed.
 
 Lemma δ2_partial_deriv_correct op v0 v1 :
   forall junk,
-    δ2 op v0 v1 <> None ->
+    δ2_dom op v0 v1 = true ->
     derivable_pt_lim (fun v1' : R => fromOption junk (δ2 op v0 v1')) v1 (δ2_partial_deriv op v0 v1).
 Proof.
   intros.
@@ -330,7 +314,7 @@ Proof.
     ring_simplify in H0.
     exact H0.
   } {
-    destruct Req_EM_T; try contradiction; cbn.
+    destruct Req_EM_T; try discriminate; cbn.
     pose proof (derivable_pt_lim_mult (const v0) id v1 0 1).
     specialize (H0 (derivable_pt_lim_const _ _) (derivable_pt_lim_id _)).
     ring_simplify in H0.
@@ -339,20 +323,20 @@ Proof.
 Qed.
 Global Opaque δ1_partial_deriv δ2_partial_deriv.
 
-Lemma δ1_partially_derivable op :
-  partially_derivable (δ1 op).
+Lemma δ1_partially_derivable op : partially_derivable (δ1_dom op) (δ1' op).
 Proof.
-  intros v0 junk H.
+  intros v0 H.
   exists (δ1_partial_deriv op v0).
-  apply δ1_partial_deriv_correct; auto.
+  apply δ1_partial_deriv_correct.
+  exact H.
 Qed.
 
-Lemma δ2_partially_derivable op v0 :
-  partially_derivable (δ2 op v0).
+Lemma δ2_partially_derivable op v0 : partially_derivable (δ2_dom op v0) (δ2' op v0).
 Proof.
-  intros v1 junk H.
+  intros v1 H.
   exists (δ2_partial_deriv op v0 v1).
-  apply δ2_partial_deriv_correct; auto.
+  apply δ2_partial_deriv_correct.
+  exact H.
 Qed.
 
 (* u for untyped *)

@@ -14,6 +14,12 @@ Open Scope ennr.
 
 Notation "a  '⨉'  b" := (prod a b) (at level 40, left associativity).
 
+Definition fromOption {A} (d : A) (opt : option A) : A :=
+  match opt with
+  | Some a' => a'
+  | None => d
+  end.
+
 Definition option0 : option R+ -> R+ := fromOption 0.
 
 Notation "f ∘ g" := (compose f g).
@@ -134,3 +140,6 @@ Proof.
   apply app_inv_tail in H.
   discriminate H.
 Qed.
+
+Global Arguments const {A B} a b /.
+Global Arguments compose {A B C} g f x /.

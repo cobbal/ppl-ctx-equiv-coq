@@ -34,104 +34,148 @@ Proof.
   trivial.
 Qed.
 
-Lemma δ1_bijection op : partial_bijection (δ1 op) (δ1_inv op).
+Lemma δ1_bijection op : partial_bijection (δ1_dom op) (δ1' op) (δ1'_inv op).
 Proof.
-  split; [apply δ1_inv_complete | apply δ1_inv_sound].
+  repeat intro.
+  cbn in *.
+  remember (δ1 _ _) in *.
+  destruct o; cbn; try discriminate.
+  erewrite δ1_inv_complete; eauto.
+  reflexivity.
 Qed.
 
 Lemma δ1_deriv op :
     is_RN_deriv
-      (meas_option (pushforward lebesgue_measure (δ1 op)))
+      (pushforward (restrict_meas lebesgue_measure (δ1_dom op)) (δ1' op))
       lebesgue_measure
-      (option0 ∘
-         (fun x => ennr_inv <$> (ennr_abs <$> (δ1_partial_deriv op <$> δ1_inv op x)))).
+      (δ1'_partial_deriv_inv op).
 Proof.
   refine (RN_deriv_is_coq_deriv_partial
-            _
-            (δ1_inv op)
+            (δ1_dom op)
+            (δ1' op)
+            (δ1'_inv op)
             _
             (δ1_partially_derivable _)
             (δ1_bijection _)
             _).
+  split; intros. {
+    unfold δ1'_partial_deriv_inv, partially_derive.
+    destruct H as [? [? ?]].
+    cbn in *.
 
-  intros.
+    remember (δ1 _ _).
+    destruct o; cbn in *; try discriminate.
+    subst.
 
-  remember (δ1_inv _ _).
-  destruct o; cbn; auto.
+    erewrite δ1_inv_complete; eauto.
+    cbn.
+    do 2 f_equal.
 
-  unfold partially_derive.
-  set (δ1_partially_derivable _ _ _).
-  clearbody d.
-  apply eq_sym, δ1_inv_sound in Heqo.
-  remember (δ1 op r).
-  destruct o; inject Heqo.
-  destruct d.
-  cbn.
-  repeat f_equal.
+    (* Dependent types can get really ugly sometimes... *)
+    set (δ1_partially_derivable _ _).
+    cbn in *.
+    set (δ1 _ _) in *.
+    clearbody d.
+    pose proof (Heqo : Some y = δ1 op x) as Heqo'.
+    clearbody o.
+    subst o.
+    destruct d; cbn.
 
-  eapply uniqueness_limite; eauto.
-  apply δ1_partial_deriv_correct.
-  rewrite <- Heqo0.
-  discriminate.
+    eapply uniqueness_limite; eauto.
+    apply δ1_partial_deriv_correct.
+    cbn.
+    rewrite <- Heqo'.
+    reflexivity.
+  } {
+    unfold δ1'_partial_deriv_inv.
+    cbn.
+    remember (δ1_inv _ _).
+    destruct o; auto.
+    contradict H.
+    exists r.
+    cbn.
+    erewrite δ1_inv_sound; cbn; eauto.
+  }
 Qed.
-
 
 Lemma δ2_bijection op v0 :
   binop_effect op = ObsR ->
-  partial_bijection (δ2 op v0) (δ2_inv op v0).
+  partial_bijection (δ2_dom op v0) (δ2' op v0) (δ2'_inv op v0).
 Proof.
-  split; [apply δ2_inv_complete | apply δ2_inv_sound]; auto.
+  repeat intro.
+  cbn in *.
+  remember (δ2 _ _ _) in *.
+  destruct o; cbn; try discriminate.
+  pose proof (δ2_inv_complete H (eq_sym Heqo)).
+  unfold δ2'_inv.
+  rewrite H1.
+  reflexivity.
 Qed.
 
 Lemma δ2_deriv op v0 :
   binop_effect op = ObsR ->
   is_RN_deriv
-    (meas_option (pushforward lebesgue_measure (δ2 op v0)))
+    (pushforward (restrict_meas lebesgue_measure (δ2_dom op v0)) (δ2' op v0))
     lebesgue_measure
-    (option0 ∘
-             (fun x => ennr_inv <$> (ennr_abs <$> (δ2_partial_deriv op v0 <$> δ2_inv op v0 x)))).
+    (δ2'_partial_deriv_inv op v0).
 Proof.
   intros.
   refine (RN_deriv_is_coq_deriv_partial
-            _
-            (δ2_inv op v0)
+            (δ2_dom op v0)
+            (δ2' op v0)
+            (δ2'_inv op v0)
             _
             (δ2_partially_derivable _ _)
             (δ2_bijection _ _ H)
             _).
-  intros.
-  remember (δ2_inv _ _ _).
-  destruct o; cbn; auto.
+  split; intros. {
+    unfold δ2'_partial_deriv_inv, partially_derive.
+    destruct H0 as [? [? ?]].
+    cbn in *.
 
-  unfold partially_derive.
-  set (δ2_partially_derivable _ _ _ _).
-  clearbody d.
-  apply eq_sym, δ2_inv_sound in Heqo.
-  remember (δ2 op v0 r).
-  destruct o; inject Heqo.
-  destruct d.
-  cbn.
-  repeat f_equal.
+    remember (δ2 _ _ _).
+    destruct o; cbn in *; try discriminate.
+    subst.
 
-  eapply uniqueness_limite; eauto.
-  apply δ2_partial_deriv_correct.
-  rewrite <- Heqo0.
-  discriminate.
+    erewrite δ2_inv_complete; eauto.
+    cbn.
+    do 2 f_equal.
+
+    set (δ2_partially_derivable _ _ _).
+    cbn in *.
+    set (δ2 _ _ _) in *.
+    clearbody d.
+    pose proof (Heqo : Some y = δ2 op v0 x) as Heqo'.
+    clearbody o.
+    subst o.
+    destruct d; cbn.
+
+    eapply uniqueness_limite; eauto.
+    apply δ2_partial_deriv_correct.
+    cbn.
+    rewrite <- Heqo'.
+    reflexivity.
+  } {
+    unfold δ2'_partial_deriv_inv.
+    cbn.
+    remember (δ2_inv _ _ _).
+    destruct o; auto.
+    contradict H0.
+    exists r.
+    cbn.
+    erewrite δ2_inv_sound; cbn; eauto.
+  }
 Qed.
 
 Lemma lebesgue_δ1_invariant op :
-  score_meas
-    (fun x =>
-       option0 (ennr_inv <$> (ennr_abs <$> (δ1_partial_deriv op <$> (δ1_inv op x)))))
-    lebesgue_measure =
-  meas_option (pushforward lebesgue_measure (δ1 op)).
+  score_meas (δ1'_partial_deriv_inv op) lebesgue_measure =
+  pushforward (restrict_meas lebesgue_measure (δ1_dom op)) (δ1' op).
 Proof.
   setoid_rewrite <- meas_id_right at 3.
   erewrite change_of_variable; revgoals. {
     apply δ1_deriv.
   } {
-    unfold compose.
-    integrand_extensionality x.
+    integrand_extensionality v.
     unfold dirac.
     ring.
   }
@@ -139,19 +183,15 @@ Qed.
 
 Lemma lebesgue_δ2_invariant op v0 :
   binop_effect op = ObsR ->
-  score_meas
-    (fun x =>
-       option0 (ennr_inv <$> (ennr_abs <$> (δ2_partial_deriv op v0 <$> δ2_inv op v0 x))))
-    lebesgue_measure =
-  meas_option (pushforward lebesgue_measure (δ2 op v0)).
+  score_meas (δ2'_partial_deriv_inv op v0) lebesgue_measure =
+  pushforward (restrict_meas lebesgue_measure (δ2_dom op v0)) (δ2' op v0).
 Proof.
   intros.
-  setoid_rewrite <- (meas_id_right (meas_option (pushforward lebesgue_measure (δ2 op v0)))).
+  setoid_rewrite <- meas_id_right at 3.
   erewrite change_of_variable; revgoals. {
     apply δ2_deriv; auto.
   } {
-    unfold compose.
-    integrand_extensionality x.
+    integrand_extensionality v.
     unfold dirac.
     ring.
   }
@@ -429,197 +469,6 @@ Module RadonNikodymCases : CASES RadonNikodymBase.
     }
   Qed.
 
-  Lemma case_binop : forall ϕl ϕr ϕ op Hϕ el er,
-      E_rel ℝ ϕl el ->
-      E_rel ℝ ϕr er ->
-      E_rel ℝ ϕ (e_binop op Hϕ el er).
-  Proof.
-    split; intros. {
-      exact I.
-    } {
-      move Hϕ0 after Hϕ.
-      subst ϕ.
-      d_destruct Hτ.
-      cbn in e'.
-      subst e'.
-
-      assert (ϕr = ObsR) by (destruct ϕr, op; auto); subst.
-      assert (binop_effect op = ObsR) by (destruct op; auto); subst.
-
-      hnf; intros.
-      rewrite by_μe_eq_μEntropy_binop.
-      rewrite obs_help_binop.
-      do 2 setoid_rewrite integration_linear_mult_l.
-      unfold lebesgue_val_measure.
-      rewrite bind_of_pushforward.
-      unfold compose.
-
-      change (μ el >>= (fun vl => μ er >>= binop_in op vl) =
-              lebesgue_measure >>=
-               (fun x => μ el >>=
-                 (fun vl A =>
-                    integration
-                      (fun σ =>
-                         indicator A (v_real x) *
-                         obs_binop_in op vl er (v_real x) σ full_event)
-                      μEntropy))).
-
-      rewrite (tonelli lebesgue_measure); auto.
-      apply peer_inside_the_μ; auto.
-      intros vl _.
-      destruct_val vl.
-
-      clear H el.
-
-      replace (μ er)
-      with (lebesgue_val_measure
-              >>= (fun x A => indicator A x * obs_μ er x full_event));
-        revgoals.
-      {
-        symmetry.
-        destruct H0 as [_ ?].
-        apply (H eq_refl eq_refl).
-      }
-      unfold lebesgue_val_measure.
-      rewrite bind_of_pushforward.
-      rewrite meas_bind_assoc.
-      unfold compose.
-
-      unfold obs_μ.
-      cbn.
-      setoid_rewrite ennr_mul_1_l.
-      setoid_rewrite ennr_mul_comm at 1.
-      setoid_rewrite integration_linear_in_meas.
-
-      transitivity (
-          score_meas
-            (fun x => integration (obs er (v_real x)) μEntropy)
-            lebesgue_measure >>=
-                           (fun (x : R) => binop_in op (v_real r) (v_real x))).
-                           (* (fun (x : R) (ev : Event (val ℝ)) => *)
-                           (*    integration (fun σ : Entropy => obs er (v_real x) σ) μEntropy * *)
-                           (*    op_in op (v_real r) (v_real x) ev)). *)
-      {
-        rewrite bind_of_score.
-        integrand_extensionality x.
-        fold (dirac (v_real x)).
-        rewrite meas_id_left.
-        reflexivity.
-      }
-      cbn.
-
-      setoid_rewrite weird_δ2_correct.
-      remember (weird_δ2 _ _).
-      destruct o; cbn; revgoals. {
-        destruct op; try contradiction; try discriminate.
-        cbn in *.
-        destruct Req_EM_T; try discriminate; subst.
-        transitivity (empty_meas (val ℝ)). {
-          extensionality A.
-          apply integration_of_0.
-        } {
-          extensionality A.
-          cbn.
-          unfold ">>=".
-          replace 0 with (integration (fun _ => 0) lebesgue_measure)
-            by apply integration_of_0.
-          integrand_extensionality x.
-
-          rewrite δ2_inv_checked_fail.
-          unfold const.
-          rewrite <- integration_linear_mult_r.
-          cbn.
-            ring.
-        }
-      } {
-        replace (fun x => dirac (v_real (r0 x))) with (dirac ∘ (v_real ∘ r0))
-          by reflexivity.
-        rewrite <- pushforward_as_bind.
-        rewrite pushforward_compose.
-
-        rewrite <- meas_id_right at 1.
-        rewrite bind_of_pushforward.
-
-        setoid_rewrite <- integration_linear_mult_l.
-
-        transitivity
-          (lebesgue_measure
-             >>=
-             fun (x0 : R) (A : Event (val ℝ)) =>
-               indicator A (v_real x0) *
-               match δ2_inv op r x0 with
-               | Some ri => integration (obs er (v_real ri)) μEntropy
-                                        / ennr_abs (δ2_partial_deriv op r ri)
-               | None => 0
-               end);
-          revgoals.
-        {
-          integrand_extensionality x.
-          f_equal.
-          destruct δ2_inv. {
-            setoid_rewrite integration_linear_mult_r.
-            integrand_extensionality σ.
-            cbn.
-            unfold ennr_div.
-            ring.
-          } {
-            apply eq_sym, integration_of_0.
-          }
-        }
-
-        rewrite push_score' with (g_inv := δ2_inv op r); revgoals. {
-          intros.
-          pose proof weird_δ2_correct op r x.
-          rewrite <- Heqo in H.
-          cbn in H.
-          remember (r0 x).
-          clear Heqo r0 Heqr1.
-
-          erewrite δ2_inv_complete; eauto.
-          reflexivity.
-        }
-
-        rewrite bind_of_score.
-        unfold compose.
-
-        replace (pushforward lebesgue_measure r0)
-        with (meas_option (pushforward lebesgue_measure (δ2 op r))); revgoals. {
-          pose proof weird_δ2_correct op r.
-          rewrite <- Heqo in H.
-          cbn in H.
-          replace (δ2 op r) with (Some ∘ r0); revgoals. {
-            extensionality x.
-            rewrite H.
-            reflexivity.
-          }
-          rewrite <- meas_id_right at 1.
-          rewrite bind_meas_option.
-          rewrite pushforward_compose.
-          rewrite pushforward_as_bind.
-          rewrite meas_bind_assoc.
-          rewrite <- meas_id_right.
-          integrand_extensionality x.
-          unfold compose.
-          rewrite meas_id_left.
-          reflexivity.
-        }
-
-        rewrite <- lebesgue_δ2_invariant; auto.
-
-        unfold score_meas.
-        rewrite meas_bind_assoc.
-        integrand_extensionality x.
-        rewrite integration_linear_in_meas.
-        fold (dirac x).
-        rewrite meas_id_left.
-        destruct δ2_inv; cbn; try ring.
-
-        unfold dirac, ennr_div.
-        ring.
-      }
-    }
-  Qed.
-
   Lemma case_unop : forall ϕ op e,
       E_rel ℝ ϕ e ->
       E_rel ℝ ϕ (e_unop op e).
@@ -695,89 +544,162 @@ Module RadonNikodymCases : CASES RadonNikodymBase.
           reflexivity.
         }
       }
-      transitivity
-      (meas_option
-         (pushforward
-            (score_meas (fun x => integration (obs e (v_real x)) μEntropy) lebesgue_measure)
-            (δ1 op)) >>= (dirac ∘ v_real)).
-      {
-        rewrite bind_meas_option.
-        rewrite pushforward_as_bind.
-        set (score_meas _ _).
-        clearbody m.
-        rewrite meas_bind_assoc.
-        integrand_extensionality x.
-        unfold compose.
-        rewrite meas_id_left.
-        cbn.
-        destruct δ1; reflexivity.
-      }
 
       transitivity
-      (meas_option
          (pushforward
-            (score_meas (fun x =>
-                           match δ1 op x with
-                           | Some _ => 1
-                           | None => 0
-                           end *
-                           integration (obs e (v_real x)) μEntropy) lebesgue_measure)
-            (δ1 op)) >>= (dirac ∘ v_real)).
+            (score_meas (fun x => integration (obs e (v_real x)) μEntropy)
+                        (restrict_meas lebesgue_measure (δ1_dom op)))
+            (δ1' op) >>= (dirac ∘ v_real)).
       {
-        rewrite 2 bind_meas_option.
-        rewrite 2 bind_of_pushforward.
-        unfold flip, compose.
-        unfold score_meas.
-        rewrite 2 meas_bind_assoc.
+        rewrite <- pushforward_as_bind.
+        rewrite <- pushforward_compose.
+        rewrite pushforward_as_bind.
+        unfold restrict_meas, score_meas.
+        rewrite !meas_bind_assoc.
         integrand_extensionality x.
-        rewrite 2 integration_linear_in_meas.
-        rewrite (meas_id_left x).
+
+        unfold compose.
+        cbn.
+        rewrite !integration_linear_in_meas.
+        rewrite !(meas_id_left x).
+        rewrite !integration_linear_in_meas.
+        rewrite !(meas_id_left x).
+
+        unfold indicator; cbn.
         destruct δ1; cbn; ring.
       }
 
-      rewrite (push_score _ _ _ _ (δ1_bijection op)); revgoals. {
-        intros.
-        rewrite H0.
-        ring.
-      }
-
-      rewrite bind_meas_option.
-      rewrite bind_of_score.
-
-      transitivity (
-          meas_option (pushforward lebesgue_measure (δ1 op))
-                      >>=
-                      (fun a ev =>
-                         option0
-                           ((fun x =>
-                               integration (obs e (v_real x)) μEntropy)
-                              <$> (δ1_inv op a)) *
-                         (dirac (v_real a) ev))).
-      {
-        rewrite bind_meas_option.
-        rewrite 2 bind_of_pushforward.
-        integrand_extensionality r.
-        unfold flip, compose.
-        remember (δ1 _ _).
-        destruct o; cbn; try ring.
-        erewrite δ1_inv_complete; eauto.
-        cbn.
-        rewrite <- Heqo.
-        ring.
-      }
-
+      rewrite (push_score _ _ _ _ _ (δ1_bijection op)).
       rewrite <- lebesgue_δ1_invariant.
 
+      rewrite double_score.
       unfold score_meas.
       rewrite meas_bind_assoc.
       integrand_extensionality x.
+
       rewrite integration_linear_in_meas.
       fold (dirac x).
       rewrite meas_id_left.
-      destruct δ1_inv; cbn; try ring.
+      unfold compose, dirac.
+      rewrite ennr_mul_comm.
+      f_equal.
+      unfold δ1'_partial_deriv_inv, δ1'_inv.
+      unfold ennr_div.
+      destruct δ1_inv; cbn in *; ring.
+    }
+  Qed.
 
-      unfold dirac, ennr_div.
-      ring.
+  Lemma case_binop : forall ϕl ϕr ϕ op Hϕ el er,
+      E_rel ℝ ϕl el ->
+      E_rel ℝ ϕr er ->
+      E_rel ℝ ϕ (e_binop op Hϕ el er).
+  Proof.
+    split; intros. {
+      exact I.
+    } {
+      move Hϕ0 after Hϕ.
+      subst ϕ.
+      d_destruct Hτ.
+      cbn in e'.
+      subst e'.
+
+      assert (ϕr = ObsR) by (destruct ϕr, op; auto); subst.
+      assert (binop_effect op = ObsR) by (destruct op; auto); subst.
+
+      hnf; intros.
+      rewrite by_μe_eq_μEntropy_binop.
+      rewrite obs_help_binop.
+      do 2 setoid_rewrite integration_linear_mult_l.
+      unfold lebesgue_val_measure.
+      rewrite bind_of_pushforward.
+      unfold compose.
+
+      setoid_rewrite tonelli at 2; auto.
+      apply peer_inside_the_μ; auto.
+      intros vl _.
+      destruct_val vl.
+      clear H el.
+
+      replace (μ er)
+      with (lebesgue_val_measure
+              >>= (fun x A => indicator A x * obs_μ er x full_event));
+        revgoals.
+      {
+        destruct H0 as [_ ?].
+        symmetry.
+        apply (H eq_refl eq_refl).
+      }
+      unfold lebesgue_val_measure.
+      rewrite bind_of_pushforward.
+      rewrite meas_bind_assoc.
+      unfold compose.
+
+      unfold obs_μ.
+      setoid_rewrite ennr_mul_1_l.
+      setoid_rewrite ennr_mul_comm at 1.
+      setoid_rewrite integration_linear_in_meas.
+
+      transitivity (
+          score_meas
+            (fun x => integration (obs er (v_real x)) μEntropy)
+            lebesgue_measure >>=
+                           (fun (x : R) => binop_in op (v_real r) (v_real x))).
+      {
+        rewrite bind_of_score.
+        integrand_extensionality x.
+        fold (dirac (v_real x)).
+        rewrite meas_id_left.
+        reflexivity.
+      }
+
+      transitivity (pushforward
+                      (score_meas (fun x => integration (obs er (v_real x)) μEntropy)
+                                  (restrict_meas lebesgue_measure (δ2_dom op r)))
+                      (δ2' op r) >>= (dirac ∘ v_real)).
+      {
+        rewrite <- pushforward_as_bind.
+        rewrite <- pushforward_compose.
+        rewrite pushforward_as_bind.
+        unfold restrict_meas, score_meas.
+        rewrite !meas_bind_assoc.
+        integrand_extensionality x.
+
+        unfold compose.
+        rewrite !integration_linear_in_meas.
+        rewrite !(meas_id_left x).
+        rewrite !integration_linear_in_meas.
+        rewrite !(meas_id_left x).
+
+        unfold indicator; cbn.
+        destruct δ2; cbn; ring.
+      }
+
+      rewrite (push_score _ _ _ _ _ (δ2_bijection op r H1)).
+      rewrite <- lebesgue_δ2_invariant; auto.
+
+      rewrite double_score.
+      unfold score_meas.
+      rewrite meas_bind_assoc.
+      integrand_extensionality x.
+
+      rewrite integration_linear_in_meas.
+      fold (dirac x).
+      rewrite meas_id_left.
+      unfold compose, dirac.
+      rewrite ennr_mul_comm.
+      rewrite <- integration_linear_mult_l.
+      f_equal.
+
+      unfold δ2'_partial_deriv_inv.
+      cbn.
+      destruct δ2_inv; cbn. {
+        setoid_rewrite <- integration_linear_mult_r.
+        setoid_rewrite ennr_mul_1_l.
+        reflexivity.
+      } {
+        rewrite integration_of_0.
+        ring.
+      }
     }
   Qed.
 End RadonNikodymCases.

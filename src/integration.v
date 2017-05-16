@@ -23,6 +23,7 @@ Definition ifte {X} (a : bool) (b c : X) := if a then b else c.
 Definition indicator {X} (b : Event X) : X -> R+ := fun x => ifte (b x) 1 0.
 
 Definition full_event {X} : Event X := const true.
+Definition empty_event {X} : Event X := const false.
 
 Axiom μEntropy : Meas Entropy.
 Axiom μEntropy_is_a_probability_measure : μEntropy full_event = 1.
@@ -251,6 +252,58 @@ Proof.
   reflexivity.
 Qed.
 
+Require Import Coq.Logic.ClassicalDescription. (* this import is always a bad sign... *)
+
+Definition restrict_meas {X} (μ : Meas X) (dom : X -> bool) : Meas X :=
+  score_meas (indicator dom) μ.
+
+(* some sanity checking *)
+Lemma restrict_meas_full {X} (μ : Meas X) :
+  restrict_meas μ full_event = μ.
+Proof.
+  extensionality A.
+  unfold restrict_meas, score_meas.
+  replace (fun x => _) with (fun x => @dirac X x). {
+    rewrite meas_id_right.
+    reflexivity.
+  }
+  extensionality x.
+  extensionality A'.
+  cbn.
+  unfold dirac.
+  ring.
+Qed.
+
+Lemma restrict_meas_empty {X} (μ : Meas X) :
+  restrict_meas μ empty_event = empty_meas _.
+Proof.
+  unfold restrict_meas.
+  extensionality A.
+  cbn.
+  unfold score_meas.
+  unfold ">>=".
+  replace (fun a => _) with (@const R+ X 0). {
+    apply integration_of_0.
+  } {
+    extensionality x.
+    cbn.
+    ring.
+  }
+Qed.
+
+Lemma double_score {X} (w0 w1 : X -> R+) μ :
+  score_meas w0 (score_meas w1 μ) = score_meas (fun x => w0 x * w1 x) μ.
+Proof.
+  setoid_rewrite <- meas_id_right at 2.
+  setoid_rewrite <- meas_id_right at 1 2.
+  rewrite !bind_of_score.
+  rewrite meas_bind_assoc.
+  integrand_extensionality x.
+  cbn.
+  rewrite integration_linear_in_meas.
+  rewrite meas_id_left.
+  ring.
+Qed.
 
 Lemma bind_meas_option {A B} μ (f : A -> Meas B) :
   meas_option μ >>= f =
@@ -271,28 +324,44 @@ Proof.
   auto.
 Qed.
 
-Lemma push_score {X Y} (f : X -> R+) (g : X -> option Y) (g_inv : Y -> option X) (μ : Meas X) :
-  partial_bijection g g_inv ->
-  (forall x, g x = None -> f x = 0) ->
-  pushforward (score_meas f μ) g =
-  score_meas (fun y => option0 (f <$> (g_inv o=<< y))) (pushforward μ g).
+Lemma restrict_extensionality {X Y} (dom : X -> bool) (μ : Meas X) (f0 f1 : X -> Meas Y) :
+  (forall x, dom x = true -> f0 x = f1 x) ->
+  restrict_meas μ dom >>= f0 =
+  restrict_meas μ dom >>= f1.
+Proof.
+  intros.
+  unfold restrict_meas, score_meas.
+  rewrite 2 meas_bind_assoc.
+  integrand_extensionality x.
+  rewrite 2 integration_linear_in_meas.
+  unfold indicator.
+  remember (dom x).
+  destruct b; cbn; try ring.
+
+  f_equal.
+  rewrite 2 (meas_id_left x).
+  apply equal_f.
+  auto.
+Qed.
+
+Lemma push_score {X Y} (dom : X -> bool) f (g : X -> Y) g_inv μ :
+  partial_bijection dom g g_inv ->
+  pushforward (score_meas f (restrict_meas μ dom)) g =
+  score_meas (fun y => (f (g_inv y))) (pushforward (restrict_meas μ dom) g).
 Proof.
   intros.
   unfold score_meas.
   rewrite 2 pushforward_as_bind.
-  repeat rewrite meas_bind_assoc.
-  integrand_extensionality x.
+  rewrite !meas_bind_assoc.
+
+  apply restrict_extensionality; intros.
   unfold compose.
-  rewrite meas_id_left.
   rewrite integration_linear_in_meas.
   fold (dirac x).
-  rewrite meas_id_left.
-  remember (g x).
-  destruct o; cbn. {
-    rewrite (proj1 (H x y)); auto.
-  } {
-    rewrite H0; auto.
-  }
+  rewrite !meas_id_left.
+  extensionality A.
+  f_equal.
+  rewrite H; auto.
 Qed.
 
 Lemma push_score' {X Y}
@@ -341,6 +410,7 @@ Proof.
   unfold preimage in f_is_M_measurable.
   exact f_is_M_measurable.
 Qed.
+
 
 (* Lemma 5 *)
 Axiom integration_πL_πR : forall (g : Entropy -> Entropy -> R+),
@@ -462,6 +532,7 @@ Definition Rmonotone (f : R -> R) :=
 
 (* Axiom lebesgue_opp_invariant : lebesgue_measure = pushforward lebesgue_measure Ropp. *)
 
+(* f = dν / dμ *)
 Definition is_RN_deriv_traditional {X} (ν : Meas X) (μ : Meas X) (f : X -> R+) : Prop :=
   forall A,
     ν A = integration (fun x => indicator A x * f x) μ.
@@ -483,17 +554,31 @@ Proof.
   }
 Qed.
 
-(* Is this even true? *)
+Lemma domain_of_inverse {X Y} {dom} {f : X -> Y} {f_inv} :
+  partial_bijection dom f f_inv ->
+  forall {y},
+    imageb f dom y ->
+    dom (f_inv y) = true.
+Proof.
+  intros.
+  destruct H0 as [x [? ?]].
+  subst.
+  rewrite H; auto.
+Qed.
+
 Axiom RN_deriv_is_coq_deriv_partial :
-  forall (f f_inv : R -> option R) (D_f_inv : R -> option R+) (H : partially_derivable f),
-    (* (forall y, f o=<< (f_inv o=<< y) o<= y) -> *)
-    (* (forall x, f_inv o=<< (f o=<< x) o<= x) -> *)
-    partial_bijection f f_inv ->
-    (forall y, D_f_inv y = ennr_inv <$> (ennr_abs <$> (partially_derive f H o=<< (f_inv y)))) ->
+  forall (dom : R -> bool) (f f_inv : R -> R) (D_f_inv : R -> R+)
+         (H : partially_derivable dom f)
+         (H0 : partial_bijection dom f f_inv),
+    (forall y,
+        (imageb f dom y ->
+         D_f_inv y = / (ennr_abs (partially_derive H (f_inv y)))) /\
+        (~ imageb f dom y ->
+         D_f_inv y = 0)) ->
     is_RN_deriv
-      (meas_option (pushforward lebesgue_measure f))
+      (pushforward (restrict_meas lebesgue_measure dom) f)
       lebesgue_measure
-      (option0 ∘ D_f_inv).
+      D_f_inv.
 
 Lemma RN_deriv_is_coq_deriv_total :
   forall (f f_inv : R -> R) (D_f_inv : R -> R+) (H : derivable f),
@@ -506,31 +591,23 @@ Lemma RN_deriv_is_coq_deriv_total :
       D_f_inv.
 Proof.
   intros.
-  pose proof RN_deriv_is_coq_deriv_partial (Some ∘ f) (Some ∘ f_inv) (Some ∘ D_f_inv).
-  unfold compose in *.
-  cbn in *.
-
-  replace (meas_option (pushforward lebesgue_measure (fun x => Some (f x))))
-  with (pushforward lebesgue_measure f)
-    in * by reflexivity.
-
-  unshelve eapply H3; clear H3; intros. {
+  rewrite <- (restrict_meas_full lebesgue_measure) at 1.
+  unshelve eapply RN_deriv_is_coq_deriv_partial with (dom := full_event) (f_inv := f_inv).
+  {
     repeat intro.
-    unfold compose.
-    cbn.
     apply H.
   } {
-    split; intros. {
-      inject H3.
-      rewrite H1.
-      reflexivity.
-    } {
-      inject H3.
-      rewrite H0.
-      reflexivity.
-    }
+    repeat intro.
+    auto.
   } {
-     rewrite H2.
-     reflexivity.
+    split. {
+      intros.
+      apply H2.
+    } {
+      intro.
+      contradict H3.
+      hnf.
+      eexists; split; eauto.
+    }
   }
 Qed.
