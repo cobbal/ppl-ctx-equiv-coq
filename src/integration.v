@@ -568,11 +568,11 @@ Qed.
 
 Axiom RN_deriv_is_coq_deriv_partial :
   forall (dom : R -> bool) (f f_inv : R -> R) (D_f_inv : R -> R+)
-         (H : partially_derivable dom f)
+         (Hf : partially_derivable dom f)
          (H0 : partial_bijection dom f f_inv),
     (forall y,
         (imageb f dom y ->
-         D_f_inv y = / (ennr_abs (partially_derive H (f_inv y)))) /\
+         D_f_inv y = / (ennr_abs (partially_derive Hf (f_inv y)))) /\
         (~ imageb f dom y ->
          D_f_inv y = 0)) ->
     is_RN_deriv
