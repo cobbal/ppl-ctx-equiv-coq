@@ -124,3 +124,14 @@ Proof.
 Qed.
 
 Ltac π_join := repeat rewrite ?π_O_join, ?π_S_join in *.
+
+Lemma dummy_entropy : Entropy.
+Proof.
+  exists R0.
+  split. {
+    apply Rle_refl.
+  } {
+    apply Rlt_le.
+    apply Rlt_0_1.
+  }
+Qed.

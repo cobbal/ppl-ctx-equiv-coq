@@ -7,7 +7,6 @@ Require Import Coq.Logic.JMeq.
 Require Import Coq.Program.Equality.
 Require Import Coq.Program.Basics.
 Require Import nnr.
-Require Import cube.
 Require Export entropy.
 Require Import utils.
 Require Import List.
