@@ -108,20 +108,14 @@ Definition apply_paths (ps : list path) (σ : Entropy) : list Entropy :=
   map (flip apply_path σ) ps.
 Arguments apply_paths !_ _.
 
-Fixpoint split_left (p : path) : list path :=
-  match p with
-  | L :: p' => [p']
-  | _ => []
+Fixpoint split (d : dir) (p : path) : list path :=
+  match d, p with
+  | L, L :: p' => [p']
+  | R, R :: p' => [p']
+  | _, _ => []
   end.
 
-Fixpoint split_right (p : path) : list path :=
-  match p with
-  | R :: p' => [p']
-  | _ => []
-  end.
-
-Definition splits_left := flat_map split_left.
-Definition splits_right := flat_map split_right.
+Definition splits := fun d => flat_map (split d).
 
 Fixpoint integrate_by_entropies (g : list Entropy -> R+) (n : nat) : R+ :=
   match n with
@@ -156,82 +150,51 @@ Proof.
   reflexivity.
 Qed.
 
-Lemma splits_left_max_len {n Δ} :
+Lemma splits_max_len {n Δ} :
   max_list_len Δ <= S n ->
-  max_list_len (splits_left Δ) <= n.
+  forall d,
+    max_list_len (splits d Δ) <= n.
 Proof.
   revert n.
   induction Δ; intros; cbn in *; try omega.
   rewrite @max_list_len_app.
   apply Max.max_lub; eauto using Max.max_lub_r.
   apply Max.max_lub_l in H.
-  induction a as [|[|] ?]; cbn in *; try omega.
-  apply Max.max_lub; omega.
+  induction a as [| [|] ?];
+    destruct d;
+    cbn in *;
+    try apply Max.max_lub;
+    omega.
 Qed.
 
-Lemma splits_left_max_len' {Δ} :
+Lemma splits_max_len' {Δ} :
   0 <> max_list_len Δ ->
-  max_list_len (splits_left Δ) < max_list_len Δ.
-Proof.
-  intros.
-  unfold lt.
-  remember (max_list_len Δ).
-  destruct n; try contradiction.
-  apply le_n_S.
-  apply splits_left_max_len.
-  omega.
-Qed.
-
-Lemma splits_right_max_len {n Δ} :
-  max_list_len Δ <= S n ->
-  max_list_len (splits_right Δ) <= n.
-Proof.
-  revert n.
-  induction Δ; intros; cbn in *; try omega.
-  rewrite @max_list_len_app.
-  apply Max.max_lub; eauto using Max.max_lub_r.
-  apply Max.max_lub_l in H.
-  induction a as [|[|]]; cbn in *; try omega.
-  apply Max.max_lub; omega.
-Qed.
-
-Lemma splits_right_max_len' {Δ} :
-  0 <> max_list_len Δ ->
-  max_list_len (splits_right Δ) < max_list_len Δ.
+  forall d,
+    max_list_len (splits d Δ) < max_list_len Δ.
 Proof.
   intros.
   unfold lt.
   remember (max_list_len Δ).
   destruct n; try omega.
   apply le_n_S.
-  apply splits_right_max_len.
+  apply splits_max_len.
   rewrite Heqn.
   reflexivity.
 Qed.
 
-Lemma in_split_left {p p'} :
-  In p' (split_left p) ->
-  p = L :: p'.
+Lemma in_split {p p' d} :
+  In p' (split d p) ->
+  p = d :: p'.
 Proof.
   intros.
-  destruct p as [|[|]]; cbn in *; intuition idtac.
-  subst.
-  reflexivity.
+  destruct d, p as [|[|]];
+    cbn in *;
+    intuition (subst; trivial).
 Qed.
 
-Lemma in_split_right {p p'} :
-  In p' (split_right p) ->
-  p = R :: p'.
-Proof.
-  intros.
-  destruct p as [|[|]]; cbn in *; intuition idtac.
-  subst.
-  reflexivity.
-Qed.
-
-Lemma in_splits_left {Δ p} :
-  In p (splits_left Δ) ->
-  In (L :: p) Δ.
+Lemma in_splits {Δ p d} :
+  In p (splits d Δ) ->
+  In (d :: p) Δ.
 Proof.
   intros.
   induction Δ; auto.
@@ -239,57 +202,25 @@ Proof.
   apply in_app_or in H.
   intuition idtac.
   left.
-  apply in_split_left; auto.
+  apply in_split; auto.
 Qed.
 
-Lemma in_splits_right {Δ p} :
-  In p (splits_right Δ) ->
-  In (R :: p) Δ.
+Lemma splits_nondup {Δ} :
+  nondup Δ ->
+  forall d,
+    nondup (splits d Δ).
 Proof.
   intros.
-  induction Δ; auto.
-  cbn in *.
-  apply in_app_or in H.
-  intuition idtac.
-  left.
-  apply in_split_right; auto.
-Qed.
-
-Lemma splits_left_nondup {Δ} :
-  nondup Δ ->
-  nondup (splits_left Δ).
-Proof.
   induction Δ; intros; auto.
   inject H.
   rewrite Forall_forall in H2.
   cbn.
   apply paths_nondup_app.
   intuition idtac. {
-    destruct a as [|[|]]; cbn; auto.
+    destruct d, a as [|[|]]; cbn; auto.
   } {
-    apply in_split_left in H0.
-    apply in_splits_left in H1.
-    subst.
-    specialize (H2 _ H1).
-    inject H2.
-    auto.
-  }
-Qed.
-
-Lemma splits_right_nondup {Δ} :
-  nondup Δ ->
-  nondup (splits_right Δ).
-Proof.
-  induction Δ; intros; auto.
-  inject H.
-  rewrite Forall_forall in H2.
-  cbn.
-  apply paths_nondup_app.
-  intuition idtac. {
-    destruct a as [|[|]]; cbn; auto.
-  } {
-    apply in_split_right in H0.
-    apply in_splits_right in H1.
+    apply in_split in H0.
+    apply in_splits in H1.
     subst.
     specialize (H2 _ H1).
     inject H2.
@@ -325,8 +256,8 @@ Fixpoint reinterleave (Δ : list path) (σls σrs : list Entropy) : list Entropy
   end.
 
 Lemma reinterleave_splits Δ σ :
-  (* ~ In [] Δ -> *)
-  reinterleave Δ (apply_paths (splits_left Δ) (πL σ)) (apply_paths (splits_right Δ) (πR σ)) =
+  ~ In [] Δ ->
+  reinterleave Δ (apply_paths (splits L Δ) (πL σ)) (apply_paths (splits R Δ) (πR σ)) =
   apply_paths Δ σ.
 Proof.
   revert σ.
@@ -349,8 +280,8 @@ Lemma split_and_reinterleave g Δ :
        integrate_by_entropies
          (fun σrs =>
             g (reinterleave Δ σls σrs)
-         ) (length (splits_right Δ))
-    ) (length (splits_left Δ)).
+         ) (length (splits R Δ))
+    ) (length (splits L Δ)).
 Proof.
   intros.
 
@@ -410,22 +341,19 @@ Proof.
   }
 
   destruct (in_dec path_eq_dec [] Δ) as [?H | ?H]. {
-    apply nil_in_nondup in H0; auto.
-    subst.
+    rewrite (nil_in_nondup Δ); try assumption.
     reflexivity.
   }
 
   rewrite split_and_reinterleave; auto.
 
   assert (0 <> max_list_len Δ). {
-    destruct Δ as [|[|] ?]; cbn in *; try tauto.
+    destruct Δ as [|[|] Δ]; cbn in *; try tauto.
     destruct (max_list_len Δ); discriminate.
   }
 
-  pose proof splits_left_nondup H0.
-  pose proof splits_right_nondup H0.
-  pose proof splits_left_max_len' H2.
-  pose proof splits_right_max_len' H2.
+  pose proof splits_nondup H0.
+  pose proof splits_max_len' H2.
 
   do 2 (setoid_rewrite <- H; auto).
 
