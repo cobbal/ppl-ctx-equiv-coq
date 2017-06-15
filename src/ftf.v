@@ -27,14 +27,6 @@ Qed.
 Definition path_eq_dec : forall (p0 p1 : path), {p0 = p1} + {p0 <> p1}
   := list_eq_dec (dir_eq_dec).
 
-Lemma tonelli_entropy {A} (f : Entropy -> Entropy -> Meas A) :
-  μEntropy >>= (fun x0 => μEntropy >>= (fun x1 => f x0 x1)) =
-  μEntropy >>= (fun x1 => μEntropy >>= (fun x0 => f x0 x1)).
-Proof.
-  extensionality ev.
-  apply tonelli_sigma_finite; auto.
-Qed.
-
 Ltac spec1 H :=
   let H' := fresh "H" in
   lazymatch type of H with
@@ -47,75 +39,12 @@ Ltac spec1 H :=
   end.
 
 (** "neither is a prefix of the other" *)
-Fixpoint path_conflict (p0 p1 : path) : Prop :=
-  match p0, p1 with
-  | [], _ | _, [] => True
-  | L :: _, R :: _ => False
-  | R :: _, L :: _ => False
-  | _ :: p0', _ :: p1' => path_conflict p0' p1'
-  end.
-
-Inductive FTF :=
-| Leaf (l : path)
-| Node (tL tR : FTF)
+Inductive paths_disjoint : path -> path -> Prop :=
+| disjoint_LR p0 p1 : paths_disjoint (L :: p0) (R :: p1)
+| disjoint_RL p0 p1 : paths_disjoint (R :: p0) (L :: p1)
+| disjoint_tail d p0 p1 : paths_disjoint p0 p1 -> paths_disjoint (d :: p0) (d :: p1)
 .
-
-Infix ";;" := Node (at level 60, right associativity).
-
-Fixpoint conflicts_in (p : path) (f : FTF) : Prop :=
-  match f with
-  | Leaf l => path_conflict p l
-  | Node tL tR => conflicts_in p tL \/ conflicts_in p tR
-  end.
-
-Fixpoint vars_of (f : FTF) : list path :=
-  match f with
-  | Leaf l => [l]
-  | Node tL tR => vars_of tL ++ vars_of tR
-  end.
-
-Inductive nondup : FTF -> Prop :=
-| nondup_leaf l : nondup (Leaf l)
-| nondup_node tL tR :
-    nondup tL ->
-    nondup tR ->
-    (forall pL pR, In pL (vars_of tL) -> In pR (vars_of tR) -> ~ path_conflict pL pR) ->
-    nondup (tL ;; tR).
-
-Lemma path_conflict_sym l0 l1 :
-  path_conflict l0 l1 <-> path_conflict l1 l0.
-Proof.
-  revert l1.
-  induction l0; intros. {
-    induction l1; cbn in *; try tauto.
-    destruct a; tauto.
-  } {
-    destruct a. {
-      induction l1; cbn; try tauto.
-      destruct a; try tauto.
-      apply IHl0.
-    } {
-      induction l1; cbn; try tauto.
-      destruct a; try tauto.
-      apply IHl0.
-    }
-  }
-Qed.
-
-Lemma conflicts_in_reflected_by_path_conflict f p l :
-  In p (vars_of f) ->
-  path_conflict l p ->
-  conflicts_in l f.
-Proof.
-  reverse.
-  induction f; intros. {
-    inject H; tauto.
-  } {
-    cbn in *.
-    apply in_app_or in H.
-    inject H; eauto.
-  }
-Qed.
+Hint Constructors paths_disjoint.
 
 Fixpoint apply_path (p : path) : Entropy -> Entropy :=
   match p with
@@ -123,212 +52,54 @@ Fixpoint apply_path (p : path) : Entropy -> Entropy :=
   | d :: p' => apply_path p' ∘ πd d
   end.
 
-Fixpoint apply_FTF (f : FTF) (σ : Entropy) : Entropy :=
-  match f with
-  | Leaf l => apply_path l σ
-  | fL ;; fR => join (apply_FTF fL σ) (apply_FTF fR σ)
-  end.
-
-Record good (f : FTF) :=
-  mk_good {
-      good_nondup : nondup f;
-      good_pushforward : pushforward μEntropy (apply_FTF f) = μEntropy;
-    }.
-
-Definition comm_FTF : FTF :=
-  Leaf [R] ;; Leaf [L].
-Definition let_comm_FTF : FTF :=
-  Leaf [R; L] ;; Leaf [L] ;; Leaf [R; R].
-Definition assoc_l_FTF : FTF :=
-  (Leaf [L] ;; Leaf [R; L]) ;; Leaf [R; R].
-Definition assoc_r_FTF : FTF :=
-  Leaf [L; L] ;; Leaf [L; R] ;; Leaf [R].
-Definition πR_FTF : FTF := Leaf [R].
-
-Ltac show_concrete_nondup :=
-  repeat constructor;
-  cbn;
-  intros;
-  intuition (subst; auto).
-
-Lemma comm_good : good comm_FTF.
-  split. {
-    show_concrete_nondup.
-  } {
-    hnf.
-    rewrite pushforward_as_bind; cbn.
-    unfold compose, id, Datatypes.id.
-    setoid_rewrite (bind_πL_πR (fun σL σR => dirac (join σR σL))).
-
-    setoid_rewrite tonelli_entropy.
-    setoid_rewrite <- bind_πL_πR.
-    setoid_rewrite join_πL_πR.
-    apply meas_id_right.
-  }
-Qed.
-
-Lemma let_comm_good : good let_comm_FTF.
-Proof.
-  split. {
-    show_concrete_nondup.
-  } {
-    hnf.
-    rewrite pushforward_as_bind; cbn.
-    unfold compose, id, Datatypes.id.
-    setoid_rewrite (bind_πL_πR (fun σL σR => dirac (join (πL σR) (join σL (πR σR))))).
-    setoid_rewrite (bind_πL_πR (fun σLR σRR => dirac (join σLR (join _ σRR)))).
-
-    setoid_rewrite tonelli_entropy at 2.
-    setoid_rewrite <- bind_πL_πR.
-    setoid_rewrite join_πL_πR.
-
-    setoid_rewrite tonelli_entropy.
-    setoid_rewrite <- bind_πL_πR.
-    setoid_rewrite join_πL_πR.
-    apply meas_id_right.
-  }
-Qed.
-
-Lemma assoc_l_good : good assoc_l_FTF.
-Proof.
-  split. {
-    show_concrete_nondup.
-  } {
-    hnf.
-    rewrite pushforward_as_bind; cbn.
-    unfold compose, id, Datatypes.id.
-
-    setoid_rewrite (bind_πL_πR (fun σL σR => dirac (join (join σL (πL σR)) (πR σR)))).
-    setoid_rewrite (bind_πL_πR (fun σLR σRR => dirac (join (join _ σLR) σRR))).
-
-    setoid_rewrite <- bind_πL_πR.
-    setoid_rewrite join_πL_πR.
-    setoid_rewrite <- bind_πL_πR.
-    setoid_rewrite join_πL_πR.
-    apply meas_id_right.
-  }
-Qed.
-
-Lemma assoc_r_good : good assoc_r_FTF.
-Proof.
-  split. {
-    show_concrete_nondup.
-  } {
-    hnf.
-    rewrite pushforward_as_bind; cbn.
-    unfold compose, id, Datatypes.id.
-
-    setoid_rewrite (bind_πL_πR (fun σL σR => dirac (join (πL σL) (join (πR σL) σR)))).
-    rewrite tonelli_entropy.
-    setoid_rewrite (bind_πL_πR (fun σLL σRL => dirac (join σLL (join σRL _)))).
-
-    setoid_rewrite tonelli_entropy at 1.
-    setoid_rewrite tonelli_entropy at 2.
-    setoid_rewrite <- bind_πL_πR at 2.
-    setoid_rewrite join_πL_πR.
-    setoid_rewrite <- bind_πL_πR.
-    setoid_rewrite join_πL_πR.
-    apply meas_id_right.
-  }
-Qed.
-
-Lemma πL_good : good πR_FTF.
-Proof.
-  split. {
-    show_concrete_nondup.
-  } {
-    hnf.
-    rewrite pushforward_as_bind; cbn.
-    unfold compose, id, Datatypes.id.
-
-    setoid_rewrite (bind_πL_πR (fun _ σR => dirac σR)).
-    rewrite meas_id_right.
-    extensionality A.
-    apply int_const_entropy; auto.
-  }
-Qed.
-
-Fixpoint paths_nondup (ps : list path) : Prop :=
-  match ps with
-  | nil => True
-  | p :: ps' => Forall (fun p' => ~ path_conflict p p') ps' /\ paths_nondup ps'
-  end.
+Inductive nondup : list path -> Prop :=
+| nondup_nil : nondup []
+| nondup_cons p ps :
+    Forall (paths_disjoint p) ps ->
+    nondup ps ->
+    nondup (p :: ps)
+.
+Hint Constructors nondup.
 
 Lemma paths_nondup_app (l0 l1 : list path) :
-  (paths_nondup l0 /\
-   paths_nondup l1 /\
-   (forall p0 p1, In p0 l0 -> In p1 l1 -> ~ path_conflict p0 p1)) <->
-  paths_nondup (l0 ++ l1).
+  (nondup l0 /\
+   nondup l1 /\
+   (forall p0 p1, In p0 l0 -> In p1 l1 -> paths_disjoint p0 p1)) <->
+  nondup (l0 ++ l1).
 Proof.
-  intros.
   induction l0. {
     cbn.
-    intuition idtac.
+    intuition eauto.
   } {
     split; intros. {
       destruct IHl0 as [? _].
       intuition idtac.
-      cbn in H1.
+      inject H1.
       intuition idtac.
+      cbn in *.
 
-      cbn.
-      split. {
-        apply Forall_forall.
-        intros.
-        apply in_app_or in H2.
-        rewrite Forall_forall in H0.
-        inject H2; eauto.
-        intro.
-        eapply H3; eauto.
-        left; auto.
-      } {
-        apply H1.
-        intros.
-        eapply H3; eauto.
-        right; auto.
-      }
+      constructor; eauto.
+      apply Forall_forall.
+      rewrite Forall_forall in H5.
+      intros.
+      apply in_app_or in H1.
+      inject H1; eauto.
     } {
       destruct IHl0 as [_ ?].
-      cbn in H.
-      rewrite Forall_forall in H.
-      intuition idtac. {
-        cbn.
-        split; auto.
+      inject H.
+      cbn in *.
+      rewrite Forall_forall in H3.
+      intuition idtac; eauto. {
+        constructor; eauto.
         rewrite Forall_forall.
-        repeat intro.
-        eapply H1; eauto.
+        intros.
+        eapply H3; eauto.
         apply in_or_app; auto.
       } {
-        inject H3. {
-          specialize (H1 p1).
-          apply H1; auto.
-          apply in_or_app; auto.
-        } {
-          eapply H4; eauto.
-        }
+        subst.
+        apply H3.
+        apply in_or_app; auto.
       }
-    }
-  }
-Qed.
-
-Lemma nondup_is_vars_nondup (f : FTF) :
-  nondup f <-> paths_nondup (vars_of f).
-Proof.
-  induction f. {
-    repeat split; constructor.
-  } {
-    intuition idtac. {
-      inject H3.
-      intuition idtac.
-      clear H6 H7.
-      cbn.
-      apply paths_nondup_app; auto.
-    } {
-      cbn in H3.
-      apply paths_nondup_app in H3.
-      intuition idtac.
-      clear H H2.
-      constructor; auto.
     }
   }
 Qed.
@@ -369,40 +140,6 @@ Fixpoint integrate_by_entropies (g : list Entropy -> R+) (n : nat) : R+ :=
   | O => g []
   | S n' => integration (fun σ => integrate_by_entropies (fun σs => g (σ :: σs)) n') μEntropy
   end.
-
-Lemma integrate_by_entropies_n_ext f g n :
-  (forall l, length l = n -> f l = g l) ->
-  integrate_by_entropies f n = integrate_by_entropies g n.
-Proof.
-  revert f g.
-  induction n; intros. {
-    intros.
-    cbn.
-    rewrite H; auto.
-  } {
-    intros.
-    cbn.
-    integrand_extensionality σ.
-    apply IHn.
-    intros.
-    apply H.
-    subst.
-    auto.
-  }
-Qed.
-
-Lemma integrate_by_entropies_nest g n n' :
-  integrate_by_entropies g (n + n') =
-  integrate_by_entropies
-    (fun l =>
-       integrate_by_entropies
-         (fun l' => g (l ++ l')) n') n.
-Proof.
-  revert g.
-  induction n; intros; cbn; auto.
-  integrand_extensionality σ.
-  apply IHn.
-Qed.
 
 Fixpoint max_list_len {X} (l : list (list X)) :=
   match l with
@@ -455,12 +192,13 @@ Proof.
   induction n; destruct l; cbn; auto.
 Qed.
 
-Lemma apply_dep_cons d l σ :
+Lemma apply_map_cons d l σ :
   apply_paths (map (cons d) l) σ =
   apply_paths l (πd d σ).
 Proof.
   induction l; cbn; auto.
-  setoid_rewrite IHl.
+  rewrite !fold_apply_paths.
+  rewrite IHl.
   reflexivity.
 Qed.
 
@@ -503,12 +241,11 @@ Proof.
     }
     clear H.
 
-    setoid_rewrite apply_paths_app.
-    setoid_rewrite map_map.
+    rewrite apply_paths_app.
+    rewrite 2 apply_map_cons.
     cbn.
     rewrite πL_join, πR_join.
-    setoid_rewrite H0.
-    setoid_rewrite H1.
+    rewrite H0, H1.
     apply firstn_skipn.
   }
 Qed.
@@ -529,6 +266,7 @@ Proof.
   subst.
   replace (length l0) with (length l0 + O) by omega.
   rewrite firstn_app_2.
+  cbn.
   apply app_nil_r.
 Qed.
 
@@ -539,8 +277,8 @@ Lemma app_len_inj {X} (a a' b b' : list X) :
 Proof.
   revert a'.
   induction a; destruct a'; try discriminate; intros; auto.
-  cbn in *.
   inject H0.
+  cbn in H.
   specialize (IHa a' ltac:(omega) H3).
   inject IHa.
   auto.
@@ -564,10 +302,10 @@ Proof.
     inject H.
     auto.
   } {
-    cbn -[apply_paths] in H.
-    rewrite !apply_paths_app, !apply_dep_cons in H.
+    cbn in H.
+    rewrite !apply_paths_app, !apply_map_cons in H.
     apply app_len_inj in H; revgoals. {
-      repeat setoid_rewrite map_length.
+      setoid_rewrite map_length.
       reflexivity.
     }
     inject H.
@@ -593,13 +331,13 @@ Proof.
 
     apply (apply_build_tree_injective n).
     rewrite join_the_build_correct; auto.
-    repeat setoid_rewrite map_length.
+    setoid_rewrite map_length.
     apply len_build_tree.
   } {
     cbn in *.
     destruct n; try omega.
-    cbn -[apply_paths].
-    rewrite apply_dep_cons.
+    cbn.
+    rewrite apply_map_cons.
     apply IHp.
     omega.
   }
@@ -621,21 +359,25 @@ Proof.
     }
     clear H.
 
-    simpl.
-    setoid_rewrite apply_paths_app.
+    cbn.
+    rewrite fold_apply_paths.
+    rewrite apply_paths_app.
 
-    rewrite skipn_app; revgoals. {
-      repeat setoid_rewrite map_length.
-      reflexivity.
+    f_equal. {
+      rewrite firstn_app_3. {
+        apply join_of_pad; auto.
+      } {
+        setoid_rewrite map_length.
+        reflexivity.
+      }
+    } {
+      rewrite skipn_app. {
+        apply IHΔ.
+      } {
+        setoid_rewrite map_length.
+        reflexivity.
+      }
     }
-    rewrite firstn_app_3; revgoals. {
-      repeat setoid_rewrite map_length.
-      reflexivity.
-    }
-
-    rewrite join_of_pad; auto.
-    rewrite IHΔ.
-    reflexivity.
   }
 Qed.
 
@@ -657,10 +399,10 @@ Lemma splits_left_max_len {n Δ} :
 Proof.
   revert n.
   induction Δ; intros; cbn in *; try omega.
-  setoid_rewrite max_list_len_app.
+  rewrite @max_list_len_app.
   apply Max.max_lub; eauto using Max.max_lub_r.
   apply Max.max_lub_l in H.
-  induction a as [|[|]]; cbn in *; try omega.
+  induction a as [|[|] ?]; cbn in *; try omega.
   apply Max.max_lub; omega.
 Qed.
 
@@ -670,7 +412,7 @@ Lemma splits_right_max_len {n Δ} :
 Proof.
   revert n.
   induction Δ; intros; cbn in *; try omega.
-  setoid_rewrite max_list_len_app.
+  rewrite @max_list_len_app.
   apply Max.max_lub; eauto using Max.max_lub_r.
   apply Max.max_lub_l in H.
   induction a as [|[|]]; cbn in *; try omega.
@@ -724,49 +466,49 @@ Proof.
 Qed.
 
 Lemma splits_left_nondup {Δ} :
-  paths_nondup Δ ->
-  paths_nondup (splits_left Δ).
+  nondup Δ ->
+  nondup (splits_left Δ).
 Proof.
   induction Δ; intros; auto.
-  replace (a :: Δ) with ([a] ++ Δ) in * by auto.
-  apply paths_nondup_app in H.
+  inject H.
+  rewrite Forall_forall in H2.
   cbn.
   apply paths_nondup_app.
   intuition idtac. {
     destruct a as [|[|]]; cbn; auto.
   } {
-    apply in_split_left in H3.
-    apply in_splits_left in H4.
+    apply in_split_left in H0.
+    apply in_splits_left in H1.
     subst.
-    specialize (H2 (L :: p0) (L :: p1) ltac:(cbn; auto) H4).
-    cbn in H2.
+    specialize (H2 _ H1).
+    inject H2.
     auto.
   }
 Qed.
 
 Lemma splits_right_nondup {Δ} :
-  paths_nondup Δ ->
-  paths_nondup (splits_right Δ).
+  nondup Δ ->
+  nondup (splits_right Δ).
 Proof.
   induction Δ; intros; auto.
-  replace (a :: Δ) with ([a] ++ Δ) in * by auto.
-  apply paths_nondup_app in H.
+  inject H.
+  rewrite Forall_forall in H2.
   cbn.
   apply paths_nondup_app.
   intuition idtac. {
     destruct a as [|[|]]; cbn; auto.
   } {
-    apply in_split_right in H3.
-    apply in_splits_right in H4.
+    apply in_split_right in H0.
+    apply in_splits_right in H1.
     subst.
-    specialize (H2 (R :: p0) (R :: p1) ltac:(cbn; auto) H4).
-    cbn in H2.
+    specialize (H2 _ H1).
+    inject H2.
     auto.
   }
 Qed.
 
 Lemma nil_in_nondup Δ :
-  paths_nondup Δ ->
+  nondup Δ ->
   In [] Δ ->
   Δ = [[]].
 Proof.
@@ -775,16 +517,14 @@ Proof.
   inject H.
   destruct p. {
     destruct Δ; auto.
-    cbn in H1.
-    inject H1.
-    tauto.
+    inject H3.
+    inject H2.
   }
   exfalso.
   inject H0; try discriminate.
-  rewrite Forall_forall in H1.
-  eapply H1; eauto.
-  cbn.
-  destruct d; trivial.
+  rewrite Forall_forall in H3.
+  specialize (H3 _ H).
+  inject H3.
 Qed.
 
 Lemma firstn_map {X Y} n (f : X -> Y) l :
@@ -794,16 +534,15 @@ Proof.
   induction n; intros; auto.
   cbn.
   destruct l; cbn; auto.
-  f_equal.
-  apply IHn.
+  rewrite IHn.
+  reflexivity.
 Qed.
 
 Lemma skipn_all2 {A} n (l : list A) :
   length l <= n ->
   skipn n l = [].
 Proof.
-  intros.
-  revert n H.
+  revert n.
   induction l; destruct n; intros; auto. {
     cbn in *.
     omega.
@@ -836,22 +575,24 @@ Proof.
 
   revert g.
   induction Δ; intros; auto.
-  spec1 IHΔ; [cbn in *; tauto|].
 
-  destruct a; cbn in H; try tauto.
+  spec1 IHΔ; destruct a; try (cbn in H; tauto).
+  clear H.
 
-  destruct d; cbn in *. {
-    setoid_rewrite IHΔ.
+  destruct d; cbn. {
+    integrand_extensionality σ.
+    rewrite IHΔ.
     reflexivity.
   } {
-    setoid_rewrite IHΔ.
     rewrite tonelli_entropies_and_entropy.
+    integrand_extensionality σ.
+    rewrite IHΔ.
     reflexivity.
   }
 Qed.
 
 Lemma integrate_by_entropies_unfold Δ g :
-  paths_nondup Δ ->
+  nondup Δ ->
   integrate_by_entropies g (length Δ) =
   integration (g ∘ apply_paths Δ) μEntropy.
 Proof.
@@ -866,20 +607,19 @@ Proof.
 
   revert Δ g H H0.
   induction n; intros. {
-    destruct Δ as [|? [|]]; swap 2 3. {
+    destruct Δ as [|? [|]]. {
       cbn in *.
       erewrite int_const_entropy; eauto.
+    } {
+      destruct p; cbn in *; solve [omega | reflexivity].
     } {
       destruct p as [|[|]], p0 as [|[|]];
         cbn in H, H0;
         destruct max_list_len;
         try omega.
       inject H.
-      inject H1.
-      tauto.
-    } {
-      destruct p; cbn in *; try omega.
-      reflexivity.
+      inject H3.
+      inject H2.
     }
   } {
     pose proof (fun Hn HΔ g => IHn (splits_left Δ) g HΔ Hn) as IHL.
@@ -895,174 +635,58 @@ Proof.
       clear.
 
       integrand_extensionality σ.
+      replace (normalize _ _) with (build_tree (S n)) by apply eq_sym, app_nil_r.
+
       cbn.
 
-      pose proof (join_of_pad [] (S n) ltac:(cbn; omega)).
-      cbn in *.
       repeat setoid_rewrite firstn_firstn.
 
       repeat rewrite ?app_length, ?map_length, ?len_build_tree.
-      rewrite app_nil_r.
 
-      set (min _ _).
-      replace n0 with (2 ^ n); subst n0; revgoals. {
-        symmetry.
-        apply min_l.
-        omega.
-      }
-
+      replace (min _ _) with (2 ^ n) by (apply eq_sym, min_l; omega).
       setoid_rewrite firstn_map at 2.
       setoid_rewrite firstn_all2 at 2; revgoals. {
         rewrite app_length, !map_length, !len_build_tree.
         reflexivity.
       }
-      setoid_rewrite H.
-      clear H.
+
+      setoid_rewrite (join_of_pad [] (S n)); cbn; try omega.
 
       rewrite skipn_all2; auto.
       setoid_rewrite map_length.
       rewrite app_length, !map_length, !len_build_tree.
       reflexivity.
-    }
-
-    rewrite split_and_reinterleave; auto.
-    rewrite IHL.
-    setoid_rewrite IHR.
-    clear IHL IHR.
-    rewrite <- integration_πL_πR.
-
-    integrand_extensionality σ.
-
-    repeat rewrite normalized_lookups_correct; auto; revgoals. {
-      apply splits_left_max_len; auto.
     } {
-      apply splits_right_max_len; auto.
+      rewrite split_and_reinterleave; auto.
+      rewrite IHL.
+      setoid_rewrite IHR.
+      clear IHL IHR.
+      rewrite <- integration_πL_πR.
+
+      integrand_extensionality σ.
+
+      rewrite 3 normalized_lookups_correct; auto; revgoals. {
+        apply splits_left_max_len; auto.
+      } {
+        apply splits_right_max_len; auto.
+      }
+
+      f_equal.
+      clear H H0 n g.
+
+      induction Δ; intros; auto.
+
+      spec1 IHΔ; [cbn in *; tauto |].
+      destruct a; [cbn in *; tauto |].
+
+      destruct d; cbn; f_equal; apply IHΔ.
     }
-
-    f_equal.
-    clear H H0 n g.
-
-    induction Δ; intros; auto.
-    assert (~ In [] Δ) by (cbn in *; tauto).
-
-    destruct a; cbn in *; try tauto.
-
-    destruct d; cbn; f_equal; apply IHΔ; auto.
-  }
-Qed.
-
-Fixpoint ftf_as_fn_of_vars (f : FTF) (σs : list Entropy) : Entropy :=
-  match f with
-  | Leaf l => match σs with
-              | [σ] => σ
-              | _ => dummy_entropy
-              end
-  | f0 ;; f1 =>
-    join
-      (ftf_as_fn_of_vars f0 (firstn (length (vars_of f0)) σs))
-      (ftf_as_fn_of_vars f1 (skipn (length (vars_of f0)) σs))
-  end.
-
-Lemma ftf_as_fn_of_vars_correct f :
-  forall σ,
-    ftf_as_fn_of_vars f (apply_paths (vars_of f) σ) = apply_FTF f σ.
-Proof.
-  induction f; intros; auto.
-  cbn.
-  rewrite apply_paths_app.
-  rewrite firstn_app_3; try apply map_length.
-  rewrite skipn_app; try apply map_length.
-  rewrite <- IHf1, <- IHf2.
-  reflexivity.
-Qed.
-
-Lemma nondup_good (f : FTF) :
-  nondup f -> good f.
-Proof.
-  intros.
-  constructor; auto.
-  rewrite nondup_is_vars_nondup in H.
-
-  rewrite pushforward_as_bind.
-  rewrite <- meas_id_right.
-  extensionality A.
-  unfold ">>=".
-  cbn.
-  unfold dirac.
-  set (g := indicator A).
-  clearbody g.
-
-  setoid_rewrite <- ftf_as_fn_of_vars_correct.
-
-  pose proof integrate_by_entropies_unfold.
-  specialize (H0 (vars_of f)).
-  specialize (H0 (g ∘ ftf_as_fn_of_vars f) H).
-  setoid_rewrite <- H0.
-  clear H0.
-
-  revert g.
-  induction f; intros. {
-    cbn in *.
-    reflexivity.
-  } {
-    cbn in *.
-    unfold compose.
-    rewrite app_length.
-    rewrite integrate_by_entropies_nest.
-
-    apply paths_nondup_app in H.
-    repeat destruct H as [?H0 H].
-    spec1 IHf1; auto.
-    spec1 IHf2; auto.
-
-    transitivity (
-        integrate_by_entropies
-          (fun σls =>
-             integrate_by_entropies
-               (fun σrs =>
-                  g (join (ftf_as_fn_of_vars f1 σls)
-                          (ftf_as_fn_of_vars f2 σrs)))
-               (length (vars_of f2)))
-          (length (vars_of f1))).
-    {
-      apply integrate_by_entropies_n_ext.
-      intros.
-      apply integrate_by_entropies_n_ext.
-      intros.
-      rewrite firstn_app_3; auto.
-      rewrite skipn_app; auto.
-    }
-
-    transitivity (
-      integration
-        (fun σl =>
-           integration
-             (fun σr =>
-                g (join σl σr))
-             μEntropy)
-        μEntropy).
-    {
-      specialize (IHf1 (fun σl =>
-                          integrate_by_entropies
-                            (fun σrs =>
-                               g (join σl (ftf_as_fn_of_vars f2 σrs)))
-                            (length (vars_of f2)))).
-      setoid_rewrite IHf1.
-      clear IHf1.
-      integrand_extensionality σl.
-      specialize (IHf2 (fun σr => g (join σl σr))).
-      setoid_rewrite IHf2.
-      reflexivity.
-    }
-    rewrite <- integration_πL_πR.
-    setoid_rewrite join_πL_πR.
-    reflexivity.
   }
 Qed.
 
 Lemma diagram (Δ Δ' : list path) (f f' : Entropy -> R+) (g : list Entropy -> R+) :
-  paths_nondup Δ ->
-  paths_nondup Δ' ->
+  nondup Δ ->
+  nondup Δ' ->
   length Δ = length Δ' ->
   f = g ∘ apply_paths Δ ->
   f' = g ∘ apply_paths Δ' ->
