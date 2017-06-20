@@ -61,7 +61,7 @@ Inductive nondup : list path -> Prop :=
 .
 Hint Constructors nondup.
 
-Lemma paths_nondup_app (l0 l1 : list path) :
+Lemma nondup_app (l0 l1 : list path) :
   (nondup l0 /\
    nondup l1 /\
    (forall p0 p1, In p0 l0 -> In p1 l1 -> paths_disjoint p0 p1)) <->
@@ -215,7 +215,7 @@ Proof.
   inject H.
   rewrite Forall_forall in H2.
   cbn.
-  apply paths_nondup_app.
+  apply nondup_app.
   intuition idtac. {
     destruct d, a as [|[|]]; cbn; auto.
   } {
@@ -305,9 +305,8 @@ Proof.
   }
 Qed.
 
-(* inspired by https://stackoverflow.com/questions/20883855 *)
-Theorem strong_induction (P : nat -> Type) :
-  (forall n, (forall k, k < n -> P k) -> P n) ->
+Theorem strong_nat_rect (P : nat -> Type) :
+  (forall n, (forall m, m < n -> P m) -> P n) ->
   forall n, P n.
 Proof.
   intros H n.
@@ -331,7 +330,7 @@ Proof.
 
   remember (max_list_len Δ) as m.
   revert Δ Heqm H g.
-  induction m using strong_induction.
+  induction m using strong_nat_rect.
   intros; subst.
   specialize (fun Δ' Hk => H _ Hk Δ' eq_refl).
 
@@ -347,13 +346,13 @@ Proof.
 
   rewrite split_and_reinterleave; auto.
 
-  assert (0 <> max_list_len Δ). {
+  pose proof splits_nondup H0.
+  pose proof @splits_max_len' Δ.
+
+  spec1 H3. {
     destruct Δ as [|[|] Δ]; cbn in *; try tauto.
     destruct (max_list_len Δ); discriminate.
   }
-
-  pose proof splits_nondup H0.
-  pose proof splits_max_len' H2.
 
   do 2 (setoid_rewrite <- H; auto).
 
@@ -364,7 +363,19 @@ Proof.
   rewrite reinterleave_splits; auto.
 Qed.
 
-Lemma diagram (Δ Δ' : list path) (f f' : Entropy -> R+) (g : list Entropy -> R+) :
+Lemma diagram (Δ Δ' : list path) (g : list Entropy -> R+) :
+  nondup Δ ->
+  nondup Δ' ->
+  length Δ = length Δ' ->
+  integration (g ∘ apply_paths Δ) μEntropy = integration (g ∘ apply_paths Δ') μEntropy.
+Proof.
+  intros.
+  rewrite 2 integrate_by_entropies_unfold; try assumption.
+  rewrite H1.
+  reflexivity.
+Qed.
+
+Lemma diagram' (Δ Δ' : list path) (f f' : Entropy -> R+) (g : list Entropy -> R+) :
   nondup Δ ->
   nondup Δ' ->
   length Δ = length Δ' ->
@@ -374,7 +385,527 @@ Lemma diagram (Δ Δ' : list path) (f f' : Entropy -> R+) (g : list Entropy -> R
 Proof.
   intros.
   subst.
-  rewrite 2 integrate_by_entropies_unfold; try assumption.
-  rewrite H1.
+  apply diagram; auto.
+Qed.
+
+Inductive FTF :=
+| Leaf (l : path)
+| Node (tL tR : FTF)
+.
+
+Infix ";;" := Node (at level 60, right associativity).
+
+Fixpoint vars_of (f : FTF) : list path :=
+  match f with
+  | Leaf l => [l]
+  | Node tL tR => vars_of tL ++ vars_of tR
+  end.
+
+Fixpoint apply_FTF (f : FTF) (σ : Entropy) : Entropy :=
+  match f with
+  | Leaf l => apply_path l σ
+  | fL ;; fR => join (apply_FTF fL σ) (apply_FTF fR σ)
+  end.
+
+Fixpoint ftf_as_fn_of_vars (f : FTF) (σs : list Entropy) : Entropy :=
+  match f with
+  | Leaf l => match σs with
+              | [σ] => σ
+              | _ => dummy_entropy
+              end
+  | f0 ;; f1 =>
+    join
+      (ftf_as_fn_of_vars f0 (firstn (length (vars_of f0)) σs))
+      (ftf_as_fn_of_vars f1 (skipn (length (vars_of f0)) σs))
+  end.
+
+Lemma apply_paths_app l0 l1 σ :
+  apply_paths (l0 ++ l1) σ = apply_paths l0 σ ++ apply_paths l1 σ.
+Proof.
+  apply map_app.
+Qed.
+
+Lemma firstn_app_3 {X} n (l0 l1 : list X) :
+  length l0 = n ->
+  firstn n (l0 ++ l1) = l0.
+Proof.
+  intros.
+  subst.
+  replace (length l0) with (length l0 + O) by omega.
+  rewrite firstn_app_2.
+  cbn.
+  apply app_nil_r.
+Qed.
+
+Lemma skipn_app {X} n (l0 l1 : list X) :
+  length l0 = n ->
+  skipn n (l0 ++ l1) = l1.
+Proof.
+  intros; subst.
+  induction l0; auto.
+Qed.
+
+Lemma skipn_app_2 {X} n (l0 l1 : list X) :
+  n <= length l0 ->
+  skipn n (l0 ++ l1) = skipn n l0 ++ l1.
+Proof.
+  revert l0.
+  induction n; cbn; intros; auto. {
+    destruct l0; cbn in *; try omega.
+    apply IHn.
+    omega.
+  }
+Qed.
+
+Lemma ftf_as_fn_of_vars_correct f :
+  apply_FTF f =
+  ftf_as_fn_of_vars f ∘ apply_paths (vars_of f).
+Proof.
+  induction f; intros; auto.
+  extensionality σ.
+  cbn.
+  rewrite apply_paths_app.
+  rewrite firstn_app_3; [| apply map_length].
+  rewrite skipn_app; [| apply map_length].
+  rewrite IHf1, IHf2.
   reflexivity.
+Qed.
+
+Definition nondup_ftf (f : FTF) := nondup (vars_of f).
+Definition good (f : FTF) := pushforward μEntropy (apply_FTF f) = μEntropy.
+
+Definition comm_FTF : FTF :=
+  Leaf [R] ;; Leaf [L].
+Definition let_comm_FTF : FTF :=
+  Leaf [R; L] ;; Leaf [L] ;; Leaf [R; R].
+Definition assoc_l_FTF : FTF :=
+  (Leaf [L] ;; Leaf [R; L]) ;; Leaf [R; R].
+Definition assoc_r_FTF : FTF :=
+  Leaf [L; L] ;; Leaf [L; R] ;; Leaf [R].
+Definition πR_FTF : FTF := Leaf [R].
+
+Definition running_examples := [comm_FTF; let_comm_FTF; assoc_l_FTF; assoc_r_FTF; πR_FTF].
+
+Lemma all_nondup : Forall nondup_ftf running_examples.
+Proof.
+  repeat constructor.
+Qed.
+
+Fixpoint covars (f : FTF) : list path :=
+  match f with
+  | Leaf _ => [[]]
+  | fL ;; fR => map (cons L) (covars fL) ++ map (cons R) (covars fR)
+  end.
+
+Lemma fold_apply_paths σ :
+  map (flip apply_path σ) = (fun ps => apply_paths ps σ).
+Proof.
+  reflexivity.
+Qed.
+
+Lemma apply_paths_map_cons d l σ :
+  apply_paths (map (cons d) l) σ = apply_paths l (πd d σ).
+Proof.
+  apply map_map.
+Qed.
+
+Lemma apply_paths_map_snoc d l σ :
+  apply_paths (map (fun l' => l' ++ [d]) l) σ = map (πd d) (apply_paths l σ).
+Proof.
+  setoid_rewrite map_map.
+  cbn.
+  apply map_ext.
+  intros.
+  revert σ.
+  induction a; cbn; auto.
+Qed.
+
+Fixpoint ftf_map (g : path -> path) (f : FTF) : FTF :=
+  match f with
+  | Leaf p => Leaf (g p)
+  | fL ;; fR => ftf_map g fL ;; ftf_map g fR
+  end.
+
+Fixpoint id_tree (f : FTF) : FTF :=
+  match f with
+  | Leaf _ => Leaf []
+  | fL ;; fR => ftf_map (cons L) (id_tree fL) ;; ftf_map (cons R) (id_tree fR)
+  end.
+
+Lemma apply_of_cons d f σ :
+  apply_FTF (ftf_map (cons d) f) σ = apply_FTF f (πd d σ).
+Proof.
+  revert σ.
+  induction f; cbn; intros; auto.
+  rewrite IHf1, IHf2; auto.
+Qed.
+
+Lemma id_tree_correct f σ :
+  apply_FTF (id_tree f) σ = σ.
+Proof.
+  revert σ.
+  induction f; intros; auto.
+  cbn in *.
+  rewrite 2 apply_of_cons.
+  rewrite IHf1, IHf2.
+  apply join_πL_πR.
+Qed.
+
+Lemma vars_of_nonempty f : vars_of f <> [].
+Proof.
+  induction f; cbn; try discriminate.
+  destruct (vars_of f1), (vars_of f2); discriminate || contradiction.
+Qed.
+
+Lemma vars_of_map (f : FTF) g :
+  vars_of (ftf_map g f) = map g (vars_of f).
+Proof.
+  induction f; auto.
+  cbn.
+  rewrite map_app.
+  rewrite IHf1, IHf2.
+  auto.
+Qed.
+
+Lemma cons_preserves_nondup Δ d :
+  nondup Δ <-> nondup (map (cons d) Δ).
+Proof.
+  induction Δ; cbn; intuition idtac. {
+    inject H1.
+    constructor; auto.
+    rewrite Forall_forall in *.
+    intros.
+    rewrite in_map_iff in H1.
+    inject H1.
+    inject H2.
+    constructor.
+    auto.
+  } {
+    inject H1.
+    constructor; auto.
+    rewrite Forall_forall in *.
+    intros.
+    specialize (H4 (d :: x)).
+    spec1 H4; [apply in_map; auto |].
+    inject H4.
+    auto.
+  }
+Qed.
+
+Lemma id_tree_nondup f : nondup_ftf (id_tree f).
+Proof.
+  unfold nondup_ftf.
+  induction f; cbn; intros. {
+    repeat constructor.
+  } {
+    apply nondup_app.
+    rewrite !vars_of_map.
+    rewrite <- !cons_preserves_nondup.
+    setoid_rewrite in_map_iff.
+    intuition idtac.
+    destruct H, H0.
+    inject H.
+    inject H0.
+    constructor.
+  }
+Qed.
+
+Lemma id_tree_inv {X} f (g : Entropy -> X) :
+  g = (g ∘ ftf_as_fn_of_vars (id_tree f)) ∘ apply_paths (vars_of (id_tree f)).
+Proof.
+  change (g = g ∘ (ftf_as_fn_of_vars (id_tree f) ∘ apply_paths (vars_of (id_tree f)))).
+  rewrite <- ftf_as_fn_of_vars_correct.
+  extensionality σ.
+  cbn.
+  rewrite id_tree_correct.
+  reflexivity.
+Qed.
+
+Lemma id_tree_len f :
+  length (vars_of (id_tree f)) = length (vars_of f).
+Proof.
+  induction f; cbn; auto.
+  rewrite !app_length, <- IHf1, <- IHf2.
+  rewrite !vars_of_map.
+  rewrite !map_length.
+  reflexivity.
+Qed.
+
+Inductive permutation : nat -> Type :=
+| permute_nil : permutation O
+| permute_at p {n} : p <= n -> permutation n -> permutation (S n)
+.
+
+Fixpoint permute_fn {X n} (p : permutation n) (l : list X) :=
+  match p, l with
+  | _, [] | permute_nil, _ => []
+  | permute_at pos _ p', x :: l' =>
+    let l'' := permute_fn p' l' in
+    firstn pos l'' ++ [x] ++ skipn pos l''
+  end.
+
+Lemma permute_fn_len {X n} (p : permutation n) (l : list X) :
+  length (permute_fn p l) = min n (length l).
+Proof.
+  revert l.
+  induction p; cbn in *; intros. {
+    destruct l; auto.
+  } {
+    destruct l0; cbn; auto.
+    rewrite app_length.
+    cbn.
+    rewrite <- plus_n_Sm.
+    rewrite <- app_length.
+    rewrite firstn_skipn.
+    rewrite IHp.
+    reflexivity.
+  }
+Qed.
+
+Lemma permute_fn_len' {X n} (p : permutation n) (l : list X) :
+  length l = n ->
+  length (permute_fn p l) = n.
+Proof.
+  intros.
+  subst.
+  rewrite permute_fn_len.
+  apply Min.min_l.
+  reflexivity.
+Qed.
+
+Lemma integrate_by_entropies_nest g n n' :
+  integrate_by_entropies g (n + n') =
+  integrate_by_entropies
+    (fun l =>
+       integrate_by_entropies
+         (fun l' => g (l ++ l')) n') n.
+Proof.
+  revert g.
+  induction n; intros; cbn; auto.
+  integrand_extensionality σ.
+  apply IHn.
+Qed.
+
+Lemma integrate_by_entropies_n_ext f g n :
+  (forall l, length l = n -> f l = g l) ->
+  integrate_by_entropies f n = integrate_by_entropies g n.
+Proof.
+  revert f g.
+  induction n; intros. {
+    intros.
+    cbn.
+    rewrite H; auto.
+  } {
+    intros.
+    cbn.
+    integrand_extensionality σ.
+    apply IHn.
+    intros.
+    apply H.
+    subst.
+    auto.
+  }
+Qed.
+
+Lemma integrate_entropies_roll g n :
+  integration (fun σ => integrate_by_entropies (fun σs => g (σ :: σs)) n) μEntropy =
+  integrate_by_entropies (fun σs => integration (fun σ => g (σs ++ [σ])) μEntropy) n.
+Proof.
+  revert g.
+  induction n; cbn; intros; auto.
+
+  integrand_extensionality σ.
+  apply (IHn (g ∘ cons σ)).
+Qed.
+
+Lemma tonelli_entropies m n f :
+  integrate_by_entropies (fun σn => integrate_by_entropies (fun σm => f σn σm) m) n =
+  integrate_by_entropies (fun σm => integrate_by_entropies (fun σn => f σn σm) n) m.
+Proof.
+  revert f.
+  induction m; cbn; intros; auto.
+  rewrite tonelli_entropies_and_entropy.
+  integrand_extensionality σ.
+  apply IHm.
+Qed.
+
+Lemma integrate_entropy_app_comm g n m :
+  integrate_by_entropies (fun σn => integrate_by_entropies (fun σm => g (σm ++ σn)) m) n =
+  integrate_by_entropies (fun σn => integrate_by_entropies (fun σm => g (σn ++ σm)) m) n.
+Proof.
+  revert g m.
+  induction n; intros. {
+    cbn.
+    setoid_rewrite app_nil_r.
+    reflexivity.
+  } {
+    transitivity (
+        integrate_by_entropies
+          (fun σn => integrate_by_entropies (fun σm => g (σm ++ σn)) (S m)) n).
+    {
+      clear.
+      cbn.
+      rewrite tonelli_entropies_and_entropy.
+      setoid_rewrite tonelli_entropies.
+      setoid_rewrite app_comm_cons.
+
+      setoid_rewrite (integrate_entropies_roll
+                        (fun σs => integrate_by_entropies (fun σn => g (σs ++ σn)) n)).
+      setoid_rewrite <- app_assoc.
+      cbn.
+      rewrite tonelli_entropies_and_entropy.
+      reflexivity.
+    } {
+      cbn.
+      rewrite tonelli_entropies_and_entropy.
+      integrand_extensionality σ.
+      apply (IHn (g ∘ (cons σ))).
+    }
+  }
+Qed.
+
+Lemma integral_permute {n} (p : permutation n) g :
+  integrate_by_entropies (g ∘ permute_fn p) n = integrate_by_entropies g n.
+Proof.
+  revert g.
+
+  induction p; intros. {
+    cbn.
+    reflexivity.
+  } {
+    cbn.
+
+    transitivity (
+        integrate_by_entropies
+          (fun σs =>
+             integrate_by_entropies
+               (fun σs' => g (σs ++ σs'))
+               (S (n - p)))
+          p); revgoals.
+    {
+      setoid_rewrite <- integrate_entropy_app_comm.
+      cbn.
+      rewrite tonelli_entropies_and_entropy.
+      setoid_rewrite (integrate_entropy_app_comm (g ∘ cons _)).
+      setoid_rewrite <- integrate_by_entropies_nest.
+      integrand_extensionality σ.
+      f_equal.
+      omega.
+    } {
+      cbn.
+      setoid_rewrite tonelli_entropies_and_entropy.
+      integrand_extensionality σ.
+      setoid_rewrite (IHp (fun σs => g (firstn p σs ++ [σ] ++ skipn p σs))).
+      clear IHp.
+
+      replace n with (p + (n - p)) at 1 by omega.
+      rewrite integrate_by_entropies_nest.
+      cbn.
+      repeat (apply integrate_by_entropies_n_ext; intros).
+      repeat f_equal. {
+        rewrite firstn_app_3; auto.
+      } {
+        rewrite skipn_app; auto.
+      }
+    }
+  }
+Qed.
+
+Lemma compose_assoc {A B C D} (f : A -> B) (g : B -> C) (h : C -> D) :
+  h ∘ (g ∘ f) = (h ∘ g) ∘ f.
+Proof.
+  reflexivity.
+Qed.
+
+Fixpoint permute_app {n0 n1} (p0 : permutation n0) (p1 : permutation n1) : permutation (n0 + n1) :=
+  match p0 in permutation n0' return permutation (n0' + n1) with
+  | permute_nil => p1
+  | permute_at pos Hpos p0' =>
+    permute_at pos (le_trans _ _ _ Hpos (Nat.le_add_r _ _))
+               (permute_app p0' p1)
+  end.
+
+Lemma permute_app_correct {X n0 n1} p0 p1 :
+  forall (l0 l1 : list X),
+    length l0 = n0 ->
+    length l1 = n1 ->
+    permute_fn (@permute_app n0 n1 p0 p1) (l0 ++ l1) = permute_fn p0 l0 ++ permute_fn p1 l1.
+Proof.
+  intros.
+  revert l0 H.
+  induction p0; cbn; intros. {
+    destruct l0; try discriminate.
+    reflexivity.
+  } {
+    destruct l0; try discriminate.
+    cbn.
+    inject H.
+    specialize (IHp0 _ eq_refl).
+    rewrite IHp0.
+    rewrite firstn_app.
+    rewrite permute_fn_len'; auto.
+    replace (p - length l0) with O by omega.
+    cbn.
+    rewrite app_nil_r.
+    rewrite <- app_assoc.
+    cbn.
+    rewrite skipn_app_2; auto.
+    rewrite permute_fn_len'; auto.
+  }
+Qed.
+
+Lemma nondup_good f : nondup_ftf f -> good f.
+Proof.
+  intros.
+  hnf.
+  rewrite <- meas_id_right.
+  rewrite pushforward_as_bind.
+  extensionality A.
+  unfold dirac, ">>=".
+  cbn.
+  set (g := indicator A).
+  clearbody g.
+  clear A.
+
+  change (integration (g ∘ apply_FTF f) μEntropy = integration g μEntropy).
+  rewrite ftf_as_fn_of_vars_correct.
+  rewrite compose_assoc.
+  rewrite integrate_by_entropies_unfold; auto.
+
+  revert g.
+  induction f; cbn; intros. {
+    reflexivity.
+  } {
+    unfold compose.
+    rewrite app_length.
+    rewrite integrate_by_entropies_nest.
+
+    transitivity (
+        integrate_by_entropies
+          (fun σsL =>
+             integrate_by_entropies
+               (fun σsR =>
+                  g
+                    (join (ftf_as_fn_of_vars f1 σsL)
+                          (ftf_as_fn_of_vars f2 σsR)))
+               (length (vars_of f2)))
+          (length (vars_of f1))).
+    {
+      apply integrate_by_entropies_n_ext; intros.
+      apply integrate_by_entropies_n_ext; intros.
+      rewrite firstn_app_3; auto.
+      rewrite skipn_app; auto.
+    }
+
+    unfold nondup_ftf in H.
+    cbn in H.
+    apply nondup_app in H.
+    intuition idtac.
+
+    setoid_rewrite (H3 (fun σR => g (join _ σR))).
+    setoid_rewrite (H1 (fun σL => integration (fun σR => g (join σL σR)) _)).
+    rewrite <- integration_πL_πR.
+    setoid_rewrite join_πL_πR.
+    reflexivity.
+  }
 Qed.
