@@ -55,11 +55,13 @@ Fixpoint apply_path (p : path) : Entropy -> Entropy :=
 Inductive nondup : list path -> Prop :=
 | nondup_nil : nondup []
 | nondup_cons p ps :
-    Forall (paths_disjoint p) ps ->
+    (forall p', In p' ps -> paths_disjoint p p') ->
     nondup ps ->
     nondup (p :: ps)
 .
 Hint Constructors nondup.
+
+Ltac show_nondup := progress repeat (constructor; rewrite <- ?Forall_forall).
 
 Lemma nondup_app (l0 l1 : list path) :
   (nondup l0 /\
@@ -71,35 +73,20 @@ Proof.
     cbn.
     intuition eauto.
   } {
-    split; intros. {
+    split; cbn; intros. {
       destruct IHl0 as [? _].
       intuition idtac.
       inject H1.
       intuition idtac.
-      cbn in *.
-
       constructor; eauto.
-      apply Forall_forall.
-      rewrite Forall_forall in H5.
       intros.
-      apply in_app_or in H1.
-      inject H1; eauto.
+      rewrite in_app_iff in H1.
+      intuition eauto.
     } {
       destruct IHl0 as [_ ?].
       inject H.
-      cbn in *.
-      rewrite Forall_forall in H3.
-      intuition idtac; eauto. {
-        constructor; eauto.
-        rewrite Forall_forall.
-        intros.
-        eapply H3; eauto.
-        apply in_or_app; auto.
-      } {
-        subst.
-        apply H3.
-        apply in_or_app; auto.
-      }
+      setoid_rewrite in_app_iff in H3.
+      intuition (subst; eauto).
     }
   }
 Qed.
@@ -213,11 +200,10 @@ Proof.
   intros.
   induction Δ; intros; auto.
   inject H.
-  rewrite Forall_forall in H2.
   cbn.
   apply nondup_app.
   intuition idtac. {
-    destruct d, a as [|[|]]; cbn; auto.
+    destruct d, a as [|[|]]; show_nondup.
   } {
     apply in_split in H0.
     apply in_splits in H1.
@@ -238,12 +224,11 @@ Proof.
   inject H.
   destruct p. {
     destruct Δ; auto.
+    specialize (H3 p (in_eq _ _)).
     inject H3.
-    inject H2.
   }
   exfalso.
   inject H0; try discriminate.
-  rewrite Forall_forall in H3.
   specialize (H3 _ H).
   inject H3.
 Qed.
@@ -375,19 +360,6 @@ Proof.
   reflexivity.
 Qed.
 
-Lemma diagram' (Δ Δ' : list path) (f f' : Entropy -> R+) (g : list Entropy -> R+) :
-  nondup Δ ->
-  nondup Δ' ->
-  length Δ = length Δ' ->
-  f = g ∘ apply_paths Δ ->
-  f' = g ∘ apply_paths Δ' ->
-  integration f μEntropy = integration f' μEntropy.
-Proof.
-  intros.
-  subst.
-  apply diagram; auto.
-Qed.
-
 Inductive FTF :=
 | Leaf (l : path)
 | Node (tL tR : FTF)
@@ -460,6 +432,8 @@ Proof.
 Qed.
 
 Definition nondup_ftf (f : FTF) := nondup (vars_of f).
+Arguments nondup_ftf / !_.
+
 Definition good (f : FTF) := pushforward μEntropy (apply_FTF f) = μEntropy.
 
 Definition comm_FTF : FTF :=
@@ -476,7 +450,7 @@ Definition running_examples := [comm_FTF; let_comm_FTF; assoc_l_FTF; assoc_r_FTF
 
 Lemma all_nondup : Forall nondup_ftf running_examples.
 Proof.
-  repeat constructor.
+  show_nondup.
 Qed.
 
 Lemma integrate_by_entropies_nest g n n' :
@@ -522,17 +496,18 @@ Qed.
 Lemma nondup_good f : nondup_ftf f -> good f.
 Proof.
   intros.
-  hnf.
-  rewrite <- meas_id_right.
-  rewrite pushforward_as_bind.
-  extensionality A.
-  unfold dirac, ">>=".
-  cbn.
-  set (g := indicator A).
-  clearbody g.
-  clear A.
 
-  change (integration (g ∘ apply_FTF f) μEntropy = integration g μEntropy).
+  enough (forall g, integration (g ∘ apply_FTF f) μEntropy = integration g μEntropy). {
+    hnf.
+    rewrite <- meas_id_right.
+    rewrite pushforward_as_bind.
+    extensionality A.
+    unfold dirac, ">>=".
+    cbn.
+    exact (H0 (indicator A)).
+  }
+  intros.
+
   rewrite ftf_as_fn_of_vars_correct.
   rewrite compose_assoc.
   rewrite integrate_by_entropies_unfold; auto.
@@ -550,8 +525,7 @@ Proof.
           (fun σsL =>
              integrate_by_entropies
                (fun σsR =>
-                  g
-                    (join (ftf_as_fn_of_vars f1 σsL)
+                  g (join (ftf_as_fn_of_vars f1 σsL)
                           (ftf_as_fn_of_vars f2 σsR)))
                (length (vars_of f2)))
           (length (vars_of f1))).
@@ -562,8 +536,7 @@ Proof.
       rewrite skipn_app; auto.
     }
 
-    unfold nondup_ftf in H.
-    cbn in H.
+    simpl in H.
     apply nondup_app in H.
     intuition idtac.
 
@@ -577,9 +550,5 @@ Qed.
 
 Lemma all_good : Forall good running_examples.
 Proof.
-  eapply Forall_impl. {
-    apply nondup_good.
-  } {
-    apply all_nondup.
-  }
+  exact (Forall_impl _ nondup_good all_nondup).
 Qed.
